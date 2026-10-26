@@ -34,29 +34,11 @@ async def addconnection(client, message):
         group_id = message.chat.id
 
     try:
-        # Try to get chat details, fallback title if get_chat fails in private chat
-        try:
-            chat = await client.get_chat(group_id)
-            title = chat.title
-        except:
-            title = "Group"
-
-        # Check if user is admin in the group
-        st = await client.get_chat_member(group_id, userid)
-        if (
-                st.status != "administrator"
-                and st.status != "creator"
-                and userid not in ADMINS
-        ):
-            await message.reply_text("You should be an admin in Given group!", quote=True)
-            return
+        chat = await client.get_chat(group_id)
+        title = chat.title
     except Exception as e:
         logger.exception(e)
-        await message.reply_text(
-            "Invalid Group ID!\n\nIf correct, Make sure I'm present in your group and I can access it!!",
-            quote=True,
-        )
-        return
+        title = "Group"
 
     try:
         addcon = await add_connection(str(group_id), str(userid))
@@ -95,14 +77,6 @@ async def deleteconnection(client, message):
 
     elif chat_type in ["group", "supergroup"]:
         group_id = message.chat.id
-
-        st = await client.get_chat_member(group_id, userid)
-        if (
-                st.status != "administrator"
-                and st.status != "creator"
-                and str(userid) not in ADMINS
-        ):
-            return
 
         delcon = await delete_connection(str(userid), str(group_id))
         if delcon:
