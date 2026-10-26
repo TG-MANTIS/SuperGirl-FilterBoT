@@ -18,7 +18,11 @@ async def addconnection(client, message):
     if chat_type == "private":
         try:
             cmd, group_id = message.text.split(" ", 1)
-        except:
+            group_id = group_id.strip()
+            # Try converting group_id to int if it's a numeric string
+            if group_id.startswith("-") or group_id.isdigit():
+                group_id = int(group_id)
+        except Exception:
             await message.reply_text(
                 "<b>Enter in correct format!</b>\n\n"
                 "<code>/connect groupid</code>\n\n"
@@ -31,6 +35,10 @@ async def addconnection(client, message):
         group_id = message.chat.id
 
     try:
+        # First ensure the bot can fetch the chat to warm up cache
+        chat = await client.get_chat(group_id)
+        title = chat.title
+
         st = await client.get_chat_member(group_id, userid)
         if (
                 st.status != "administrator"
@@ -42,17 +50,14 @@ async def addconnection(client, message):
     except Exception as e:
         logger.exception(e)
         await message.reply_text(
-            "Invalid Group ID!\n\nIf correct, Make sure I'm present in your group!!",
+            "Invalid Group ID!\n\nIf correct, Make sure I'm present in your group and I can access it!!",
             quote=True,
         )
-
         return
+
     try:
         st = await client.get_chat_member(group_id, "me")
         if st.status == "administrator":
-            ttl = await client.get_chat(group_id)
-            title = ttl.title
-
             addcon = await add_connection(str(group_id), str(userid))
             if addcon:
                 await message.reply_text(
@@ -144,4 +149,4 @@ async def connections(client, message):
         await message.reply_text(
             "There are no active connections!! Connect to some groups first.",
             quote=True
-)
+        )
