@@ -4,12 +4,15 @@ from database.connections_mdb import add_connection, all_connections, if_active,
 from info import ADMINS
 
 
-@Client.on_message((filters.private | filters.group) & filters.command('connect') & filters.user(ADMINS))
+@Client.on_message((filters.private | filters.group) & filters.command('connect'))
 async def addconnection(client, message):
     userid = message.from_user.id if message.from_user else None
     if not userid:
         return await message.reply(f"You are anonymous admin. Use /connect {message.chat.id} in PM")
     
+    # Debug print to check if command is being triggered
+    print(f"Connection command received from user: {userid}")
+
     chat_type = message.chat.type
     group_id = None
 
@@ -22,7 +25,8 @@ async def addconnection(client, message):
             else:
                 await message.reply_text("<b>Enter in correct format!</b>\n\n<code>/connect groupid</code>", quote=True)
                 return
-        except Exception:
+        except Exception as e:
+            print(f"Error parsing group id: {e}")
             await message.reply_text(
                 "<b>Enter in correct format!</b>\n\n"
                 "<code>/connect groupid</code>\n\n"
@@ -38,7 +42,8 @@ async def addconnection(client, message):
     try:
         chat = await client.get_chat(group_id)
         title = chat.title
-    except Exception:
+    except Exception as e:
+        print(f"Error getting chat: {e}")
         title = "Group"
 
     try:
@@ -46,16 +51,16 @@ async def addconnection(client, message):
             await add_connection(str(group_id), str(userid))
         except:
             await add_connection(str(userid), str(group_id))
-    except Exception:
-        pass
+    except Exception as db_err:
+        print(f"Database error: {db_err}")
 
     try:
         await message.reply_text(
             f"Successfully connected to **{title}**\nNow manage your group from my pm !",
             quote=True
         )
-    except:
-        pass
+    except Exception as e:
+        print(f"Error replying to message: {e}")
 
     if chat_type in ["group", "supergroup"]:
         try:
@@ -67,7 +72,7 @@ async def addconnection(client, message):
             pass
 
 
-@Client.on_message((filters.private | filters.group) & filters.command('disconnect') & filters.user(ADMINS))
+@Client.on_message((filters.private | filters.group) & filters.command('disconnect'))
 async def deleteconnection(client, message):
     userid = message.from_user.id if message.from_user else None
     if not userid:
@@ -91,7 +96,7 @@ async def deleteconnection(client, message):
         await message.reply_text("Successfully disconnected from this chat", quote=True)
 
 
-@Client.on_message(filters.private & filters.command(["connections"]) & filters.user(ADMINS))
+@Client.on_message(filters.private & filters.command(["connections"]))
 async def connections(client, message):
     userid = message.from_user.id
 
