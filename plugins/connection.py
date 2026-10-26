@@ -19,7 +19,6 @@ async def addconnection(client, message):
         try:
             cmd, group_id = message.text.split(" ", 1)
             group_id = group_id.strip()
-            # Try converting group_id to int if it's a numeric string
             if group_id.startswith("-") or group_id.isdigit():
                 group_id = int(group_id)
         except Exception:
@@ -35,10 +34,14 @@ async def addconnection(client, message):
         group_id = message.chat.id
 
     try:
-        # First ensure the bot can fetch the chat to warm up cache
-        chat = await client.get_chat(group_id)
-        title = chat.title
+        # Try to get chat details, fallback title if get_chat fails in private chat
+        try:
+            chat = await client.get_chat(group_id)
+            title = chat.title
+        except:
+            title = "Group"
 
+        # Check if user is admin in the group
         st = await client.get_chat_member(group_id, userid)
         if (
                 st.status != "administrator"
@@ -56,28 +59,24 @@ async def addconnection(client, message):
         return
 
     try:
-        st = await client.get_chat_member(group_id, "me")
-        if st.status == "administrator":
-            addcon = await add_connection(str(group_id), str(userid))
-            if addcon:
-                await message.reply_text(
-                    f"Successfully connected to **{title}**\nNow manage your group from my pm !",
-                    quote=True,
+        addcon = await add_connection(str(group_id), str(userid))
+        if addcon:
+            await message.reply_text(
+                f"Successfully connected to **{title}**\nNow manage your group from my pm !",
+                quote=True,
+                parse_mode="md"
+            )
+            if chat_type in ["group", "supergroup"]:
+                await client.send_message(
+                    userid,
+                    f"Connected to **{title}** !",
                     parse_mode="md"
                 )
-                if chat_type in ["group", "supergroup"]:
-                    await client.send_message(
-                        userid,
-                        f"Connected to **{title}** !",
-                        parse_mode="md"
-                    )
-            else:
-                await message.reply_text(
-                    "You're already connected to this chat!",
-                    quote=True
-                )
         else:
-            await message.reply_text("Add me as an admin in group", quote=True)
+            await message.reply_text(
+                "You're already connected to this chat!",
+                quote=True
+            )
     except Exception as e:
         logger.exception(e)
         await message.reply_text('Some error occurred! Try again later.', quote=True)
