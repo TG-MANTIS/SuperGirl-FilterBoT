@@ -41,44 +41,31 @@ async def addconnection(client, message):
         title = "Group"
 
     try:
-        # Try passing user id first as expected by disconnect function
-        addcon = await add_connection(str(userid), str(group_id))
-        if addcon:
+        # Save connection directly
+        await add_connection(str(group_id), str(userid))
+        await message.reply_text(
+            f"Successfully connected to **{title}**\nNow manage your group from my pm !",
+            quote=True,
+            parse_mode="md"
+        )
+        if chat_type in ["group", "supergroup"]:
+            try:
+                await client.send_message(
+                    userid,
+                    f"Connected to **{title}** !",
+                    parse_mode="md"
+                )
+            except:
+                pass
+    except Exception as e:
+        logger.exception(e)
+        try:
+            await add_connection(str(userid), str(group_id))
             await message.reply_text(
                 f"Successfully connected to **{title}**\nNow manage your group from my pm !",
                 quote=True,
                 parse_mode="md"
             )
-            if chat_type in ["group", "supergroup"]:
-                try:
-                    await client.send_message(
-                        userid,
-                        f"Connected to **{title}** !",
-                        parse_mode="md"
-                    )
-                except:
-                    pass
-        else:
-            await message.reply_text(
-                "You're already connected to this chat!",
-                quote=True
-            )
-    except Exception as e:
-        logger.exception(e)
-        # Fallback in case add_connection takes (group_id, userid)
-        try:
-            addcon2 = await add_connection(str(group_id), str(userid))
-            if addcon2:
-                await message.reply_text(
-                    f"Successfully connected to **{title}**\nNow manage your group from my pm !",
-                    quote=True,
-                    parse_mode="md"
-                )
-            else:
-                await message.reply_text(
-                    "You're already connected to this chat!",
-                    quote=True
-                )
         except Exception as err:
             logger.exception(err)
             await message.reply_text('Some error occurred! Try again later.', quote=True)
