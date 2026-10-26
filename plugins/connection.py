@@ -2,9 +2,6 @@ from pyrogram import filters, Client
 from pyrogram.types import InlineKeyboardButton, InlineKeyboardMarkup
 from database.connections_mdb import add_connection, all_connections, if_active, delete_connection
 from info import ADMINS
-import logging
-
-logger = logging.getLogger(__name__)
 
 
 @Client.on_message((filters.private | filters.group) & filters.command('connect') & filters.user(ADMINS))
@@ -41,8 +38,7 @@ async def addconnection(client, message):
     try:
         chat = await client.get_chat(group_id)
         title = chat.title
-    except Exception as e:
-        logger.exception(e)
+    except Exception:
         title = "Group"
 
     try:
@@ -50,8 +46,8 @@ async def addconnection(client, message):
             await add_connection(str(group_id), str(userid))
         except:
             await add_connection(str(userid), str(group_id))
-    except Exception as db_err:
-        logger.exception(db_err)
+    except Exception:
+        pass
 
     try:
         await message.reply_text(
