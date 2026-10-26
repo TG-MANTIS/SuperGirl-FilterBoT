@@ -15,7 +15,6 @@ async def addconnection(client, message):
         return await message.reply(f"You are anonymous admin. Use /connect {message.chat.id} in PM")
     
     chat_type = message.chat.type
-    group_id = None
 
     if chat_type == "private":
         try:
@@ -23,6 +22,9 @@ async def addconnection(client, message):
             group_id_str = group_id_str.strip()
             if group_id_str.startswith("-") or group_id_str.isdigit():
                 group_id = int(group_id_str)
+            else:
+                await message.reply_text("<b>Enter in correct format!</b>\n\n<code>/connect groupid</code>", quote=True)
+                return
         except Exception:
             await message.reply_text(
                 "<b>Enter in correct format!</b>\n\n"
@@ -33,9 +35,7 @@ async def addconnection(client, message):
             return
     elif chat_type in ["group", "supergroup"]:
         group_id = message.chat.id
-
-    if not group_id:
-        await message.reply_text("Invalid Group ID!", quote=True)
+    else:
         return
 
     try:
