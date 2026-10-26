@@ -41,7 +41,8 @@ async def addconnection(client, message):
         title = "Group"
 
     try:
-        addcon = await add_connection(str(group_id), str(userid))
+        # Try passing user id first as expected by disconnect function
+        addcon = await add_connection(str(userid), str(group_id))
         if addcon:
             await message.reply_text(
                 f"Successfully connected to **{title}**\nNow manage your group from my pm !",
@@ -49,11 +50,14 @@ async def addconnection(client, message):
                 parse_mode="md"
             )
             if chat_type in ["group", "supergroup"]:
-                await client.send_message(
-                    userid,
-                    f"Connected to **{title}** !",
-                    parse_mode="md"
-                )
+                try:
+                    await client.send_message(
+                        userid,
+                        f"Connected to **{title}** !",
+                        parse_mode="md"
+                    )
+                except:
+                    pass
         else:
             await message.reply_text(
                 "You're already connected to this chat!",
@@ -61,8 +65,24 @@ async def addconnection(client, message):
             )
     except Exception as e:
         logger.exception(e)
-        await message.reply_text('Some error occurred! Try again later.', quote=True)
-        return
+        # Fallback in case add_connection takes (group_id, userid)
+        try:
+            addcon2 = await add_connection(str(group_id), str(userid))
+            if addcon2:
+                await message.reply_text(
+                    f"Successfully connected to **{title}**\nNow manage your group from my pm !",
+                    quote=True,
+                    parse_mode="md"
+                )
+            else:
+                await message.reply_text(
+                    "You're already connected to this chat!",
+                    quote=True
+                )
+        except Exception as err:
+            logger.exception(err)
+            await message.reply_text('Some error occurred! Try again later.', quote=True)
+            return
 
 
 @Client.on_message((filters.private | filters.group) & filters.command('disconnect') & filters.user(ADMINS))
