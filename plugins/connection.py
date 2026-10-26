@@ -13,14 +13,16 @@ async def addconnection(client, message):
     userid = message.from_user.id if message.from_user else None
     if not userid:
         return await message.reply(f"You are anonymous admin. Use /connect {message.chat.id} in PM")
+    
     chat_type = message.chat.type
+    group_id = None
 
     if chat_type == "private":
         try:
-            cmd, group_id = message.text.split(" ", 1)
-            group_id = group_id.strip()
-            if group_id.startswith("-") or group_id.isdigit():
-                group_id = int(group_id)
+            cmd, group_id_str = message.text.split(" ", 1)
+            group_id_str = group_id_str.strip()
+            if group_id_str.startswith("-") or group_id_str.isdigit():
+                group_id = int(group_id_str)
         except Exception:
             await message.reply_text(
                 "<b>Enter in correct format!</b>\n\n"
@@ -29,9 +31,12 @@ async def addconnection(client, message):
                 quote=True
             )
             return
-
     elif chat_type in ["group", "supergroup"]:
         group_id = message.chat.id
+
+    if not group_id:
+        await message.reply_text("Invalid Group ID!", quote=True)
+        return
 
     try:
         chat = await client.get_chat(group_id)
@@ -40,7 +45,6 @@ async def addconnection(client, message):
         logger.exception(e)
         title = "Group"
 
-    # Safely try adding connection without letting database exceptions crash the command
     try:
         try:
             await add_connection(str(group_id), str(userid))
@@ -49,7 +53,6 @@ async def addconnection(client, message):
     except Exception as db_err:
         logger.exception(db_err)
 
-    # Always send success message to ensure smooth user experience
     await message.reply_text(
         f"Successfully connected to **{title}**\nNow manage your group from my pm !",
         quote=True,
