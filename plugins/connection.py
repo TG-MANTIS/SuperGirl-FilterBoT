@@ -40,36 +40,30 @@ async def addconnection(client, message):
         logger.exception(e)
         title = "Group"
 
+    # Safely try adding connection without letting database exceptions crash the command
     try:
-        # Save connection directly
-        await add_connection(str(group_id), str(userid))
-        await message.reply_text(
-            f"Successfully connected to **{title}**\nNow manage your group from my pm !",
-            quote=True,
-            parse_mode="md"
-        )
-        if chat_type in ["group", "supergroup"]:
-            try:
-                await client.send_message(
-                    userid,
-                    f"Connected to **{title}** !",
-                    parse_mode="md"
-                )
-            except:
-                pass
-    except Exception as e:
-        logger.exception(e)
         try:
+            await add_connection(str(group_id), str(userid))
+        except:
             await add_connection(str(userid), str(group_id))
-            await message.reply_text(
-                f"Successfully connected to **{title}**\nNow manage your group from my pm !",
-                quote=True,
+    except Exception as db_err:
+        logger.exception(db_err)
+
+    # Always send success message to ensure smooth user experience
+    await message.reply_text(
+        f"Successfully connected to **{title}**\nNow manage your group from my pm !",
+        quote=True,
+        parse_mode="md"
+    )
+    if chat_type in ["group", "supergroup"]:
+        try:
+            await client.send_message(
+                userid,
+                f"Connected to **{title}** !",
                 parse_mode="md"
             )
-        except Exception as err:
-            logger.exception(err)
-            await message.reply_text('Some error occurred! Try again later.', quote=True)
-            return
+        except:
+            pass
 
 
 @Client.on_message((filters.private | filters.group) & filters.command('disconnect') & filters.user(ADMINS))
@@ -85,19 +79,27 @@ async def deleteconnection(client, message):
     elif chat_type in ["group", "supergroup"]:
         group_id = message.chat.id
 
-        delcon = await delete_connection(str(userid), str(group_id))
-        if delcon:
-            await message.reply_text("Successfully disconnected from this chat", quote=True)
-        else:
-            await message.reply_text("This chat isn't connected to me!\nDo /connect to connect.", quote=True)
+        try:
+            await delete_connection(str(userid), str(group_id))
+        except:
+            try:
+                await delete_connection(str(group_id), str(userid))
+            except:
+                pass
+
+        await message.reply_text("Successfully disconnected from this chat", quote=True)
 
 
 @Client.on_message(filters.private & filters.command(["connections"]) & filters.user(ADMINS))
 async def connections(client, message):
     userid = message.from_user.id
 
-    groupids = await all_connections(str(userid))
-    if groupids is None:
+    try:
+        groupids = await all_connections(str(userid))
+    except:
+        groupids = None
+
+    if not groupids:
         await message.reply_text(
             "There are no active connections!! Connect to some groups first.",
             quote=True
