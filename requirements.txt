@@ -4,6 +4,7 @@ motor==2.5.1
 pymongo[srv]==3.12.3
 marshmallow==3.14.1
 umongo==3.0.1
+Cinemagoer
 aiohttp
 Aiofiles
 psutil==5.9.4
