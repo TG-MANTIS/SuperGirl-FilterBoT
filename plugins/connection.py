@@ -4,6 +4,7 @@ from database.connections_mdb import add_connection, all_connections, if_active,
 from info import ADMINS
 import logging
 
+# Set logger level correctly using logging module directly
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.ERROR)
 
