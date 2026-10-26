@@ -5,7 +5,7 @@ from info import ADMINS
 import logging
 
 logger = logging.getLogger(__name__)
-logger.setLevel(logging.ERROR)
+logger.setLevel(logger.ERROR)
 
 
 @Client.on_message((filters.private | filters.group) & filters.command('connect') & filters.user(ADMINS))
@@ -15,6 +15,7 @@ async def addconnection(client, message):
         return await message.reply(f"You are anonymous admin. Use /connect {message.chat.id} in PM")
     
     chat_type = message.chat.type
+    group_id = None
 
     if chat_type == "private":
         try:
@@ -53,17 +54,19 @@ async def addconnection(client, message):
     except Exception as db_err:
         logger.exception(db_err)
 
-    await message.reply_text(
-        f"Successfully connected to **{title}**\nNow manage your group from my pm !",
-        quote=True,
-        parse_mode="md"
-    )
+    try:
+        await message.reply_text(
+            f"Successfully connected to **{title}**\nNow manage your group from my pm !",
+            quote=True
+        )
+    except:
+        pass
+
     if chat_type in ["group", "supergroup"]:
         try:
             await client.send_message(
                 userid,
-                f"Connected to **{title}** !",
-                parse_mode="md"
+                f"Connected to **{title}** !"
             )
         except:
             pass
