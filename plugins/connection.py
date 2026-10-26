@@ -5,7 +5,7 @@ from info import ADMINS
 import logging
 
 logger = logging.getLogger(__name__)
-logger.setLevel(logger.ERROR)
+logger.setLevel(logging.ERROR)
 
 
 @Client.on_message((filters.private | filters.group) & filters.command('connect') & filters.user(ADMINS))
