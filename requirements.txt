@@ -1,1 +1,16 @@
+Pyrogram==2.3.43
+tgcrypto
+motor==2.5.1
+pymongo[srv]==3.12.3
+aiohttp
+Aiofiles
+psutil==5.9.4
+Pillow
+requests
+yt-dlp
+pytz
+python-dotenv
+git+https://github.com/agronholm/anyio
+jinja2
+telegraph
 
