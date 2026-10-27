@@ -783,7 +783,7 @@ async def auto_filter(client, msg, spoll=False):
     else:
         cap = f"<b>🎬 Rᴇǫᴜᴇsᴛᴇᴅ Mᴏᴠɪᴇ Nᴀᴍᴇ :</b><code>{search}</code>\n\n<b><u>‼️ Note : Files Sended To PM Check In Private</u></b>"
 
-    # If IMDb setting is True/ON and poster is available, send IMDb poster. Otherwise, strictly use NOR_IMG (Random Photo).
+    # STRICT LOGIC: If IMDb is enabled (True) AND poster exists, send IMDb poster. Otherwise (if IMDb is False/OFF or poster fails), strictly use NOR_IMG.
     if settings.get("imdb", True) and imdb and imdb.get('poster'):
         try:
             hehe = await message.reply_photo(photo=imdb.get('poster'), caption=cap, reply_markup=InlineKeyboardMarkup(btn))
@@ -795,8 +795,10 @@ async def auto_filter(client, msg, spoll=False):
             await message.reply_photo(photo=poster, caption=cap[:1024], reply_markup=InlineKeyboardMarkup(btn))
         except Exception as e:
             logger.exception(e)
+            # If IMDb is ON but poster loading fails due to database/network error, fallback to NOR_IMG as a last resort
             await message.reply_photo(photo=NOR_IMG, caption=cap, reply_markup=InlineKeyboardMarkup(btn))
     else:
+        # When IMDb is OFF (False), strictly use the default random photo (NOR_IMG)
         await message.reply_photo(photo=NOR_IMG, caption=cap, reply_markup=InlineKeyboardMarkup(btn))
         
     if spoll:
