@@ -21,7 +21,6 @@ BTN_URL_REGEX = re.compile(
     r"(\[([^\[]+?)\]\((buttonurl|buttonalert):(?:/{0,2})(.+?)(:same)?\))"
 )
 
-# ഇവിടെയാണ് മാറ്റം വരുത്തിയത് ('http' ഒഴിവാക്കി വെറും IMDb() നൽകി)
 imdb = IMDb()
 
 BANNED = {}
@@ -73,6 +72,7 @@ async def get_poster(query, bulk=False, id=False, file=None):
                     year = list_to_str(year[:1]) 
             else:
                 year = None
+            
             movieid = imdb.search_movie(title.lower(), results=10)
             if not movieid:
                 return None
@@ -90,13 +90,18 @@ async def get_poster(query, bulk=False, id=False, file=None):
             movieid = movieid[0].movieID
         else:
             movieid = query
+        
         movie = imdb.get_movie(movieid)
+        if not movie:
+            return None
+            
         if movie.get("original air date"):
             date = movie["original air date"]
         elif movie.get("year"):
             date = movie.get("year")
         else:
             date = "N/A"
+            
         plot = ""
         if not LONG_IMDB_DESCRIPTION:
             plot = movie.get('plot')
@@ -122,10 +127,10 @@ async def get_poster(query, bulk=False, id=False, file=None):
             "certificates": list_to_str(movie.get("certificates")),
             "languages": list_to_str(movie.get("languages")),
             "director": list_to_str(movie.get("director")),
-            "writer":list_to_str(movie.get("writer")),
-            "producer":list_to_str(movie.get("producer")),
-            "composer":list_to_str(movie.get("composer")) ,
-            "cinematographer":list_to_str(movie.get("cinematographer")),
+            "writer": list_to_str(movie.get("writer")),
+            "producer": list_to_str(movie.get("producer")),
+            "composer": list_to_str(movie.get("composer")),
+            "cinematographer": list_to_str(movie.get("cinematographer")),
             "music_team": list_to_str(movie.get("music department")),
             "distributors": list_to_str(movie.get("distributors")),
             'release_date': date,
@@ -134,10 +139,9 @@ async def get_poster(query, bulk=False, id=False, file=None):
             'poster': movie.get('full-size cover url'),
             'plot': plot,
             'rating': str(movie.get("rating")),
-            'url':f'https://www.imdb.com/title/tt{movieid}'
+            'url': f'https://www.imdb.com/title/tt{movieid}'
         }
     except Exception as e:
-        logger.exception(f"IMDb Error: {e}")
         return None
 
 async def broadcast_messages(user_id, message):
