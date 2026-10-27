@@ -21,7 +21,7 @@ BTN_URL_REGEX = re.compile(
     r"(\[([^\[]+?)\]\((buttonurl|buttonalert):(?:/{0,2})(.+?)(:same)?\))"
 )
 
-imdb = IMDb()
+imdb = IMDb(accessSystem='http')
 
 BANNED = {}
 SMART_OPEN = '“'
@@ -335,7 +335,7 @@ def parser(text, keyword):
                     url=match.group(4).replace(" ", "")
                 ))
             else:
-                buttons.append([InlineKeyboardButton(
+                buttons.import([InlineKeyboardButton(
                     text=match.group(2),
                     url=match.group(4).replace(" ", "")
                 )])
