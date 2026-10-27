@@ -730,11 +730,9 @@ async def auto_filter(client, msg, spoll=False):
             [InlineKeyboardButton(text="Dᴇʟᴇᴛᴇ 🗑️", callback_data="close_data")]
         )
 
+    # STRICT ORIGINAL LOGIC WITH SAFE TRY-EXCEPT FOR DATABASE ERRORS
     imdb = None
-    is_imdb_on = settings.get("imdb", True)
-
-    # Fetch IMDb only if setting is explicitly ON (True)
-    if is_imdb_on:
+    if settings.get("imdb", True):
         try:
             imdb = await get_poster(search, file=(files[0]).file_name)
         except Exception as e:
@@ -742,67 +740,62 @@ async def auto_filter(client, msg, spoll=False):
             imdb = None
 
     TEMPLATE = settings.get('template') or IMDB_TEMPLATE
-    if imdb and is_imdb_on:
+    if imdb and settings.get("imdb", True):
         try:
             cap = TEMPLATE.format(
                 query=search,
-                title=imdb.get('title', search),
-                votes=imdb.get('votes', 'N/A'),
-                aka=imdb.get("aka", 'N/A'),
-                seasons=imdb.get("seasons", 'N/A'),
-                box_office=imdb.get('box_office', 'N/A'),
-                localized_title=imdb.get('localized_title', 'N/A'),
-                kind=imdb.get('kind', 'movie'),
-                imdb_id=imdb.get("imdb_id", 'N/A'),
-                cast=imdb.get("cast", 'N/A'),
-                runtime=imdb.get("runtime", 'N/A'),
-                countries=imdb.get("countries", 'N/A'),
-                certificates=imdb.get("certificates", 'N/A'),
-                languages=imdb.get("languages", 'N/A'),
-                director=imdb.get("director", 'N/A'),
-                writer=imdb.get("writer", 'N/A'),
-                producer=imdb.get("producer", 'N/A'),
-                composer=imdb.get("composer", 'N/A'),
-                cinematographer=imdb.get("cinematographer", 'N/A'),
-                music_team=imdb.get("music department", 'N/A'),
-                distributors=imdb.get("distributors", 'N/A'),
-                release_date=imdb.get('release_date', 'N/A'),
-                year=imdb.get('year', 'N/A'),
-                genres=imdb.get('genres', 'N/A'),
-                poster=imdb.get('poster', ''),
-                plot=imdb.get('plot', 'N/A'),
-                rating=imdb.get('rating', 'N/A'),
-                url=imdb.get('url', ''),
+                title=imdb['title'],
+                votes=imdb['votes'],
+                aka=imdb["aka"],
+                seasons=imdb["seasons"],
+                box_office=imdb['box_office'],
+                localized_title=imdb['localized_title'],
+                kind=imdb['kind'],
+                imdb_id=imdb["imdb_id"],
+                cast=imdb["cast"],
+                runtime=imdb["runtime"],
+                countries=imdb["countries"],
+                certificates=imdb["certificates"],
+                languages=imdb["languages"],
+                director=imdb["director"],
+                writer=imdb["writer"],
+                producer=imdb["producer"],
+                composer=imdb["composer"],
+                cinematographer=imdb["cinematographer"],
+                music_team=imdb["music_team"],
+                distributors=imdb["distributors"],
+                release_date=imdb['release_date'],
+                year=imdb['year'],
+                genres=imdb['genres'],
+                poster=imdb['poster'],
+                plot=imdb['plot'],
+                rating=imdb['rating'],
+                url=imdb['url'],
                 **locals()
             )
         except Exception as err:
             logger.exception(err)
-            cap = f"<b>🎬 Rᴇǫᴜᴇsᴛᴇᴅ Mᴏᴠɪᴇ Nᴀᴍᴇ :</b><code>{search}</code>\n\n<b><u>‼️ Note : Files Sended To PM Check In Private</u></b>"
+            cap = f"<b>📁 Found</b> {total_results} <b>Files For</b> {search} \n\n<i>⚡ Uploaded By</i> @cinema_filx_updates"
     else:
-        cap = f"<b>🎬 Rᴇǫᴜᴇsᴛᴇᴅ Mᴏᴠɪᴇ Nᴀᴍᴇ :</b><code>{search}</code>\n\n<b><u>‼️ Note : Files Sended To PM Check In Private</u></b>"
+        cap = f"<b>📁 Found</b> {total_results} <b>Files For</b> {search} \n\n<i>⚡ Uploaded By</i> @cinema_filx_updates"
 
-    # STRICT LOGIC FOR POSTER DISPLAY:
-    # 1. If IMDb setting is ON (True) AND poster exists -> Send IMDb Poster.
-    # 2. If IMDb setting is ON (True) but IMDb database lookup failed -> Send NOR_IMG (fallback so it doesn't crash).
-    # 3. If IMDb setting is OFF (False/No) -> Strictly send NOR_IMG (Custom Random Photo) always.
-    
-    if is_imdb_on and imdb and imdb.get('poster'):
+    # EXACT ORIGINAL REPLY LOGIC BASED ON YOUR CODE:
+    # If IMDb setting is ON and imdb poster is found -> Send IMDb Poster.
+    # If IMDb setting is OFF (False) -> Strictly bypass IMDb and send NOR_IMG (Custom Random Photo).
+    if settings.get("imdb", True) and imdb and imdb.get('poster'):
         try:
-            hehe = await message.reply_photo(photo=imdb.get('poster'), caption=cap, reply_markup=InlineKeyboardMarkup(btn))
-            await asyncio.sleep(9999)
-            await hehe.delete()
+            await message.reply_photo(photo=imdb.get('poster'), caption=cap[:1024],
+                                      reply_markup=InlineKeyboardMarkup(btn))
         except (MediaEmpty, PhotoInvalidDimensions, WebpageMediaEmpty):
             pic = imdb.get('poster')
             poster = pic.replace('.jpg', "._V1_UX360.jpg")
             await message.reply_photo(photo=poster, caption=cap[:1024], reply_markup=InlineKeyboardMarkup(btn))
         except Exception as e:
             logger.exception(e)
+            # Fallback if poster sending fails
             await message.reply_photo(photo=NOR_IMG, caption=cap, reply_markup=InlineKeyboardMarkup(btn))
-    elif is_imdb_on and not (imdb and imdb.get('poster')):
-        # IMDb is ON, but poster lookup failed due to database missing table error -> Fallback to NOR_IMG
-        await message.reply_photo(photo=NOR_IMG, caption=cap, reply_markup=InlineKeyboardMarkup(btn))
     else:
-        # IMDb is explicitly OFF (False) -> Strictly use NOR_IMG (Custom Random Photo)
+        # When IMDb is OFF (No) or IMDb data not found -> Strictly use NOR_IMG (Custom Random Photo)
         await message.reply_photo(photo=NOR_IMG, caption=cap, reply_markup=InlineKeyboardMarkup(btn))
         
     if spoll:
