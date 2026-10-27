@@ -25,7 +25,7 @@ from database.filters_mdb import (
 import logging
 
 logger = logging.getLogger(__name__)
-logger.setLevel(logger.ERROR)
+logger.setLevel(logging.INFO)
 
 PM_BUTTONS = {}
 BUTTONS = {}
@@ -87,7 +87,7 @@ async def next_page(bot, query):
     chat_id = query.message.chat.id
     settings = await get_settings(chat_id)
     
-    # --- [MODIFIED PART: DUAL BUTTON PATTERN FOR SERIES VS MOVIES IN NEXT PAGE] ---
+    # Dual Button Pattern for Series vs Movies in Next Page
     is_series = bool(re.search(r's\d+e\d+|season|episode|ep\d+|bbhin|bigg boss', search, re.IGNORECASE)) or any(re.search(r's\d+e\d+|season|episode|ep\d+', f.file_name, re.IGNORECASE) for f in files)
     
     if is_series:
@@ -95,7 +95,6 @@ async def next_page(bot, query):
         for file in files:
             f_name = file.file_name
             f_size = get_size(file.file_size)
-            # Extract Season & Episode if available
             se_match = re.search(r'(s\d+\s*e\d+|season\s*\d+|ep\s*\d+)', f_name, re.IGNORECASE)
             se_tag = f"[{se_match.group(0).upper()}] " if se_match else ""
             
@@ -127,7 +126,6 @@ async def next_page(bot, query):
                 ]
                for file in files
             ] 
-    # --- [MODIFIED PART END] ---
 
     btn.insert(0, 
         [
@@ -676,8 +674,7 @@ async def auto_filter(client, msg, spoll=False):
         search, files, offset, total_results = spoll
     pre = 'filep' if settings['file_secure'] else 'file'
     
-    # --- [MODIFIED PART: DUAL BUTTON PATTERN FOR SERIES VS MOVIES] ---
-    # Detect if search query or file names contain series pattern (e.g. S01E01, season, episode, bigg boss, etc.)
+    # Dual Button Pattern for Series vs Movies
     is_series = bool(re.search(r's\d+e\d+|season|episode|ep\d+|bbhin|bigg boss', search, re.IGNORECASE)) or any(re.search(r's\d+e\d+|season|episode|ep\d+', f.file_name, re.IGNORECASE) for f in files)
     
     if is_series:
@@ -685,7 +682,6 @@ async def auto_filter(client, msg, spoll=False):
         for file in files:
             f_name = file.file_name
             f_size = get_size(file.file_size)
-            # Extract Season & Episode if available
             se_match = re.search(r'(s\d+\s*e\d+|season\s*\d+|ep\s*\d+)', f_name, re.IGNORECASE)
             se_tag = f"[{se_match.group(0).upper()}] " if se_match else ""
             
@@ -718,7 +714,6 @@ async def auto_filter(client, msg, spoll=False):
                 ]
                 for file in files
             ]   
-    # --- [MODIFIED PART END] ---
 
     btn.insert(0, 
         [
