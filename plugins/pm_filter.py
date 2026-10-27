@@ -513,13 +513,63 @@ async def cb_handler(client: Client, query: CallbackQuery):
         else:
             await query.answer("🔮 𝐈𝐧𝐟𝐨𝐫𝐦𝐚𝐭𝐢𝐨𝐧 🔮\n\nIt's only for my admins\n\n©𝐓𝐞𝐚𝐦 𝐂𝐢𝐧𝐞𝐦𝐚 𝐅𝐢𝐥𝐱™️", show_alert=True)
             await query.message.edit_text(text="umfi അല്ലെ 😂 എത്ര നോക്കി നിന്നാലും നിനക്ക് കാണാൻ പറ്റില്ല 😎", reply_markup=reply_markup)
+    elif query.data.startswith("set_group_menu#"):
+        _, grp_id = query.data.split("#")
+        grpid = int(grp_id)
+        
+        user_id = query.from_user.id
+        try:
+            member = await client.get_chat_member(grpid, user_id)
+            if not (member.status in [enums.ChatMemberStatus.OWNER, enums.ChatMemberStatus.ADMINISTRATOR] or user_id in ADMINS):
+                return await query.answer("⚠️ You need to be an Admin to change settings!", show_alert=True)
+        except:
+            pass
+
+        settings = await get_settings(grpid)
+        if settings is not None:
+            buttons = [
+                [
+                    InlineKeyboardButton('Filter Button', callback_data=f'setgs#button#{settings["button"]}#{str(grpid)}'),
+                    InlineKeyboardButton('Single' if settings["button"] else 'Double', callback_data=f'setgs#button#{settings["button"]}#{str(grpid)}')
+                ],
+                [
+                    InlineKeyboardButton('Bot PM', callback_data=f'setgs#botpm#{settings["botpm"]}#{str(grpid)}'),
+                    InlineKeyboardButton('✅ Yes' if settings["botpm"] else '❌ No', callback_data=f'setgs#botpm#{settings["botpm"]}#{str(grpid)}')
+                ],
+                [
+                    InlineKeyboardButton('File Secure', callback_data=f'setgs#file_secure#{settings["file_secure"]}#{str(grpid)}'),
+                    InlineKeyboardButton('✅ Yes' if settings["file_secure"] else '❌ No', callback_data=f'setgs#file_secure#{settings["file_secure"]}#{str(grpid)}')
+                ],
+                [
+                    InlineKeyboardButton('IMDB', callback_data=f'setgs#imdb#{settings["imdb"]}#{str(grpid)}'),
+                    InlineKeyboardButton('✅ Yes' if settings["imdb"] else '❌ No', callback_data=f'setgs#imdb#{settings["imdb"]}#{str(grpid)}')
+                ],
+                [
+                    InlineKeyboardButton('Spell Check', callback_data=f'setgs#spell_check#{settings["spell_check"]}#{str(grpid)}'),
+                    InlineKeyboardButton('✅ Yes' if settings["spell_check"] else '❌ No', callback_data=f'setgs#spell_check#{settings["spell_check"]}#{str(grpid)}')
+                ],
+                [
+                    InlineKeyboardButton('Welcome', callback_data=f'setgs#welcome#{settings["welcome"]}#{str(grpid)}'),
+                    InlineKeyboardButton('✅ Yes' if settings["welcome"] else '❌ No', callback_data=f'setgs#welcome#{settings["welcome"]}#{str(grpid)}')
+                ],
+                [
+                    InlineKeyboardButton('🔒 Close Menu', callback_data='close_data')
+                ]
+            ]
+            reply_markup = InlineKeyboardMarkup(buttons)
+            await query.message.edit_text(f"<b>⚙️ Group Settings for {query.message.chat.title}</b>", reply_markup=reply_markup)
+        await query.answer()
     elif query.data.startswith("setgs"):
         ident, set_type, status, grp_id = query.data.split("#")
-        grpid = await active_connection(str(query.from_user.id))
+        grpid = int(grp_id)
 
-        if str(grp_id) != str(grpid):
-            await query.message.edit("Your Active Connection Has Been Changed. Go To /settings.")
-            return await query.answer('♥️hello Bro Please Share And Support ')
+        user_id = query.from_user.id
+        try:
+            member = await client.get_chat_member(grpid, user_id)
+            if not (member.status in [enums.ChatMemberStatus.OWNER, enums.ChatMemberStatus.ADMINISTRATOR] or user_id in ADMINS):
+                return await query.answer("⚠️ You need to be an Admin to change settings!", show_alert=True)
+        except:
+            pass
 
         if status == "True":
             await save_group_settings(grpid, set_type, False)
@@ -562,6 +612,9 @@ async def cb_handler(client: Client, query: CallbackQuery):
                     InlineKeyboardButton('Welcome', callback_data=f'setgs#welcome#{settings["welcome"]}#{str(grp_id)}'),
                     InlineKeyboardButton('✅ Yes' if settings["welcome"] else '❌ No',
                                          callback_data=f'setgs#welcome#{settings["welcome"]}#{str(grp_id)}')
+                ],
+                [
+                    InlineKeyboardButton('🔒 Close Menu', callback_data='close_data')
                 ]
             ]
             reply_markup = InlineKeyboardMarkup(buttons)
