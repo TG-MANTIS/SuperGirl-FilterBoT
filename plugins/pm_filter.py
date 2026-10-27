@@ -662,7 +662,7 @@ async def auto_filter(client, msg, spoll=False):
             search = message.text
             files, offset, total_results = await get_search_results(search.lower(), offset=0, filter=True)
             if not files:
-                if settings["spell_check"]:
+                if settings.get("spell_check", True):
                     return await advantage_theater_only_chok(msg)
                 else:
                     return
@@ -672,7 +672,7 @@ async def auto_filter(client, msg, spoll=False):
         settings = await get_settings(msg.message.chat.id)
         message = msg.message.reply_to_message  # msg will be callback query
         search, files, offset, total_results = spoll
-    pre = 'filep' if settings['file_secure'] else 'file'
+    pre = 'filep' if settings.get('file_secure', False) else 'file'
     
     # Dual Button Pattern for Series vs Movies
     is_series = bool(re.search(r's\d+e\d+|season|episode|ep\d+|bbhin|bigg boss', search, re.IGNORECASE)) or any(re.search(r's\d+e\d+|season|episode|ep\d+', f.file_name, re.IGNORECASE) for f in files)
@@ -691,7 +691,7 @@ async def auto_filter(client, msg, spoll=False):
                 )
             ])
     else:
-        if settings["button"]:
+        if settings.get('button', True):
             btn = [
                 [
                     InlineKeyboardButton(
@@ -744,7 +744,7 @@ async def auto_filter(client, msg, spoll=False):
             imdb = None
 
     TEMPLATE = settings.get('template') or IMDB_TEMPLATE
-    if imdb:
+    if imdb and settings.get("imdb", True):
         try:
             cap = TEMPLATE.format(
                 query=search,
@@ -766,7 +766,7 @@ async def auto_filter(client, msg, spoll=False):
                 producer=imdb.get("producer", 'N/A'),
                 composer=imdb.get("composer", 'N/A'),
                 cinematographer=imdb.get("cinematographer", 'N/A'),
-                music_team=imdb.get("music_team", 'N/A'),
+                music_team=imdb.get("music department", 'N/A'),
                 distributors=imdb.get("distributors", 'N/A'),
                 release_date=imdb.get('release_date', 'N/A'),
                 year=imdb.get('year', 'N/A'),
@@ -783,7 +783,8 @@ async def auto_filter(client, msg, spoll=False):
     else:
         cap = f"<b>🎬 Rᴇǫᴜᴇsᴛᴇᴅ Mᴏᴠɪᴇ Nᴀᴍᴇ :</b><code>{search}</code>\n\n<b><u>‼️ Note : Files Sended To PM Check In Private</u></b>"
 
-    if imdb and imdb.get('poster'):
+    # If IMDb setting is True/ON and poster is available, send IMDb poster. Otherwise, strictly use NOR_IMG (Random Photo).
+    if settings.get("imdb", True) and imdb and imdb.get('poster'):
         try:
             hehe = await message.reply_photo(photo=imdb.get('poster'), caption=cap, reply_markup=InlineKeyboardMarkup(btn))
             await asyncio.sleep(9999)
@@ -791,12 +792,13 @@ async def auto_filter(client, msg, spoll=False):
         except (MediaEmpty, PhotoInvalidDimensions, WebpageMediaEmpty):
             pic = imdb.get('poster')
             poster = pic.replace('.jpg', "._V1_UX360.jpg")
-            fmsg = await message.reply_photo(photo=poster, caption=cap[:1024], reply_markup=InlineKeyboardMarkup(btn))
+            await message.reply_photo(photo=poster, caption=cap[:1024], reply_markup=InlineKeyboardMarkup(btn))
         except Exception as e:
             logger.exception(e)
             await message.reply_photo(photo=NOR_IMG, caption=cap, reply_markup=InlineKeyboardMarkup(btn))
     else:
         await message.reply_photo(photo=NOR_IMG, caption=cap, reply_markup=InlineKeyboardMarkup(btn))
+        
     if spoll:
         await msg.message.delete()
 
