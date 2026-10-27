@@ -25,12 +25,17 @@ from database.filters_mdb import (
 import logging
 
 logger = logging.getLogger(__name__)
-logger.setLevel(logging.ERROR)
+logger.setLevel(logger.ERROR)
 
 PM_BUTTONS = {}
 BUTTONS = {}
 SPELL_CHECK = {}
-NON_IMG ="""<b><i>👋Hello <a href=tg://settings >My Friend</a></i></b>\n\n<b>❝ <i>Use the Button Below to Search on Google or IMDB And Copy the Correct Movie Name And Paste.</i></b>\n\n<b>❝ <i>Don't Ask Movies that Are Not Released in OTT Platform.</i></b>\n\n<b>❝ <i>Try to Ask in [ Movie name, Year ] This Fromat.</i></b>\n\n<i><b><u>⚠️ Don't Use: ➲ [+:;'*!-&.. etc</i></b></u>"""
+
+# Spell check message for movies/series with spelling mistakes or available on search
+NON_IMG = """<b><i>👋Hello {user_mention}</i></b>\n\n<b>❝ <i>Use the Button Below to Search on Google or IMDB And Copy the Correct Movie/Series Name And Paste.</i></b>\n\n<b>❝ <i>Don't Ask Movies/Series that Are Not Released in OTT Platform.</i></b>\n\n<b>❝ <i>Try to Ask in [ Name, Year ] This Fromat.</i></b>\n\n<i><b><u>⚠️ Don't Use: ➲ [+:;'*!-&.. etc</i></b></u>"""
+
+# OTT Not Released / Theater only message for content not found in database
+OTT_NOT_RELEASED_TXT = """<b><i>👋Hello {user_mention}</i></b>\n\n<b>❌ <i>Requested Title : <code>{mv_rqst}</code></i></b>\n\n<b>❝ <i>ഈ മൂവി/സീരീസ് നിലവിൽ തിയേറ്ററിൽ/ഉറവിടത്തിൽ മാത്രമാണ് ഉള്ളത്. ഫയലുകൾ ലഭ്യമാക്കാൻ സാധിക്കില്ല.</i></b>"""
 
 
 @Client.on_message(filters.group & filters.text & filters.incoming)
@@ -39,6 +44,7 @@ async def give_filter(client, message):
     if k == False:
         await auto_filter(client, message)
 
+# Enabled auto filter in bot's private chat
 @Client.on_message(filters.private & filters.text & filters.incoming)
 async def pm_text(bot, message):
     content = message.text
@@ -46,14 +52,13 @@ async def pm_text(bot, message):
     user_id = message.from_user.id
     if content.startswith("/") or content.startswith("#"): return  # ignore commands and hashtags
     if user_id in ADMINS: return # ignore admins
-    await message.reply_text(
-         text=f"<b>❝ ഇവിടെ ചോദിച്ചാൽ സിനിമ കിട്ടില്ല ഗ്രൂപ്പിൽ മാത്രം സിനിമ ചോദിക്കുക..!!\n\n❝ Group or bot any promblem or bugs contact group owner = @TG_x_filter!!!</b>",   
-         reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("🎭Cinemaflix // #Backup-Group™🎭", url=f"https://t.me/+iEbhY7mM4oE1OTVl")]])
-    )
+    
     await bot.send_message(
         chat_id=LOG_CHANNEL,
         text=f"<b>#PM_MSG\n\n★Name : {user}\n\n★ID : {user_id}\n\n★Message : {content}</b>"
     ) 
+    
+    await auto_filter(bot, message)
 
 
 @Client.on_callback_query(filters.regex(r"^next"))
@@ -78,29 +83,51 @@ async def next_page(bot, query):
 
     if not files:
         return
-    settings = await get_settings(query.message.chat.id)
-    if settings['button']:
-        btn = [
-            [
+    
+    chat_id = query.message.chat.id
+    settings = await get_settings(chat_id)
+    
+    # --- [MODIFIED PART: DUAL BUTTON PATTERN FOR SERIES VS MOVIES IN NEXT PAGE] ---
+    is_series = bool(re.search(r's\d+e\d+|season|episode|ep\d+|bbhin|bigg boss', search, re.IGNORECASE)) or any(re.search(r's\d+e\d+|season|episode|ep\d+', f.file_name, re.IGNORECASE) for f in files)
+    
+    if is_series:
+        btn = []
+        for file in files:
+            f_name = file.file_name
+            f_size = get_size(file.file_size)
+            # Extract Season & Episode if available
+            se_match = re.search(r'(s\d+\s*e\d+|season\s*\d+|ep\s*\d+)', f_name, re.IGNORECASE)
+            se_tag = f"[{se_match.group(0).upper()}] " if se_match else ""
+            
+            btn.append([
                 InlineKeyboardButton(
-                    text=f"🔗 {get_size(file.file_size)}  {file.file_name}", callback_data=f'files#{file.file_id}'
-                ),
-            ]
-            for file in files
-        ]
+                    text=f"[{f_size}] {se_tag}{f_name}", callback_data=f'files#{file.file_id}'
+                )
+            ])
     else:
-        btn = [
-            [
-                InlineKeyboardButton(
-                    text=f"{file.file_name}", callback_data=f'files#{file.file_id}'
-                ),
-                InlineKeyboardButton(
-                    text=f"🔗 {get_size(file.file_size)}",
-                    callback_data=f'files_#{file.file_id}',
-                ),
+        if settings['button']:
+            btn = [
+                [
+                    InlineKeyboardButton(
+                        text=f"🔗 {get_size(file.file_size)}  {file.file_name}", callback_data=f'files#{file.file_id}'
+                    ),
+                ]
+                for file in files
             ]
-           for file in files
-        ] 
+        else:
+            btn = [
+                [
+                    InlineKeyboardButton(
+                        text=f"{file.file_name}", callback_data=f'files#{file.file_id}'
+                    ),
+                    InlineKeyboardButton(
+                        text=f"🔗 {get_size(file.file_size)}",
+                        callback_data=f'files_#{file.file_id}',
+                    ),
+                ]
+               for file in files
+            ] 
+    # --- [MODIFIED PART END] ---
 
     btn.insert(0, 
         [
@@ -364,7 +391,10 @@ async def cb_handler(client: Client, query: CallbackQuery):
         title = files.file_name
         size = get_size(files.file_size)
         f_caption = files.caption
-        settings = await get_settings(query.message.chat.id)
+        
+        chat_id = query.message.chat.id
+        settings = await get_settings(chat_id)
+        
         if CUSTOM_FILE_CAPTION:
             try:
                 f_caption = CUSTOM_FILE_CAPTION.format(file_name='' if title is None else title,
@@ -380,7 +410,7 @@ async def cb_handler(client: Client, query: CallbackQuery):
             if AUTH_CHANNEL and not await is_subscribed(client, query):
                 await query.answer(url=f"https://t.me/{temp.U_NAME}?start={ident}_{file_id}")
                 return
-            elif settings['botpm']:
+            elif settings['botpm'] and query.message.chat.type != enums.ChatType.PRIVATE:
                 await query.answer(url=f"https://t.me/{temp.U_NAME}?start={ident}_{file_id}")
                 return
             else:
@@ -625,7 +655,8 @@ async def cb_handler(client: Client, query: CallbackQuery):
 async def auto_filter(client, msg, spoll=False):
     if not spoll:
         message = msg
-        settings = await get_settings(message.chat.id)
+        chat_id = message.chat.id
+        settings = await get_settings(chat_id)
         if message.text.startswith("/"): return  # ignore commands
         if re.findall("((^\/|^,|^!|^\.|^[\U0001F600-\U000E007F]).*)", message.text):
             return
@@ -634,39 +665,61 @@ async def auto_filter(client, msg, spoll=False):
             files, offset, total_results = await get_search_results(search.lower(), offset=0, filter=True)
             if not files:
                 if settings["spell_check"]:
-                    return await advantage_spell_chok(msg)
+                    return await advantage_theater_only_chok(msg)
                 else:
                     return
         else:
             return
     else:
-        settings = await get_settings(message.chat.id)
+        settings = await get_settings(msg.message.chat.id)
         message = msg.message.reply_to_message  # msg will be callback query
         search, files, offset, total_results = spoll
     pre = 'filep' if settings['file_secure'] else 'file'
-    if settings["button"]:
-        btn = [
-            [
+    
+    # --- [MODIFIED PART: DUAL BUTTON PATTERN FOR SERIES VS MOVIES] ---
+    # Detect if search query or file names contain series pattern (e.g. S01E01, season, episode, bigg boss, etc.)
+    is_series = bool(re.search(r's\d+e\d+|season|episode|ep\d+|bbhin|bigg boss', search, re.IGNORECASE)) or any(re.search(r's\d+e\d+|season|episode|ep\d+', f.file_name, re.IGNORECASE) for f in files)
+    
+    if is_series:
+        btn = []
+        for file in files:
+            f_name = file.file_name
+            f_size = get_size(file.file_size)
+            # Extract Season & Episode if available
+            se_match = re.search(r'(s\d+\s*e\d+|season\s*\d+|ep\s*\d+)', f_name, re.IGNORECASE)
+            se_tag = f"[{se_match.group(0).upper()}] " if se_match else ""
+            
+            btn.append([
                 InlineKeyboardButton(
-                    text=f"🔗 {get_size(file.file_size)} {file.file_name}", callback_data=f'{pre}#{file.file_id}'
-                ),
-            ]
-            for file in files
-        ]
+                    text=f"[{f_size}] {se_tag}{f_name}", callback_data=f'{pre}#{file.file_id}'
+                )
+            ])
     else:
-        btn = [
-            [
-                InlineKeyboardButton(
-                    text=f"{file.file_name}",
-                    callback_data=f'{pre}#{file.file_id}',
-                ),
-                InlineKeyboardButton(
-                    text=f"🔗 {get_size(file.file_size)}",
-                    callback_data=f'{pre}#{file.file_id}',
-                ),
+        if settings["button"]:
+            btn = [
+                [
+                    InlineKeyboardButton(
+                        text=f"🔗 {get_size(file.file_size)} {file.file_name}", callback_data=f'{pre}#{file.file_id}'
+                    ),
+                ]
+                for file in files
             ]
-            for file in files
-        ]   
+        else:
+            btn = [
+                [
+                    InlineKeyboardButton(
+                        text=f"{file.file_name}",
+                        callback_data=f'{pre}#{file.file_id}',
+                    ),
+                    InlineKeyboardButton(
+                        text=f"🔗 {get_size(file.file_size)}",
+                        callback_data=f'{pre}#{file.file_id}',
+                    ),
+                ]
+                for file in files
+            ]   
+    # --- [MODIFIED PART END] ---
+
     btn.insert(0, 
         [
             InlineKeyboardButton(f'🎬 {search} 🎬', 'dupe')
@@ -684,44 +737,57 @@ async def auto_filter(client, msg, spoll=False):
         )
     else:
         btn.append(
-            [InlineKeyboardButton(text="📍 Nᴏ Mᴏʀᴇ Nᴇxᴛ Pᴀɢᴇꜱ 📍", callback_data="pages")]
+            [InlineKeyboardButton(text="Dᴇʟᴇᴛᴇ 🗑️", callback_data="close_data")]
         )
-    imdb = await get_poster(search, file=(files[0]).file_name) if settings["imdb"] else None
-    TEMPLATE = settings['template']
+
+    imdb = None
+    if settings.get("imdb", True):
+        try:
+            imdb = await get_poster(search, file=(files[0]).file_name)
+        except Exception as e:
+            logger.exception(e)
+            imdb = None
+
+    TEMPLATE = settings.get('template') or IMDB_TEMPLATE
     if imdb:
-        cap = TEMPLATE.format(
-            query=search,
-            title=imdb['title'],
-            votes=imdb['votes'],
-            aka=imdb["aka"],
-            seasons=imdb["seasons"],
-            box_office=imdb['box_office'],
-            localized_title=imdb['localized_title'],
-            kind=imdb['kind'],
-            imdb_id=imdb["imdb_id"],
-            cast=imdb["cast"],
-            runtime=imdb["runtime"],
-            countries=imdb["countries"],
-            certificates=imdb["certificates"],
-            languages=imdb["languages"],
-            director=imdb["director"],
-            writer=imdb["writer"],
-            producer=imdb["producer"],
-            composer=imdb["composer"],
-            cinematographer=imdb["cinematographer"],
-            music_team=imdb["music_team"],
-            distributors=imdb["distributors"],
-            release_date=imdb['release_date'],
-            year=imdb['year'],
-            genres=imdb['genres'],
-            poster=imdb['poster'],
-            plot=imdb['plot'],
-            rating=imdb['rating'],
-            url=imdb['url'],
-            **locals()
-        )
+        try:
+            cap = TEMPLATE.format(
+                query=search,
+                title=imdb.get('title', search),
+                votes=imdb.get('votes', 'N/A'),
+                aka=imdb.get("aka", 'N/A'),
+                seasons=imdb.get("seasons", 'N/A'),
+                box_office=imdb.get('box_office', 'N/A'),
+                localized_title=imdb.get('localized_title', 'N/A'),
+                kind=imdb.get('kind', 'movie'),
+                imdb_id=imdb.get("imdb_id", 'N/A'),
+                cast=imdb.get("cast", 'N/A'),
+                runtime=imdb.get("runtime", 'N/A'),
+                countries=imdb.get("countries", 'N/A'),
+                certificates=imdb.get("certificates", 'N/A'),
+                languages=imdb.get("languages", 'N/A'),
+                director=imdb.get("director", 'N/A'),
+                writer=imdb.get("writer", 'N/A'),
+                producer=imdb.get("producer", 'N/A'),
+                composer=imdb.get("composer", 'N/A'),
+                cinematographer=imdb.get("cinematographer", 'N/A'),
+                music_team=imdb.get("music_team", 'N/A'),
+                distributors=imdb.get("distributors", 'N/A'),
+                release_date=imdb.get('release_date', 'N/A'),
+                year=imdb.get('year', 'N/A'),
+                genres=imdb.get('genres', 'N/A'),
+                poster=imdb.get('poster', ''),
+                plot=imdb.get('plot', 'N/A'),
+                rating=imdb.get('rating', 'N/A'),
+                url=imdb.get('url', ''),
+                **locals()
+            )
+        except Exception as err:
+            logger.exception(err)
+            cap = f"<b>🎬 Rᴇǫᴜᴇsᴛᴇᴅ Mᴏᴠɪᴇ Nᴀᴍᴇ :</b><code>{search}</code>\n\n<b><u>‼️ Note : Files Sended To PM Check In Private</u></b>"
     else:
         cap = f"<b>🎬 Rᴇǫᴜᴇsᴛᴇᴅ Mᴏᴠɪᴇ Nᴀᴍᴇ :</b><code>{search}</code>\n\n<b><u>‼️ Note : Files Sended To PM Check In Private</u></b>"
+
     if imdb and imdb.get('poster'):
         try:
             hehe = await message.reply_photo(photo=imdb.get('poster'), caption=cap, reply_markup=InlineKeyboardMarkup(btn))
@@ -739,6 +805,7 @@ async def auto_filter(client, msg, spoll=False):
     if spoll:
         await msg.message.delete()
 
+# Standard spell check function with Google & IMDb buttons
 async def advantage_spell_chok(msg):
     mv_rqst = msg.text
     search = msg.text.replace(" ", "+")
@@ -752,9 +819,29 @@ async def advantage_spell_chok(msg):
             url=f"https://imdb.com/find?q={search}")
 
     ]]
+    
+    user_mention = msg.from_user.mention if msg.from_user else "My Friend"
     spl = await msg.reply_photo(
             photo="https://envs.sh/RCE.jpg", 
-            caption=NON_IMG.format(mv_rqst),
+            caption=NON_IMG.format(user_mention=user_mention, mv_rqst=mv_rqst),
+            reply_markup=InlineKeyboardMarkup(btn)
+    )
+    
+    await asyncio.sleep(99)
+    await spl.delete()
+    await msg.delete()
+    return
+
+# OTT Not Released / Theater only check function
+async def advantage_theater_only_chok(msg):
+    mv_rqst = msg.text
+    user_mention = msg.from_user.mention if msg.from_user else "My Friend"
+    btn = [[
+        InlineKeyboardButton(text="Dᴇʟᴇᴛᴇ 🗑️", callback_data="close_data")
+    ]]
+    spl = await msg.reply_photo(
+            photo=NOR_IMG, 
+            caption=OTT_NOT_RELEASED_TXT.format(user_mention=user_mention, mv_rqst=mv_rqst),
             reply_markup=InlineKeyboardMarkup(btn)
     )
     await asyncio.sleep(99)
@@ -797,7 +884,7 @@ async def manual_filters(client, message, text=False):
                             reply_to_message_id=reply_id
                         )
                     else:
-                        button = eval(btn)
+                        button = eval(button) if 'button' in locals() else []
                         await message.reply_cached_media(
                             fileid,
                             caption=reply_text or "",
