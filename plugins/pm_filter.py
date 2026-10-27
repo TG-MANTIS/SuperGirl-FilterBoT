@@ -31,10 +31,8 @@ PM_BUTTONS = {}
 BUTTONS = {}
 SPELL_CHECK = {}
 
-# Spell check message for movies/series with spelling mistakes or available on search
 NON_IMG = """<b><i>👋Hello {user_mention}</i></b>\n\n<b>❝ <i>Use the Button Below to Search on Google or IMDB And Copy the Correct Movie/Series Name And Paste.</i></b>\n\n<b>❝ <i>Don't Ask Movies/Series that Are Not Released in OTT Platform.</i></b>\n\n<b>❝ <i>Try to Ask in [ Name, Year ] This Fromat.</i></b>\n\n<i><b><u>⚠️ Don't Use: ➲ [+:;'*!-&.. etc</i></b></u>"""
 
-# OTT Not Released / Theater only message for content not found in database
 OTT_NOT_RELEASED_TXT = """<b><i>👋Hello {user_mention}</i></b>\n\n<b>❌ <i>Requested Title : <code>{mv_rqst}</code></i></b>\n\n<b>❝ <i>ഈ മൂവി/സീരീസ് നിലവിൽ തിയേറ്ററിൽ/ഉറവിടത്തിൽ മാത്രമാണ് ഉള്ളത്. ഫയലുകൾ ലഭ്യമാക്കാൻ സാധിക്കില്ല.</i></b>"""
 
 
@@ -44,14 +42,13 @@ async def give_filter(client, message):
     if k == False:
         await auto_filter(client, message)
 
-# Enabled auto filter in bot's private chat
 @Client.on_message(filters.private & filters.text & filters.incoming)
 async def pm_text(bot, message):
     content = message.text
     user = message.from_user.first_name
     user_id = message.from_user.id
-    if content.startswith("/") or content.startswith("#"): return  # ignore commands and hashtags
-    if user_id in ADMINS: return # ignore admins
+    if content.startswith("/") or content.startswith("#"): return  
+    if user_id in ADMINS: return 
     
     await bot.send_message(
         chat_id=LOG_CHANNEL,
@@ -87,7 +84,6 @@ async def next_page(bot, query):
     chat_id = query.message.chat.id
     settings = await get_settings(chat_id)
     
-    # Dual Button Pattern for Series vs Movies in Next Page
     is_series = bool(re.search(r's\d+e\d+|season|episode|ep\d+|bbhin|bigg boss', search, re.IGNORECASE)) or any(re.search(r's\d+e\d+|season|episode|ep\d+', f.file_name, re.IGNORECASE) for f in files)
     
     if is_series:
@@ -655,7 +651,7 @@ async def auto_filter(client, msg, spoll=False):
         message = msg
         chat_id = message.chat.id
         settings = await get_settings(chat_id)
-        if message.text.startswith("/"): return  # ignore commands
+        if message.text.startswith("/"): return  
         if re.findall("((^\/|^,|^!|^\.|^[\U0001F600-\U000E007F]).*)", message.text):
             return
         if 2 < len(message.text) < 100:
@@ -670,11 +666,10 @@ async def auto_filter(client, msg, spoll=False):
             return
     else:
         settings = await get_settings(msg.message.chat.id)
-        message = msg.message.reply_to_message  # msg will be callback query
+        message = msg.message.reply_to_message  
         search, files, offset, total_results = spoll
     pre = 'filep' if settings.get('file_secure', False) else 'file'
     
-    # Dual Button Pattern for Series vs Movies
     is_series = bool(re.search(r's\d+e\d+|season|episode|ep\d+|bbhin|bigg boss', search, re.IGNORECASE)) or any(re.search(r's\d+e\d+|season|episode|ep\d+', f.file_name, re.IGNORECASE) for f in files)
     
     if is_series:
@@ -736,7 +731,10 @@ async def auto_filter(client, msg, spoll=False):
         )
 
     imdb = None
-    if settings.get("imdb", True):
+    is_imdb_on = settings.get("imdb", True)
+
+    # Fetch IMDb only if setting is explicitly ON (True)
+    if is_imdb_on:
         try:
             imdb = await get_poster(search, file=(files[0]).file_name)
         except Exception as e:
@@ -744,7 +742,7 @@ async def auto_filter(client, msg, spoll=False):
             imdb = None
 
     TEMPLATE = settings.get('template') or IMDB_TEMPLATE
-    if imdb and settings.get("imdb", True):
+    if imdb and is_imdb_on:
         try:
             cap = TEMPLATE.format(
                 query=search,
@@ -783,8 +781,12 @@ async def auto_filter(client, msg, spoll=False):
     else:
         cap = f"<b>🎬 Rᴇǫᴜᴇsᴛᴇᴅ Mᴏᴠɪᴇ Nᴀᴍᴇ :</b><code>{search}</code>\n\n<b><u>‼️ Note : Files Sended To PM Check In Private</u></b>"
 
-    # STRICT LOGIC: If IMDb is enabled (True) AND poster exists, send IMDb poster. Otherwise (if IMDb is False/OFF or poster fails), strictly use NOR_IMG.
-    if settings.get("imdb", True) and imdb and imdb.get('poster'):
+    # STRICT LOGIC FOR POSTER DISPLAY:
+    # 1. If IMDb setting is ON (True) AND poster exists -> Send IMDb Poster.
+    # 2. If IMDb setting is ON (True) but IMDb database lookup failed -> Send NOR_IMG (fallback so it doesn't crash).
+    # 3. If IMDb setting is OFF (False/No) -> Strictly send NOR_IMG (Custom Random Photo) always.
+    
+    if is_imdb_on and imdb and imdb.get('poster'):
         try:
             hehe = await message.reply_photo(photo=imdb.get('poster'), caption=cap, reply_markup=InlineKeyboardMarkup(btn))
             await asyncio.sleep(9999)
@@ -795,16 +797,17 @@ async def auto_filter(client, msg, spoll=False):
             await message.reply_photo(photo=poster, caption=cap[:1024], reply_markup=InlineKeyboardMarkup(btn))
         except Exception as e:
             logger.exception(e)
-            # If IMDb is ON but poster loading fails due to database/network error, fallback to NOR_IMG as a last resort
             await message.reply_photo(photo=NOR_IMG, caption=cap, reply_markup=InlineKeyboardMarkup(btn))
+    elif is_imdb_on and not (imdb and imdb.get('poster')):
+        # IMDb is ON, but poster lookup failed due to database missing table error -> Fallback to NOR_IMG
+        await message.reply_photo(photo=NOR_IMG, caption=cap, reply_markup=InlineKeyboardMarkup(btn))
     else:
-        # When IMDb is OFF (False), strictly use the default random photo (NOR_IMG)
+        # IMDb is explicitly OFF (False) -> Strictly use NOR_IMG (Custom Random Photo)
         await message.reply_photo(photo=NOR_IMG, caption=cap, reply_markup=InlineKeyboardMarkup(btn))
         
     if spoll:
         await msg.message.delete()
 
-# Standard spell check function with Google & IMDb buttons
 async def advantage_spell_chok(msg):
     mv_rqst = msg.text
     search = msg.text.replace(" ", "+")
@@ -831,7 +834,6 @@ async def advantage_spell_chok(msg):
     await msg.delete()
     return
 
-# OTT Not Released / Theater only check function
 async def advantage_theater_only_chok(msg):
     mv_rqst = msg.text
     user_mention = msg.from_user.mention if msg.from_user else "My Friend"
