@@ -1,4 +1,4 @@
-# hello support tem Mantis Bots™
+# hello support temp Mantis Bots™
 import asyncio
 import re
 import ast
@@ -31,7 +31,7 @@ PM_BUTTONS = {}
 BUTTONS = {}
 SPELL_CHECK = {}
 
-NON_IMG = """<b><i>👋Hello {user_mention}</i></b>\n\n<b>❝ <i>Use the Button Below to Search on Google or IMDB And Copy the Correct Movie/Series Name And Paste.</i></b>\n\n<b>❝ <i>Don't Ask Movies/Series that Are Not Released in OTT Platform.</i></b>\n\n<b>❝ <i>Try to Ask in [ Name, Year ] This Fromat.</i></b>\n\n<i><b><u>⚠️ Don't Use: ➲ [+:;'*!-&.. etc</i></b></u>"""
+NON_IMG = """<b><i>👋Hello {user_mention}</i></b>\n\n<b>❝ <i>Use the Button Below to Search on Google or IMDB And Copy the Correct Movie/Series Name And Paste.</i></b>\n\n<b>❝ <i>Don't Ask Movies/Series that Are Not Released in OTT Platform.</i></b>\n\n<b>❝ <i>Try to Ask in [ Name, Year ] This Fromat.</i></b>\n\n<i><b><u>⚠️ Don't Use: ➲ [+:;'*!-&.. etc</i></b></u>"""
 
 OTT_NOT_RELEASED_TXT = """<b><i>👋Hello {user_mention}</i></b>\n\n<b>❌ <i>Requested Title : <code>{mv_rqst}</code></i></b>\n\n<b>❝ <i>ഈ മൂവി/സീരീസ് നിലവിൽ തിയേറ്ററിൽ/ഉറവിടത്തിൽ മാത്രമാണ് ഉള്ളത്. ഫയലുകൾ ലഭ്യമാക്കാൻ സാധിക്കില്ല.</i></b>"""
 
@@ -730,44 +730,51 @@ async def auto_filter(client, msg, spoll=False):
             [InlineKeyboardButton(text="Dᴇʟᴇᴛᴇ 🗑️", callback_data="close_data")]
         )
 
-    # STRICT ORIGINAL LOGIC WITH SAFE TRY-EXCEPT FOR DATABASE ERRORS
+    # FIXED IMDb TEMPLATE & SAFE ERROR HANDLING
     imdb = None
-    imdb = await get_poster(search, file=(files[0]).file_name) if settings["imdb"] else None
-    TEMPLATE = settings['template']
+    imdb = await get_poster(search, file=(files[0]).file_name) if settings.get("imdb", True) else None
     if imdb:
-        cap = TEMPLATE.format(
-            query=search,
-            title=imdb['title'],
-            votes=imdb['votes'],
-            aka=imdb["aka"],
-            seasons=imdb["seasons"],
-            box_office=imdb['box_office'],
-            localized_title=imdb['localized_title'],
-            kind=imdb['kind'],
-            imdb_id=imdb["imdb_id"],
-            cast=imdb["cast"],
-            runtime=imdb["runtime"],
-            countries=imdb["countries"],
-            certificates=imdb["certificates"],
-            languages=imdb["languages"],
-            director=imdb["director"],
-            writer=imdb["writer"],
-            producer=imdb["producer"],
-            composer=imdb["composer"],
-            cinematographer=imdb["cinematographer"],
-            music_team=imdb["music_team"],
-            distributors=imdb["distributors"],
-            release_date=imdb['release_date'],
-            year=imdb['year'],
-            genres=imdb['genres'],
-            poster=imdb['poster'],
-            plot=imdb['plot'],
-            rating=imdb['rating'],
-            url=imdb['url'],
-            **locals()
-        )
+        TEMPLATE = settings.get('template', IMDB_TEMPLATE)
+        if not TEMPLATE:
+            TEMPLATE = IMDB_TEMPLATE
+        try:
+            cap = TEMPLATE.format(
+                query=search,
+                title=imdb['title'],
+                votes=imdb['votes'],
+                aka=imdb["aka"],
+                seasons=imdb["seasons"],
+                box_office=imdb['box_office'],
+                localized_title=imdb['localized_title'],
+                kind=imdb['kind'],
+                imdb_id=imdb["imdb_id"],
+                cast=imdb["cast"],
+                runtime=imdb["runtime"],
+                countries=imdb["countries"],
+                certificates=imdb["certificates"],
+                languages=imdb["languages"],
+                director=imdb["director"],
+                writer=imdb["writer"],
+                producer=imdb["producer"],
+                composer=imdb["composer"],
+                cinematographer=imdb["cinematographer"],
+                music_team=imdb["music_team"],
+                distributors=imdb["distributors"],
+                release_date=imdb['release_date'],
+                year=imdb['year'],
+                genres=imdb['genres'],
+                poster=imdb['poster'],
+                plot=imdb['plot'],
+                rating=imdb['rating'],
+                url=imdb['url'],
+                **locals()
+            )
+        except Exception as e:
+            logger.exception(e)
+            cap = f"<b>🎬 {imdb['title']} ({imdb['year']})</b>\n\n<b>⭐ Rating :</b> {imdb['rating']}\n<b>🎭 Genres :</b> {imdb['genres']}\n\n{imdb['plot']}"
     else:
         cap = f"Here is what i found for your query {search}"
+
     if imdb and imdb.get('poster'):
         try:
             await message.reply_photo(photo=imdb.get('poster'), caption=cap[:1024],
