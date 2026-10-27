@@ -1,3 +1,4 @@
+import os
 import logging
 import logging.config
 
@@ -18,7 +19,7 @@ from pyrogram import types
 from aiohttp import web
 from plugins import web_server
 
-PORT = "8080"
+PORT = int(os.environ.get("PORT", 8080))
 
 class Bot(Client):
 
