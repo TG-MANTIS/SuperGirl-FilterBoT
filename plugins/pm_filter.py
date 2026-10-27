@@ -1,4 +1,7 @@
-# hello support temp Mantis Bots™
+# --------------------------------------------------------------------------- #
+#  Mantis Bots™ - PM & Group Auto-Filter & Media Delivery Core                #
+# --------------------------------------------------------------------------- #
+
 import asyncio
 import re
 import ast
@@ -31,10 +34,15 @@ PM_BUTTONS = {}
 BUTTONS = {}
 SPELL_CHECK = {}
 
+# Notification Texts & Warnings
 NON_IMG = """<b><i>👋Hello {user_mention}</i></b>\n\n<b>❝ <i>Use the Button Below to Search on Google or IMDB And Copy the Correct Movie/Series Name And Paste.</i></b>\n\n<b>❝ <i>Don't Ask Movies/Series that Are Not Released in OTT Platform.</i></b>\n\n<b>❝ <i>Try to Ask in [ Name, Year ] This Fromat.</i></b>\n\n<i><b><u>⚠️ Don't Use: ➲ [+:;'*!-&.. etc</i></b></u>"""
 
 OTT_NOT_RELEASED_TXT = """<b><i>👋Hello {user_mention}</i></b>\n\n<b>❌ <i>Requested Title : <code>{mv_rqst}</code></i></b>\n\n<b>❝ <i>ഈ മൂവി/സീരീസ് നിലവിൽ തിയേറ്ററിൽ/ഉറവിടത്തിൽ മാത്രമാണ് ഉള്ളത്. ഫയലുകൾ ലഭ്യമാക്കാൻ സാധിക്കില്ല.</i></b>"""
 
+
+# --------------------------------------------------------------------------- #
+#  Message Handlers (Group & Private Filters)                                 #
+# --------------------------------------------------------------------------- #
 
 @Client.on_message(filters.group & filters.text & filters.incoming)
 async def give_filter(client, message):
@@ -57,6 +65,10 @@ async def pm_text(bot, message):
     
     await auto_filter(bot, message)
 
+
+# --------------------------------------------------------------------------- #
+#  Pagination & Result Navigation Handler                                     #
+# --------------------------------------------------------------------------- #
 
 @Client.on_callback_query(filters.regex(r"^next"))
 async def next_page(bot, query):
@@ -110,14 +122,15 @@ async def next_page(bot, query):
                 for file in files
             ]
         else:
+            # Dual Button Format: File Size First, File Name Second
             btn = [
                 [
                     InlineKeyboardButton(
-                        text=f"{file.file_name}", callback_data=f'files#{file.file_id}'
-                    ),
-                    InlineKeyboardButton(
                         text=f"🔗 {get_size(file.file_size)}",
                         callback_data=f'files_#{file.file_id}',
+                    ),
+                    InlineKeyboardButton(
+                        text=f"{file.file_name}", callback_data=f'files#{file.file_id}'
                     ),
                 ]
                for file in files
@@ -186,6 +199,10 @@ async def advantage_spoll_choker(bot, query):
             await asyncio.sleep(10)
             await k.delete()
 
+
+# --------------------------------------------------------------------------- #
+#  General Callback & Interactive Buttons Handler                             #
+# --------------------------------------------------------------------------- #
 
 @Client.on_callback_query()
 async def cb_handler(client: Client, query: CallbackQuery):
@@ -646,6 +663,10 @@ async def cb_handler(client: Client, query: CallbackQuery):
     await query.answer('Done.!👍')
 
 
+# --------------------------------------------------------------------------- #
+#  Auto Filter Core Logic & IMDb Poster Integration                           #
+# --------------------------------------------------------------------------- #
+
 async def auto_filter(client, msg, spoll=False):
     if not spoll:
         message = msg
@@ -696,14 +717,15 @@ async def auto_filter(client, msg, spoll=False):
                 for file in files
             ]
         else:
+            # Dual Button Format: File Size First, File Name Second
             btn = [
                 [
                     InlineKeyboardButton(
-                        text=f"{file.file_name}",
+                        text=f"🔗 {get_size(file.file_size)}",
                         callback_data=f'{pre}#{file.file_id}',
                     ),
                     InlineKeyboardButton(
-                        text=f"🔗 {get_size(file.file_size)}",
+                        text=f"{file.file_name}",
                         callback_data=f'{pre}#{file.file_id}',
                     ),
                 ]
@@ -730,7 +752,7 @@ async def auto_filter(client, msg, spoll=False):
             [InlineKeyboardButton(text="Dᴇʟᴇᴛᴇ 🗑️", callback_data="close_data")]
         )
 
-    # FIXED IMDb TEMPLATE & SAFE ERROR HANDLING
+    # IMDb Template & Metadata Resolution
     imdb = None
     imdb = await get_poster(search, file=(files[0]).file_name) if settings.get("imdb", True) else None
     if imdb:
@@ -791,6 +813,10 @@ async def auto_filter(client, msg, spoll=False):
     if spoll:
         await msg.message.delete()
 
+
+# --------------------------------------------------------------------------- #
+#  Spell Check & Supplemental Handlers                                        #
+# --------------------------------------------------------------------------- #
 
 async def advantage_spell_chok(msg):
     mv_rqst = msg.text
