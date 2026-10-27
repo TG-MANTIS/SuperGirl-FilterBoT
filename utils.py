@@ -21,14 +21,14 @@ BTN_URL_REGEX = re.compile(
     r"(\[([^\[]+?)\]\((buttonurl|buttonalert):(?:/{0,2})(.+?)(:same)?\))"
 )
 
-imdb = IMDb('http')
+# ഇവിടെയാണ് മാറ്റം വരുത്തിയത് ('http' ഒഴിവാക്കി വെറും IMDb() നൽകി)
+imdb = IMDb()
 
 BANNED = {}
 SMART_OPEN = '“'
 SMART_CLOSE = '”'
 START_CHAR = ('\'', '"', SMART_OPEN)
 
-# temp db for banned 
 class temp(object):
     BANNED_USERS = []
     BANNED_CHATS = []
@@ -42,7 +42,6 @@ class temp(object):
 
 async def is_subscribed(bot, query):
     try:
-        # Resolve peer before checking subscription to prevent PeerIdInvalid error for private channels
         try:
             await bot.get_chat(AUTH_CHANNEL)
         except Exception:
@@ -62,7 +61,6 @@ async def is_subscribed(bot, query):
 async def get_poster(query, bulk=False, id=False, file=None):
     try:
         if not id:
-            # Clean and convert query to lowercase
             query = (query.strip()).lower()
             title = query
             year = re.findall(r'[1-2]\d{3}$', query, re.IGNORECASE)
@@ -191,8 +189,6 @@ async def save_group_settings(group_id, key, value):
     await db.update_settings(group_id, current)
     
 def get_size(size):
-    """Get size in readable format"""
-
     units = ["Bytes", "KB", "MB", "GB", "TB", "PB", "EB"]
     size = float(size)
     i = 0
@@ -223,7 +219,6 @@ def get_file_id(msg: Message):
                 return obj
 
 def extract_user(message: Message) -> Union[int, str]:
-    """Extracts the user from a message"""
     user_id = None
     user_first_name = None
     if message.reply_to_message:
@@ -284,7 +279,7 @@ def last_online(from_user):
 def split_quotes(text: str) -> List:
     if not any(text.startswith(char) for char in START_CHAR):
         return text.split(None, 1)
-    counter = 1  # Ignore first char -> is some kind of quote
+    counter = 1
     while counter < len(text):
         if text[counter] == "\\":
             counter += 1
