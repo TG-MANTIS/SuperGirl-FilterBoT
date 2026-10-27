@@ -414,11 +414,11 @@ async def delete_all_index(bot, message):
 @Client.on_callback_query(filters.regex(r'^autofilter_delete'))
 async def delete_all_index_confirm(bot, message):
     await Media.collection.drop()
-    await message.answer('Tʜᴇᴛᴇʀ & Oᴛᴛ Kᴜ Kᴀsᴜ Iʟʟᴀʏᴀ 💌 Pᴀʀᴀᴠᴀʟʟᴀ Nᴀ Iʀᴜᴋᴇɴ')
+    await message.answer('Tʜᴇᴛᴇْر & Oᴛᴛ Kᴜ Kᴀsᴜ Iʟʟᴀʏᴀ 💌 Pᴀʀᴀᴠᴀʟʟᴀ Nᴀ Iʀᴜᴋᴇɴ')
     await message.message.edit('Succesfully Deleted All The Indexed Files.')
 
 
-@Client.on_message(filters.command('settings') & (filters.group | filters.supergroup))
+@Client.on_message(filters.command('settings') & filters.group)
 async def settings(client, message):
     userid = message.from_user.id if message.from_user else None
     if not userid:
@@ -426,7 +426,7 @@ async def settings(client, message):
     
     chat_id = message.chat.id
     
-    # നിങ്ങൾ ആവശ്യപ്പെട്ടതുപോലെ ഗ്രൂപ്പിൽ അയക്കുന്ന ഡ്യുവൽ നാവിഗേഷൻ ബട്ടണുകൾ
+    # കറക്റ്റ് ചെയ്ത ഡ്യുവൽ നാവിഗേഷൻ ബട്ടണുകൾ
     buttons = InlineKeyboardMarkup([
         [
             InlineKeyboardButton("🌐 Open Source (Group)", callback_data=f"set_group_menu#{chat_id}"),
