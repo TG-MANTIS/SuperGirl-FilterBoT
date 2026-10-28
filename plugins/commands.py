@@ -1,3 +1,7 @@
+# --------------------------------------------------------------------------- #
+#  Mantis Bots™ - Start, Settings & Core Commands Core File                    #
+# --------------------------------------------------------------------------- #
+
 import os
 import logging
 import random
@@ -14,12 +18,18 @@ from database.connections_mdb import active_connection
 import re
 import json
 import base64
+
 logger = logging.getLogger(__name__)
 
 BATCH_FILES = {}
 
+# --------------------------------------------------------------------------- #
+#  /start Command Handler (Group & Private Welcome & File Delivery)          #
+# --------------------------------------------------------------------------- #
+
 @Client.on_message(filters.command("start") & filters.incoming)
 async def start(client, message):
+    # Group Start Handler
     if message.chat.type in [enums.ChatType.GROUP, enums.ChatType.SUPERGROUP]:
         buttons = [
             [
@@ -29,18 +39,22 @@ async def start(client, message):
                 InlineKeyboardButton('𝐌𝐨𝐯𝐢𝐞 𝐆𝐫𝐨𝐮𝐩', url='https://t.me/+iEbhY7mM4oE1OTVl'),
                 InlineKeyboardButton('𝐌𝐚𝐢𝐧 𝐆𝐫𝐨𝐮𝐩', url='https://t.me/Mallu_Movie_Hub_Group')
             ]
-            ]
+        ]
         reply_markup = InlineKeyboardMarkup(buttons)
         await message.reply(script.START_TXT_GROUP.format(message.from_user.mention if message.from_user else message.chat.title, temp.U_NAME, temp.B_NAME), reply_markup=reply_markup)
-        await asyncio.sleep(2) # 😢 https://github.com/EvamariaTG/EvaMaria/blob/master/plugins/p_ttishow.py#L17 😬 wait a bit, before checking.
+        await asyncio.sleep(2) 
         if not await db.get_chat(message.chat.id):
-            total=await client.get_chat_members_count(message.chat.id)
+            total = await client.get_chat_members_count(message.chat.id)
             await client.send_message(LOG_CHANNEL, script.LOG_TEXT_G.format(message.chat.title, message.chat.id, total, "Unknown"))       
             await db.add_chat(message.chat.id, message.chat.title)
         return 
+
+    # Private User Registration Check
     if not await db.is_user_exist(message.from_user.id):
         await db.add_user(message.from_user.id, message.from_user.first_name)
         await client.send_message(LOG_CHANNEL, script.LOG_TEXT_P.format(message.from_user.id, message.from_user.mention))
+
+    # Standard Private Start / No File Payload
     if len(message.command) != 2:
         buttons = [[
             InlineKeyboardButton('✘ Cʟᴏꜱᴇ', callback_data='close_data'),
@@ -54,6 +68,8 @@ async def start(client, message):
             parse_mode=enums.ParseMode.HTML
         )
         return
+
+    # Force Subscription Check (/start with payload)
     if AUTH_CHANNEL and not await is_subscribed(client, message):
         try:
             invite_link = await client.create_chat_invite_link(int(AUTH_CHANNEL))
@@ -63,7 +79,7 @@ async def start(client, message):
         btn = [
             [
                 InlineKeyboardButton(
-                    "📺 Jᴏɪɴ Cʜᴀɴɴᴇʟ 📺", url=invite_link.invite_link
+                    "📺 Jᴏɪɴ Cʜᴀɴɴᴇ𝗹 📺", url=invite_link.invite_link
                 )
             ]
         ]
@@ -81,8 +97,9 @@ async def start(client, message):
             caption="**താഴെ ഉള്ള 𝗝𝗼𝗶𝗻 𝗖𝗵𝗮𝗻𝗻𝗲𝗹 ക്ലിക്ക് ചെയ്ത് കഴിഞ്ഞ് 𝗧𝗿𝘆 𝗔𝗴𝗮𝗶𝗻 ക്ലിക്ക് ചെയ്‌താൽ നിങ്ങൾക് സിനിമ ലഭിക്കുന്നതാണ്.!\n\nClick the 𝗝𝗼𝗶𝗻 𝗖𝗵𝗮𝗻𝗻𝗲𝗹 and then click 𝗧𝗿𝘆 𝗔𝗴𝗮𝗶𝗻 and you will get the File.!**",
             reply_markup=InlineKeyboardMarkup(btn),
             parse_mode=enums.ParseMode.MARKDOWN
-            )
+        )
         return
+
     if len(message.command) == 2 and message.command[1] in ["subscribe", "error", "okay", "help"]:
         buttons = [[
             InlineKeyboardButton('✘ Cʟᴏꜱᴇ', callback_data='close_data'),
@@ -96,9 +113,10 @@ async def start(client, message):
             parse_mode=enums.ParseMode.HTML
         )
         return
+
     data = message.command[1]
     
-    # പ്രൈവറ്റ് ചാറ്റിൽ സ്റ്റാർട്ട് വഴി സെറ്റിംഗ്സ് ഓപ്പൺ ചെയ്യാൻ വരുന്ന ലിങ്ക് ഹാൻഡ്‌ലീ ചെയ്യാൻ:
+    # Handle Private Settings Panel Redirect from Group
     if data.startswith("settings_"):
         grp_id = int(data.split("_")[1])
         user_id = message.from_user.id
@@ -151,11 +169,13 @@ async def start(client, message):
             )
         return
 
+    # Handle Batch Files & Single Files Delivery
     try:
         pre, file_id = data.split('_', 1)
     except:
         file_id = data
         pre = ""
+
     if data.split("-", 1)[0] == "BATCH":
         sts = await message.reply("Please wait")
         file_id = data.split("-", 1)[1]
@@ -164,7 +184,7 @@ async def start(client, message):
             file = await client.download_media(file_id)
             try: 
                 with open(file) as file_data:
-                    msgs=json.loads(file_data.read())
+                    msgs = json.loads(file_data.read())
             except:
                 await sts.edit("FAILED")
                 return await client.send_message(LOG_CHANNEL, "UNABLE TO OPEN FILE.")
@@ -172,14 +192,14 @@ async def start(client, message):
             BATCH_FILES[file_id] = msgs
         for msg in msgs:
             title = msg.get("title")
-            size=get_size(int(msg.get("size", 0)))
-            f_caption=msg.get("caption", "")
+            size = get_size(int(msg.get("size", 0)))
+            f_caption = msg.get("caption", "")
             if BATCH_FILE_CAPTION:
                 try:
-                    f_caption=BATCH_FILE_CAPTION.format(file_name= '' if title is None else title, file_size='' if size is None else size, file_caption='' if f_caption is None else f_caption)
+                    f_caption = BATCH_FILE_CAPTION.format(file_name= '' if title is None else title, file_size='' if size is None else size, file_caption='' if f_caption is None else f_caption)
                 except Exception as e:
                     logger.exception(e)
-                    f_caption=f_caption
+                    f_caption = f_caption
             if f_caption is None:
                 f_caption = f"{title}"
             try:
@@ -188,7 +208,7 @@ async def start(client, message):
                     file_id=msg.get("file_id"),
                     caption=f_caption,
                     protect_content=msg.get('protect', False),
-                    )
+                )
             except FloodWait as e:
                 await asyncio.sleep(e.x)
                 logger.warning(f"Floodwait of {e.x} sec.")
@@ -197,13 +217,14 @@ async def start(client, message):
                     file_id=msg.get("file_id"),
                     caption=f_caption,
                     protect_content=msg.get('protect', False),
-                    )
+                )
             except Exception as e:
                 logger.warning(e, exc_info=True)
                 continue
             await asyncio.sleep(1) 
         await sts.delete()
         return
+
     elif data.split("-", 1)[0] == "DSTORE":
         sts = await message.reply("Please wait")
         b_string = data.split("-", 1)[1]
@@ -213,18 +234,17 @@ async def start(client, message):
         except:
             f_msg_id, l_msg_id, f_chat_id = decoded.split("_", 2)
             protect = "/pbatch" if PROTECT_CONTENT else "batch"
-        diff = int(l_msg_id) - int(f_msg_id)
+        
         async for msg in client.iter_messages(int(f_chat_id), int(l_msg_id), int(f_msg_id)):
             if msg.media:
                 media = getattr(msg, msg.media.value)
                 if BATCH_FILE_CAPTION:
                     try:
-                        f_caption=BATCH_FILE_CAPTION.format(file_name=getattr(media, 'file_name', ''), file_size=getattr(media, 'file_size', ''), file_caption=getattr(msg, 'caption', ''))
+                        f_caption = BATCH_FILE_CAPTION.format(file_name=getattr(media, 'file_name', ''), file_size=getattr(media, 'file_size', ''), file_caption=getattr(msg, 'caption', ''))
                     except Exception as e:
                         logger.exception(e)
                         f_caption = getattr(msg, 'caption', '')
                 else:
-                    media = getattr(msg, msg.media.value)
                     file_name = getattr(media, 'file_name', '')
                     f_caption = getattr(msg, 'caption', file_name)
                 try:
@@ -249,7 +269,6 @@ async def start(client, message):
             await asyncio.sleep(1) 
         return await sts.delete()
         
-
     files_ = await get_file_details(file_id)           
     if not files_:
         pre, file_id = ((base64.urlsafe_b64decode(data + "=" * (-len(data) % 4))).decode("ascii")).split("_", 1)
@@ -258,15 +277,15 @@ async def start(client, message):
                 chat_id=message.from_user.id,
                 file_id=file_id,
                 protect_content=True if pre == 'filep' else False,
-                )
+            )
             filetype = msg.media
             file = getattr(msg, filetype.value)
             title = file.file_name
-            size=get_size(file.file_size)
+            size = get_size(file.file_size)
             f_caption = f"<code>{title}</code>"
             if CUSTOM_FILE_CAPTION:
                 try:
-                    f_caption=CUSTOM_FILE_CAPTION.format(file_name= '' if title is None else title, file_size='' if size is None else size, file_caption='')
+                    f_caption = CUSTOM_FILE_CAPTION.format(file_name= '' if title is None else title, file_size='' if size is None else size, file_caption='')
                 except:
                     return
             await msg.edit_caption(f_caption)
@@ -274,40 +293,44 @@ async def start(client, message):
         except:
             pass
         return await message.reply('No such file exist.')
+    
     files = files_[0]
     title = files.file_name
-    size=get_size(files.file_size)
-    f_caption=files.caption
+    size = get_size(files.file_size)
+    f_caption = files.caption
     if CUSTOM_FILE_CAPTION:
         try:
-            f_caption=CUSTOM_FILE_CAPTION.format(file_name= '' if title is None else title, file_size='' if size is None else size, file_caption='' if f_caption is None else f_caption)
+            f_caption = CUSTOM_FILE_CAPTION.format(file_name= '' if title is None else title, file_size='' if size is None else size, file_caption='' if f_caption is None else f_caption)
         except Exception as e:
             logger.exception(e)
-            f_caption=f_caption
+            f_caption = f_caption
     if f_caption is None:
         f_caption = f"{files.file_name}"
+        
     buttons = [
-                    [
-                        InlineKeyboardButton('💥 Gʀᴏᴜᴩ', url="https://t.me/+iEbhY7mM4oE1OTVl"),
-                        InlineKeyboardButton('Dᴇʟᴇᴛᴇ ⚠️', callback_data='close_data')
-                    ],
-                    [
-                        InlineKeyboardButton(text=f'⚙️ Fɪʟᴇ Sɪᴢᴇ 【 {size} 】⚙️', callback_data='gxneo')
-                    ]
-                    ]
+        [
+            InlineKeyboardButton('💥 Gʀᴏᴜᴩ', url="https://t.me/+iEbhY7mM4oE1OTVl"),
+            InlineKeyboardButton('Dᴇʟᴇᴛᴇ ⚠️', callback_data='close_data')
+        ],
+        [
+            InlineKeyboardButton(text=f'⚙️ Fɪʟᴇ Sɪᴢᴇ 【 {size} 】⚙️', callback_data='gxneo')
+        ]
+    ]
     await client.send_cached_media(
         chat_id=message.from_user.id,
         file_id=file_id,
         caption=f_caption,
         reply_markup=InlineKeyboardMarkup(buttons),
         protect_content=True if pre == 'filep' else False,
-        )
-                    
+    )
+
+
+# --------------------------------------------------------------------------- #
+#  /channel Command Handler (Admin Only - View Indexed Channels)              #
+# --------------------------------------------------------------------------- #
 
 @Client.on_message(filters.command('channel') & filters.user(ADMINS))
 async def channel_info(bot, message):
-           
-    """Send basic information of channel"""
     if isinstance(CHANNELS, (int, str)):
         channels = [CHANNELS]
     elif isinstance(CHANNELS, list):
@@ -335,17 +358,24 @@ async def channel_info(bot, message):
         os.remove(file)
 
 
+# --------------------------------------------------------------------------- #
+#  /logs Command Handler (Admin Only - Download Log File)                     #
+# --------------------------------------------------------------------------- #
+
 @Client.on_message(filters.command('logs') & filters.user(ADMINS))
 async def log_file(bot, message):
-    """Send log file"""
     try:
         await message.reply_document('TelegramBot.log')
     except Exception as e:
         await message.reply(str(e))
 
+
+# --------------------------------------------------------------------------- #
+#  /delete Command Handler (Admin Only - Delete File from DB)                 #
+# --------------------------------------------------------------------------- #
+
 @Client.on_message(filters.command('delete') & filters.user(ADMINS))
 async def delete(bot, message):
-    """Delete file from database"""
     reply = message.reply_to_message
     if reply and reply.media:
         msg = await message.reply("Processing...⏳", quote=True)
@@ -363,9 +393,7 @@ async def delete(bot, message):
     
     file_id, file_ref = unpack_new_file_id(media.file_id)
 
-    result = await Media.collection.delete_one({
-        '_id': file_id,
-    })
+    result = await Media.collection.delete_one({'_id': file_id})
     if result.deleted_count:
         await msg.edit('File is successfully deleted from database')
     else:
@@ -374,7 +402,7 @@ async def delete(bot, message):
             'file_name': file_name,
             'file_size': media.file_size,
             'mime_type': media.mime_type
-            })
+        })
         if result.deleted_count:
             await msg.edit('File is successfully deleted from database')
         else:
@@ -389,27 +417,22 @@ async def delete(bot, message):
                 await msg.edit('File not found in database')
 
 
+# --------------------------------------------------------------------------- #
+#  /deleteall Command Handler (Admin Only - Drop Database Index)              #
+# --------------------------------------------------------------------------- #
+
 @Client.on_message(filters.command('deleteall') & filters.user(ADMINS))
 async def delete_all_index(bot, message):
     await message.reply_text(
         'This will delete all indexed files.\nDo you want to continue??',
         reply_markup=InlineKeyboardMarkup(
             [
-                [
-                    InlineKeyboardButton(
-                        text="YES", callback_data="autofilter_delete"
-                    )
-                ],
-                [
-                    InlineKeyboardButton(
-                        text="CANCEL", callback_data="close_data"
-                    )
-                ],
+                [InlineKeyboardButton(text="YES", callback_data="autofilter_delete")],
+                [InlineKeyboardButton(text="CANCEL", callback_data="close_data")],
             ]
         ),
         quote=True,
     )
-
 
 @Client.on_callback_query(filters.regex(r'^autofilter_delete'))
 async def delete_all_index_confirm(bot, message):
@@ -417,6 +440,10 @@ async def delete_all_index_confirm(bot, message):
     await message.answer('Tʜᴇᴛᴇْر & Oᴛᴛ Kᴜ Kᴀsᴜ Iʟʟᴀʏᴀ 💌 Pᴀʀᴀᴠᴀʟʟᴀ Nᴀ Iʀᴜᴋᴇɴ')
     await message.message.edit('Succesfully Deleted All The Indexed Files.')
 
+
+# --------------------------------------------------------------------------- #
+#  /settings Command Handler (Admin Only Restriction & Auto-Delete Warning)   #
+# --------------------------------------------------------------------------- #
 
 @Client.on_message(filters.command('settings') & filters.group)
 async def settings(client, message):
@@ -426,7 +453,39 @@ async def settings(client, message):
     
     chat_id = message.chat.id
     
-    # കറക്റ്റ് ചെയ്ത ഡ്യുവൽ നാവിഗേഷൻ ബട്ടണുകൾ
+    # Check if user is group Admin or Owner
+    try:
+        member = await client.get_chat_member(chat_id, userid)
+        is_admin = member.status in [enums.ChatMemberStatus.OWNER, enums.ChatMemberStatus.ADMINISTRATOR]
+    except:
+        is_admin = False
+
+    # Non-admin restriction handler with 2-second auto-delete warning
+    if not is_admin and userid not in ADMINS:
+        warning_caption = (
+            f"<b>👋 ഹലോ {message.from_user.mention},\n\n"
+            "❌ <code>/settings</code> കമാൻഡ് ഉപയോഗിക്കാൻ നിങ്ങൾക്ക് അനുവാദമില്ല!\n"
+            "⚠️ ഈ ഗ്രൂപ്പിന്റെ ക്രമീകരണങ്ങൾ (Settings) മാറ്റാൻ ഗ്രൂപ്പ് അഡ്മിൻമാർക്ക് മാത്രമേ അധികാരമുള്ളൂ.</b>"
+        )
+        
+        btn = [[InlineKeyboardButton("Dᴇʟᴇْتᴇ 🗑️", callback_data="close_data")]]
+        
+        sent_msg = await message.reply_photo(
+            photo=random.choice(PICS),
+            caption=warning_caption,
+            reply_markup=InlineKeyboardMarkup(btn)
+        )
+        
+        # Auto delete warning message and user command after 2 seconds
+        await asyncio.sleep(2)
+        try:
+            await sent_msg.delete()
+            await message.delete()
+        except:
+            pass
+        return
+
+    # Admin Settings Panel Panel View
     buttons = InlineKeyboardMarkup([
         [
             InlineKeyboardButton("🌐 Open Source (Group)", callback_data=f"set_group_menu#{chat_id}"),
@@ -445,6 +504,9 @@ async def settings(client, message):
     )
 
 
+# --------------------------------------------------------------------------- #
+#  /set_template Command Handler (Set Custom IMDB Template for Group)         #
+# --------------------------------------------------------------------------- #
 
 @Client.on_message(filters.command('set_template'))
 async def save_template(client, message):
@@ -471,7 +533,6 @@ async def save_template(client, message):
     elif chat_type in [enums.ChatType.GROUP, enums.ChatType.SUPERGROUP]:
         grp_id = message.chat.id
         title = message.chat.title
-
     else:
         return
 
