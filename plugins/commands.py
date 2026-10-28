@@ -12,7 +12,10 @@ from pyrogram.errors import ChatAdminRequired, FloodWait
 from pyrogram.types import InlineKeyboardButton, InlineKeyboardMarkup
 from database.ia_filterdb import Media, get_file_details, unpack_new_file_id
 from database.users_chats_db import db
-from info import CHANNELS, ADMINS, AUTH_CHANNEL, LOG_CHANNEL, PICS, BATCH_FILE_CAPTION, CUSTOM_FILE_CAPTION, PROTECT_CONTENT, FORCE_IMG
+
+# info.py-ൽ നിന്ന് SET_IMG ഇവിടെ ഇംപോർട്ട് ചെയ്തിരിക്കുന്നു
+from info import CHANNELS, ADMINS, AUTH_CHANNEL, LOG_CHANNEL, PICS, SET_IMG, BATCH_FILE_CAPTION, CUSTOM_FILE_CAPTION, PROTECT_CONTENT, FORCE_IMG
+
 from utils import get_settings, get_size, is_subscribed, save_group_settings, temp
 from database.connections_mdb import active_connection
 import re
@@ -437,7 +440,7 @@ async def delete_all_index(bot, message):
 @Client.on_callback_query(filters.regex(r'^autofilter_delete'))
 async def delete_all_index_confirm(bot, message):
     await Media.collection.drop()
-    await message.answer('Tʜᴇᴛᴇْر & Oᴛᴛ Kᴜ Kᴀsᴜ Iʟʟᴀʏᴀ 💌 Pᴀʀᴀᴠᴀʟʟᴀ Nᴀ Iʀᴜᴋᴇɴ')
+    await message.answer('Tʜᴇᴛᴇْر & Oᴛᴛ Kᴜ Kᴀsᴜ Iʟʟᴀʏᴀ 💌 Pᴀʀᴀᴠాల্ল Nᴀ Iʀᴜᴋᴇɴ')
     await message.message.edit('Succesfully Deleted All The Indexed Files.')
 
 
@@ -460,7 +463,7 @@ async def settings(client, message):
     except:
         is_admin = False
 
-    # Non-admin restriction handler with 2-second auto-delete warning
+    # Non-admin restriction handler with SET_IMG photo from info.py and 2-second auto-delete
     if not is_admin and userid not in ADMINS:
         warning_caption = (
             f"<b>👋 ഹലോ {message.from_user.mention},\n\n"
@@ -468,10 +471,10 @@ async def settings(client, message):
             "⚠️ ഈ ഗ്രൂപ്പിന്റെ ക്രമീകരണങ്ങൾ (Settings) മാറ്റാൻ ഗ്രൂപ്പ് അഡ്മിൻമാർക്ക് മാത്രമേ അധികാരമുള്ളൂ.</b>"
         )
         
-        btn = [[InlineKeyboardButton("Dᴇʟᴇْتᴇ 🗑️", callback_data="close_data")]]
+        btn = [[InlineKeyboardButton("Dᴇʟᴇᴛᴇ 🗑️", callback_data="close_data")]]
         
         sent_msg = await message.reply_photo(
-            photo=random.choice(PICS),
+            photo=SET_IMG,  # info.py-ൽ നിന്ന് SET_IMG വഴി ഫോട്ടോ എടുക്കുന്നു
             caption=warning_caption,
             reply_markup=InlineKeyboardMarkup(btn)
         )
@@ -485,7 +488,7 @@ async def settings(client, message):
             pass
         return
 
-    # Admin Settings Panel Panel View
+    # Admin Settings Panel View
     buttons = InlineKeyboardMarkup([
         [
             InlineKeyboardButton("🌐 Open Source (Group)", callback_data=f"set_group_menu#{chat_id}"),
