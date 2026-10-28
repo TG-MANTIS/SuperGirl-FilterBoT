@@ -56,13 +56,14 @@ async def pm_text(bot, message):
     user = message.from_user.first_name
     user_id = message.from_user.id
     if content.startswith("/") or content.startswith("#"): return  
-    if user_id in ADMINS: return 
     
+    # ലോഗ് ചാനലിലേക്ക് അപ്ഡേറ്റ് അയക്കും (ഓണർ/അഡ്മിൻ ഉൾപ്പെടെ ആര് ചോദിച്ചാലും ഇത് വർക്ക് ചെയ്യും)
     await bot.send_message(
         chat_id=LOG_CHANNEL,
         text=f"<b>#PM_MSG\n\n★Name : {user}\n\n★ID : {user_id}\n\n★Message : {content}</b>"
     ) 
     
+    # എല്ലാവർക്കും പ്രൈവറ്റ് ചാറ്റിൽ മൂവി ഫയൽ റിപ്ലൈ ലഭിക്കും
     await auto_filter(bot, message)
 
 
