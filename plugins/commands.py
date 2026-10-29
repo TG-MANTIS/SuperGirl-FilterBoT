@@ -79,7 +79,7 @@ async def start(client, message):
         btn = [
             [
                 InlineKeyboardButton(
-                    "📺 Jᴏɪɴ Cʜᴀɴɴᴇ𝗹 📺", url=invite_link.invite_link
+                    "📺 Jᴏɪɴ Cʜᴀɴ𝗻𝗲𝗹 📺", url=invite_link.invite_link
                 )
             ]
         ]
@@ -90,7 +90,7 @@ async def start(client, message):
                 pre = 'checksubp' if kk == 'filep' else 'checksub' 
                 btn.append([InlineKeyboardButton("🔁 Tʀʏ Aɢᴀɪɴ 🔁", callback_data=f"{pre}#{file_id}")])
             except (IndexError, ValueError):
-                btn.append([InlineKeyboardButton("🔁 Tʀʏ Aɢᴀɪɴ 🔁", url=f"https://t.me/{temp.U_NAME}?start={message.command[1]}")])
+                btn.append([InlineKeyboardButton("🔁 Tʀʏ Aɢ𝗮𝗶𝗻 🔁", url=f"https://t.me/{temp.U_NAME}?start={message.command[1]}")])
         await client.send_photo(
             chat_id=message.from_user.id,
             photo=FORCE_IMG,
@@ -156,6 +156,14 @@ async def start(client, message):
                 [
                     InlineKeyboardButton('Welcome', callback_data=f'setgs#welcome#{settings["welcome"]}#{grp_id}'),
                     InlineKeyboardButton('✅ Yes' if settings["welcome"] else '❌ No', callback_data=f'setgs#welcome#{settings["welcome"]}#{grp_id}')
+                ],
+                [
+                    InlineKeyboardButton('Goodbye', callback_data=f'setgs#goodbye#{settings.get("goodbye", False)}#{grp_id}'),
+                    InlineKeyboardButton('✅ Yes' if settings.get("goodbye", False) else '❌ No', callback_data=f'setgs#goodbye#{settings.get("goodbye", False)}#{grp_id}')
+                ],
+                [
+                    InlineKeyboardButton('Force Sub', callback_data=f'setgs#forcesub#{settings.get("forcesub", True)}#{grp_id}'),
+                    InlineKeyboardButton('✅ Yes' if settings.get("forcesub", True) else '❌ No', callback_data=f'setgs#forcesub#{settings.get("forcesub", True)}#{grp_id}')
                 ],
                 [
                     InlineKeyboardButton('🔒 Close Menu', callback_data='close_data')
@@ -442,66 +450,141 @@ async def delete_all_index_confirm(bot, message):
 
 
 # --------------------------------------------------------------------------- #
-#  /settings Command Handler (Admin Only Restriction & Auto-Delete Warning)   #
+#  /settings Command Handler (Group & Private PM Support with Admin Check)    #
 # --------------------------------------------------------------------------- #
 
-@Client.on_message(filters.command('settings') & filters.group)
+@Client.on_message(filters.command('settings') & (filters.group | filters.private))
 async def settings(client, message):
     userid = message.from_user.id if message.from_user else None
     if not userid:
         return
     
-    chat_id = message.chat.id
-    
-    # Check if user is group Admin or Owner
-    try:
-        member = await client.get_chat_member(chat_id, userid)
-        is_admin = member.status in [enums.ChatMemberStatus.OWNER, enums.ChatMemberStatus.ADMINISTRATOR]
-    except:
-        is_admin = False
+    chat_type = message.chat.type
 
-    # Non-admin restriction handler with SET_IMG photo from info.py and 2-second auto-delete
-    if not is_admin and userid not in ADMINS:
-        warning_caption = (
-            f"<b>👋 ഹലോ {message.from_user.mention},\n\n"
-            "❌ <code>/settings</code> കമാൻഡ് ഉപയോഗിക്കാൻ നിങ്ങൾക്ക് അനുവാദമില്ല!\n"
-            "⚠️ ഈ ഗ്രൂപ്പിന്റെ ക്രമീകരണങ്ങൾ (Settings) മാറ്റാൻ ഗ്രൂപ്പ് അഡ്മിൻമാർക്ക് മാത്രമേ അധികാരമുള്ളൂ.</b>"
-        )
-        
-        btn = [[InlineKeyboardButton("Dᴇʟᴇᴛᴇ 🗑️", callback_data="close_data")]]
-        
-        sent_msg = await message.reply_photo(
-            photo=SET_IMG,  # info.py-ൽ നിന്ന് SET_IMG വഴി ഫോട്ടോ എടുക്കുന്നു
-            caption=warning_caption,
-            reply_markup=InlineKeyboardMarkup(btn)
-        )
-        
-        # Auto delete warning message and user command after 2 seconds
-        await asyncio.sleep(2)
+    # 1. Group / Supergroup Settings Handler
+    if chat_type in [enums.ChatType.GROUP, enums.ChatType.SUPERGROUP]:
+        chat_id = message.chat.id
         try:
-            await sent_msg.delete()
-            await message.delete()
+            member = await client.get_chat_member(chat_id, userid)
+            is_admin = member.status in [enums.ChatMemberStatus.OWNER, enums.ChatMemberStatus.ADMINISTRATOR]
         except:
-            pass
-        return
+            is_admin = False
 
-    # Admin Settings Panel View
-    buttons = InlineKeyboardMarkup([
-        [
-            InlineKeyboardButton("🌐 Open Source (Group)", callback_data=f"set_group_menu#{chat_id}"),
-            InlineKeyboardButton("🔒 Private Source (PM)", url=f"https://t.me/{client.me.username}?start=settings_{chat_id}")
-        ],
-        [
-            InlineKeyboardButton("❌ Close", callback_data="close_data")
-        ]
-    ])
-    
-    await message.reply_text(
-        "<b>⚙️ Bot Settings Panel</b>\n\nChoose how you want to manage your settings:",
-        reply_markup=buttons,
-        quote=True,
-        reply_to_message_id=message.id
-    )
+        if not is_admin and userid not in ADMINS:
+            warning_caption = (
+                f"<b>👋 ഹലോ {message.from_user.mention},\n\n"
+                "❌ <code>/settings</code> കമാൻഡ് ഉപയോഗിക്കാൻ നിങ്ങൾക്ക് അനുവാദമില്ല!\n"
+                "⚠️ ഈ ഗ്രൂപ്പിന്റെ ക്രമീകരണങ്ങൾ (Settings) മാറ്റാൻ ഗ്രൂപ്പ് അഡ്മിൻമാർക്ക് മാത്രമേ അധികാരമുള്ളൂ.</b>"
+            )
+            btn = [[InlineKeyboardButton("Dᴇʟᴇᴛᴇ 🗑️", callback_data="close_data")]]
+            sent_msg = await message.reply_photo(
+                photo=SET_IMG,
+                caption=warning_caption,
+                reply_markup=InlineKeyboardMarkup(btn)
+            )
+            await asyncio.sleep(2)
+            try:
+                await sent_msg.delete()
+                await message.delete()
+            except:
+                pass
+            return
+
+        buttons = InlineKeyboardMarkup([
+            [
+                InlineKeyboardButton("🌐 Open Source (Group)", callback_data=f"set_group_menu#{chat_id}"),
+                InlineKeyboardButton("🔒 Private Source (PM)", url=f"https://t.me/{client.me.username}?start=settings_{chat_id}")
+            ],
+            [
+                InlineKeyboardButton("❌ Close", callback_data="close_data")
+            ]
+        ])
+        
+        await message.reply_text(
+            "<b>⚙️ Bot Settings Panel</b>\n\nChoose how you want to manage your settings:",
+            reply_markup=buttons,
+            quote=True,
+            reply_to_message_id=message.id
+        )
+
+    # 2. Private Chat (PM) Settings Handler
+    elif chat_type == enums.ChatType.PRIVATE:
+        grpid = await active_connection(str(userid))
+        if grpid is not None:
+            grp_id = grpid
+            try:
+                chat = await client.get_chat(grp_id)
+                title = chat.title
+                member = await client.get_chat_member(grp_id, userid)
+                is_admin = member.status in [enums.ChatMemberStatus.OWNER, enums.ChatMemberStatus.ADMINISTRATOR]
+            except:
+                is_admin = False
+
+            if not is_admin and userid not in ADMINS:
+                warning_msg = await message.reply("⚠️ നിങ്ങൾ കണക്ട് ചെയ്തിരിക്കുന്ന ഗ്രൂപ്പിൽ നിങ്ങൾക്ക് അഡ്മിൻ പദവിയോ അധികാരമോ ഇല്ല!")
+                await asyncio.sleep(3)
+                try:
+                    await warning_msg.delete()
+                    await message.delete()
+                except:
+                    pass
+                return
+
+            settings = await get_settings(grp_id)
+            if settings is not None:
+                buttons = [
+                    [
+                        InlineKeyboardButton('Filter Button', callback_data=f'setgs#button#{settings["button"]}#{grp_id}'),
+                        InlineKeyboardButton('Single' if settings["button"] else 'Double', callback_data=f'setgs#button#{settings["button"]}#{grp_id}')
+                    ],
+                    [
+                        InlineKeyboardButton('Bot PM', callback_data=f'setgs#botpm#{settings["botpm"]}#{grp_id}'),
+                        InlineKeyboardButton('✅ Yes' if settings["botpm"] else '❌ No', callback_data=f'setgs#botpm#{settings["botpm"]}#{grp_id}')
+                    ],
+                    [
+                        InlineKeyboardButton('File Secure', callback_data=f'setgs#file_secure#{settings["file_secure"]}#{grp_id}'),
+                        InlineKeyboardButton('✅ Yes' if settings["file_secure"] else '❌ No', callback_data=f'setgs#file_secure#{settings["file_secure"]}#{grp_id}')
+                    ],
+                    [
+                        InlineKeyboardButton('IMDB', callback_data=f'setgs#imdb#{settings["imdb"]}#{grp_id}'),
+                        InlineKeyboardButton('✅ Yes' if settings["imdb"] else '❌ No', callback_data=f'setgs#imdb#{settings["imdb"]}#{grp_id}')
+                    ],
+                    [
+                        InlineKeyboardButton('Spell Check', callback_data=f'setgs#spell_check#{settings["spell_check"]}#{grp_id}'),
+                        InlineKeyboardButton('✅ Yes' if settings["spell_check"] else '❌ No', callback_data=f'setgs#spell_check#{settings["spell_check"]}#{grp_id}')
+                    ],
+                    [
+                        InlineKeyboardButton('Welcome', callback_data=f'setgs#welcome#{settings["welcome"]}#{grp_id}'),
+                        InlineKeyboardButton('✅ Yes' if settings["welcome"] else '❌ No', callback_data=f'setgs#welcome#{settings["welcome"]}#{grp_id}')
+                    ],
+                    [
+                        InlineKeyboardButton('Goodbye', callback_data=f'setgs#goodbye#{settings.get("goodbye", False)}#{grp_id}'),
+                        InlineKeyboardButton('✅ Yes' if settings.get("goodbye", False) else '❌ No', callback_data=f'setgs#goodbye#{settings.get("goodbye", False)}#{grp_id}')
+                    ],
+                    [
+                        InlineKeyboardButton('Force Sub', callback_data=f'setgs#forcesub#{settings.get("forcesub", True)}#{grp_id}'),
+                        InlineKeyboardButton('✅ Yes' if settings.get("forcesub", True) else '❌ No', callback_data=f'setgs#forcesub#{settings.get("forcesub", True)}#{grp_id}')
+                    ],
+                    [
+                        InlineKeyboardButton('🔒 Close Menu', callback_data='close_data')
+                    ]
+                ]
+                reply_markup = InlineKeyboardMarkup(buttons)
+                await message.reply_text(
+                    text=f"<b>⚙️ Private Settings Panel for {title}</b>",
+                    reply_markup=reply_markup,
+                    parse_mode=enums.ParseMode.HTML
+                )
+            return
+        else:
+            warning_msg = await message.reply("⚠️ നിങ്ങൾ നിലവിൽ ഒരു ഗ്രൂപ്പുമായി കണക്ട് ചെയ്തിട്ടില്ല!\n\nഗ്രൂപ്പിൽ പോയി കണക്ട് ചെയ്തതിനു ശേഷം പ്രൈവറ്റിൽ `/settings` ഉപയോഗിക്കുക.")
+            await asyncio.sleep(4)
+            try:
+                await warning_msg.delete()
+                await message.delete()
+            except:
+                pass
+            return
 
 
 # --------------------------------------------------------------------------- #
