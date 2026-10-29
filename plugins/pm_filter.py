@@ -57,13 +57,11 @@ async def pm_text(bot, message):
     user_id = message.from_user.id
     if content.startswith("/") or content.startswith("#"): return  
     
-    # ലോഗ് ചാനലിലേക്ക് അപ്ഡേറ്റ് അയക്കും (ഓണർ/അഡ്മിൻ ഉൾപ്പെടെ ആര് ചോദിച്ചാലും ഇത് വർക്ക് ചെയ്യും)
     await bot.send_message(
         chat_id=LOG_CHANNEL,
         text=f"<b>#PM_MSG\n\n★Name : {user}\n\n★ID : {user_id}\n\n★Message : {content}</b>"
     ) 
     
-    # എല്ലാവർക്കും പ്രൈവറ്റ് ചാറ്റിൽ മൂവി ഫയൽ റിപ്ലൈ ലഭിക്കും
     await auto_filter(bot, message)
 
 
@@ -123,7 +121,6 @@ async def next_page(bot, query):
                 for file in files
             ]
         else:
-            # Dual Button Format: File Size First, File Name Second
             btn = [
                 [
                     InlineKeyboardButton(
@@ -419,7 +416,8 @@ async def cb_handler(client: Client, query: CallbackQuery):
             f_caption = f"{files.file_name}"
 
         try:
-            if AUTH_CHANNEL and not await is_subscribed(client, query):
+            # Check Force Sub based on Group Settings
+            if settings.get("forcesub", True) and AUTH_CHANNEL and not await is_subscribed(client, query):
                 await query.answer(url=f"https://t.me/{temp.U_NAME}?start={ident}_{file_id}")
                 return
             elif settings['botpm'] and query.message.chat.type != enums.ChatType.PRIVATE:
@@ -450,7 +448,9 @@ async def cb_handler(client: Client, query: CallbackQuery):
         except Exception as e:
             await query.answer(url=f"https://t.me/{temp.U_NAME}?start={ident}_{file_id}")
     elif query.data.startswith("checksub"):
-        if AUTH_CHANNEL and not await is_subscribed(client, query):
+        chat_id = query.message.chat.id
+        settings = await get_settings(chat_id)
+        if settings.get("forcesub", True) and AUTH_CHANNEL and not await is_subscribed(client, query):
             await query.answer("I Like Your Smartness, But Don't Be Oversmart Okay", show_alert=True)
             return
         ident, file_id = query.data.split("#")
@@ -599,6 +599,10 @@ async def cb_handler(client: Client, query: CallbackQuery):
                     InlineKeyboardButton('✅ Yes' if settings.get("goodbye", False) else '❌ No', callback_data=f'setgs#goodbye#{settings.get("goodbye", False)}#{str(grpid)}')
                 ],
                 [
+                    InlineKeyboardButton('Force Sub', callback_data=f'setgs#forcesub#{settings.get("forcesub", True)}#{str(grpid)}'),
+                    InlineKeyboardButton('✅ Yes' if settings.get("forcesub", True) else '❌ No', callback_data=f'setgs#forcesub#{settings.get("forcesub", True)}#{str(grpid)}')
+                ],
+                [
                     InlineKeyboardButton('🔒 Close Menu', callback_data='close_data')
                 ]
             ]
@@ -665,6 +669,11 @@ async def cb_handler(client: Client, query: CallbackQuery):
                                          callback_data=f'setgs#goodbye#{settings.get("goodbye", False)}#{str(grp_id)}')
                 ],
                 [
+                    InlineKeyboardButton('Force Sub', callback_data=f'setgs#forcesub#{settings.get("forcesub", True)}#{str(grp_id)}'),
+                    InlineKeyboardButton('✅ Yes' if settings.get("forcesub", True) else '❌ No',
+                                         callback_data=f'setgs#forcesub#{settings.get("forcesub", True)}#{str(grp_id)}')
+                ],
+                [
                     InlineKeyboardButton('🔒 Close Menu', callback_data='close_data')
                 ]
             ]
@@ -727,7 +736,6 @@ async def auto_filter(client, msg, spoll=False):
                 for file in files
             ]
         else:
-            # Dual Button Format: File Size First, File Name Second
             btn = [
                 [
                     InlineKeyboardButton(
