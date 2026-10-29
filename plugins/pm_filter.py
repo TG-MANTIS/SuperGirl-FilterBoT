@@ -595,6 +595,10 @@ async def cb_handler(client: Client, query: CallbackQuery):
                     InlineKeyboardButton('✅ Yes' if settings["welcome"] else '❌ No', callback_data=f'setgs#welcome#{settings["welcome"]}#{str(grpid)}')
                 ],
                 [
+                    InlineKeyboardButton('Goodbye', callback_data=f'setgs#goodbye#{settings.get("goodbye", False)}#{str(grpid)}'),
+                    InlineKeyboardButton('✅ Yes' if settings.get("goodbye", False) else '❌ No', callback_data=f'setgs#goodbye#{settings.get("goodbye", False)}#{str(grpid)}')
+                ],
+                [
                     InlineKeyboardButton('🔒 Close Menu', callback_data='close_data')
                 ]
             ]
@@ -654,6 +658,11 @@ async def cb_handler(client: Client, query: CallbackQuery):
                     InlineKeyboardButton('Welcome', callback_data=f'setgs#welcome#{settings["welcome"]}#{str(grp_id)}'),
                     InlineKeyboardButton('✅ Yes' if settings["welcome"] else '❌ No',
                                          callback_data=f'setgs#welcome#{settings["welcome"]}#{str(grp_id)}')
+                ],
+                [
+                    InlineKeyboardButton('Goodbye', callback_data=f'setgs#goodbye#{settings.get("goodbye", False)}#{str(grp_id)}'),
+                    InlineKeyboardButton('✅ Yes' if settings.get("goodbye", False) else '❌ No',
+                                         callback_data=f'setgs#goodbye#{settings.get("goodbye", False)}#{str(grp_id)}')
                 ],
                 [
                     InlineKeyboardButton('🔒 Close Menu', callback_data='close_data')
