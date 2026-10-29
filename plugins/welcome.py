@@ -1,4 +1,5 @@
 import logging
+import asyncio
 from pyrogram import Client, filters
 from pyrogram.types import ChatMemberUpdated
 from utils import get_settings
@@ -24,7 +25,14 @@ async def welcome_goodbye_handler(client: Client, update: ChatMemberUpdated):
             # Check if welcome settings is enabled (True) in database
             if settings and settings.get("welcome", False):
                 welcome_text = f"<b>👋 Hello {user.mention},\n\nWelcome to {chat.title}! 🎉</b>"
-                await client.send_message(chat.id, welcome_text)
+                sent_msg = await client.send_message(chat.id, welcome_text)
+                
+                # Auto delete welcome message after 5 seconds
+                await asyncio.sleep(5)
+                try:
+                    await sent_msg.delete()
+                except:
+                    pass
         except Exception as e:
             logger.exception(e)
 
@@ -43,6 +51,13 @@ async def welcome_goodbye_handler(client: Client, update: ChatMemberUpdated):
             # Check if goodbye settings is enabled (True) in database
             if settings and settings.get("goodbye", False):
                 goodbye_text = f"<b>👋 {user.mention} has left the group! 🚶‍♂️</b>"
-                await client.send_message(chat.id, goodbye_text)
+                sent_msg = await client.send_message(chat.id, goodbye_text)
+                
+                # Auto delete goodbye message after 5 seconds
+                await asyncio.sleep(5)
+                try:
+                    await sent_msg.delete()
+                except:
+                    pass
         except Exception as e:
             logger.exception(e)
