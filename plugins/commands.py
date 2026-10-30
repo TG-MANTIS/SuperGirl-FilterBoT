@@ -122,7 +122,7 @@ async def start(client, message):
 
     data = message.command[1]
     
-    # Handle Private Settings Panel Redirect from Group
+    # Handle Private Settings Panel Redirect from Group (Safe Error-Free Title Handling)
     if data.startswith("settings_"):
         grp_id = int(data.split("_")[1])
         user_id = message.from_user.id
@@ -134,8 +134,15 @@ async def start(client, message):
             return await message.reply("⚠️ Make sure I am present in that group and you are an admin!")
 
         settings = await get_settings(grp_id)
-        chat = await client.get_chat(grp_id)
-        title = chat.title
+        
+        # Safe title extraction to prevent UnboundLocalError
+        title = "Group"
+        try:
+            chat = await client.get_chat(grp_id)
+            if chat and chat.title:
+                title = chat.title
+        except Exception as e:
+            logger.error(f"Error fetching chat title: {e}")
 
         if settings is not None:
             buttons = [
@@ -590,8 +597,15 @@ async def set_group_menu_handler(client, query):
         pass
 
     settings = await get_settings(grp_id)
-    chat = await client.get_chat(grp_id)
-    title = chat.title
+    
+    # Safe title extraction
+    title = "Group"
+    try:
+        chat = await client.get_chat(grp_id)
+        if chat and chat.title:
+            title = chat.title
+    except Exception as e:
+        logger.error(f"Error fetching chat title: {e}")
 
     if settings is not None:
         if page == 1:
@@ -673,8 +687,15 @@ async def settings_update_handler(client, query):
     await save_group_settings(grp_id, set_type, new_status)
 
     settings = await get_settings(grp_id)
-    chat = await client.get_chat(grp_id)
-    title = chat.title
+    
+    # Safe title extraction
+    title = "Group"
+    try:
+        chat = await client.get_chat(grp_id)
+        if chat and chat.title:
+            title = chat.title
+    except Exception as e:
+        logger.error(f"Error fetching chat title: {e}")
 
     if settings is not None:
         if page == 1:
