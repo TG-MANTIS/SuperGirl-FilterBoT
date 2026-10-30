@@ -679,23 +679,23 @@ async def cb_handler(client: Client, query: CallbackQuery):
         ]]
         reply_markup = InlineKeyboardMarkup(buttons)
         
-        # Multiple Database Stats Breakdown
+        # Multiple Database Stats Breakdown via Script template
         db_stats = await get_databases_stats()
-        db_breakdown_text = ""
-        for stat in db_stats:
-            size_mb = get_size(stat['size'])
-            db_breakdown_text += f"<b>🔸 Database {stat['db_index']} Files:</b> {stat['count']} | <b>Size:</b> {size_mb}\n"
+        db_data = {stat['db_index']: {'count': stat['count'], 'size': get_size(stat['size'])} for stat in db_stats}
         
-        total = sum(stat['count'] for stat in db_stats)
         users = await db.total_users_count()
         chats = await db.total_chat_count()
         
         if query.from_user.id in ADMINS:
-            status_text = (
-                f"<b>📊 𝙂𝙇𝙊𝘽𝘼𝙇 𝙎𝙏𝘼𝙏𝙐𝙎 𝘽𝙊𝘼𝙍𝘿 📊</b>\n\n"
-                f"{db_breakdown_text}\n"
-                f"<b>👥 Total Members:</b> {users}\n"
-                f"<b>💬 Total Chats:</b> {chats}"
+            status_text = script.STATUS_TXT.format(
+                db1_count=db_data.get(1, {}).get('count', 0),
+                db1_size=db_data.get(1, {}).get('size', '0 KB'),
+                db2_count=db_data.get(2, {}).get('count', 0),
+                db2_size=db_data.get(2, {}).get('size', '0 KB'),
+                db3_count=db_data.get(3, {}).get('count', 0),
+                db3_size=db_data.get(3, {}).get('size', '0 KB'),
+                users=users,
+                chats=chats
             )
             await query.message.edit_text(text=status_text, reply_markup=reply_markup, parse_mode=enums.ParseMode.HTML)
         else:
@@ -714,22 +714,23 @@ async def cb_handler(client: Client, query: CallbackQuery):
         )    
         reply_markup = InlineKeyboardMarkup(buttons)
         
-        # Multiple Database Stats Breakdown
+        # Multiple Database Stats Breakdown via Script template
         db_stats = await get_databases_stats()
-        db_breakdown_text = ""
-        for stat in db_stats:
-            size_mb = get_size(stat['size'])
-            db_breakdown_text += f"<b>🔸 Database {stat['db_index']} Files:</b> {stat['count']} | <b>Size:</b> {size_mb}\n"
+        db_data = {stat['db_index']: {'count': stat['count'], 'size': get_size(stat['size'])} for stat in db_stats}
         
         users = await db.total_users_count()
         chats = await db.total_chat_count()
         
         if query.from_user.id in ADMINS:
-            status_text = (
-                f"<b>📊 𝙂𝙇𝙊𝘽𝘼𝙇 𝙎𝙏𝘼𝙏𝙐𝙎 𝘽𝙊𝘼𝙍𝘿 📊</b>\n\n"
-                f"{db_breakdown_text}\n"
-                f"<b>👥 Total Members:</b> {users}\n"
-                f"<b>💬 Total Chats:</b> {chats}"
+            status_text = script.STATUS_TXT.format(
+                db1_count=db_data.get(1, {}).get('count', 0),
+                db1_size=db_data.get(1, {}).get('size', '0 KB'),
+                db2_count=db_data.get(2, {}).get('count', 0),
+                db2_size=db_data.get(2, {}).get('size', '0 KB'),
+                db3_count=db_data.get(3, {}).get('count', 0),
+                db3_size=db_data.get(3, {}).get('size', '0 KB'),
+                users=users,
+                chats=chats
             )
             await query.message.edit_text(text=status_text, reply_markup=reply_markup, parse_mode=enums.ParseMode.HTML)
         else:
