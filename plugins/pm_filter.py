@@ -32,12 +32,24 @@ logger.setLevel(logging.INFO)
 
 PM_BUTTONS = {}
 BUTTONS = {}
-SPELL_CHECK = {}
 
-# Notification Texts & Warnings
-NON_IMG = """<b><i>👋Hello {user_mention}</i></b>\n\n<b>❝ <i>Use the Button Below to Search on Google or IMDB And Copy the Correct Movie/Series Name And Paste.</i></b>\n\n<b>❝ <i>Don't Ask Movies/Series that Are Not Released in OTT Platform.</i></b>\n\n<b>❝ <i>Try to Ask in [ Name, Year ] This Fromat.</i></b>\n\n<i><b><u>⚠️ Don't Use: ➲ [+:;'*!-&.. etc</i></b></u>"""
+# Notification Text for Spell Check / No File Found
+NON_IMG = """<b>👋 Hello {user_mention},</b>
 
-OTT_NOT_RELEASED_TXT = """<b><i>👋Hello {user_mention}</i></b>\n\n<b>❌ <i>Requested Title : <code>{mv_rqst}</code></i></b>\n\n<b>❝ <i>ഈ മൂവി/സീരീസ് നിലവിൽ തിയേറ്ററിൽ/ഉറവിടത്തിൽ മാത്രമാണ് ഉള്ളത്. ഫയലുകൾ ലഭ്യമാക്കാൻ സാധിക്കില്ല.</i></b>"""
+<b>❌ <i>Could not find <code>{mv_rqst}</code> in our database!</i></b>
+
+<b><u>📌 Possible Reasons:</u></b>
+
+1️⃣ <b><u>Spelling Mistake:</u></b>
+   • Please check the spelling and try again, or use the <b>Google</b> / <b>IMDb</b> buttons below to find the correct title.
+
+2️⃣ <b><u>OTT Release:</u></b>
+   • The movie/series might not be released on OTT platforms yet. (Theater prints are not available).
+
+3️⃣ <b><u>Database:</u></b>
+   • The file has not been added to our database yet.
+
+💡 <b><u>Search Format:</u></b> <code>Movie Name Year</code> (Eg: <i>Lucifer 2019</i>)"""
 
 
 # --------------------------------------------------------------------------- #
@@ -172,30 +184,6 @@ async def next_page(bot, query):
     except MessageNotModified:
         pass
     await query.answer()
-
-
-@Client.on_callback_query(filters.regex(r"^spolling"))
-async def advantage_spoll_choker(bot, query):
-    _, user, movie_ = query.data.split('#')
-    if int(user) != 0 and query.from_user.id != int(user):
-        return await query.answer("okDa", show_alert=True)
-    if movie_ == "close_spellcheck":
-        return await query.message.delete()
-    movies = SPELL_CHECK.get(query.message.reply_to_message.id)
-    if not movies:
-        return await query.answer("You are clicking on an old button which is expired.", show_alert=True)
-    movie = movies[(int(movie_))]
-    await query.answer('Checking for Movie in database...💡')
-    k = await manual_filters(bot, query.message, text=movie)
-    if k == False:
-        files, offset, total_results = await get_search_results(movie, offset=0, filter=True)
-        if files:
-            k = (movie, files, offset, total_results)
-            await auto_filter(bot, query, k)
-        else:
-            k = await query.message.edit('movie not for my database..!')
-            await asyncio.sleep(10)
-            await k.delete()
 
 
 # --------------------------------------------------------------------------- #
@@ -699,7 +687,7 @@ async def auto_filter(client, msg, spoll=False):
             files, offset, total_results = await get_search_results(search.lower(), offset=0, filter=True)
             if not files:
                 if settings.get("spell_check", True):
-                    return await advantage_theater_only_chok(msg)
+                    return await advantage_spell_chok(msg)
                 else:
                     return
         else:
@@ -767,7 +755,7 @@ async def auto_filter(client, msg, spoll=False):
         )
     else:
         btn.append(
-            [InlineKeyboardButton(text="Dᴇʟᴇᴛᴇ 🗑️", callback_data="close_data")]
+            [InlineKeyboardButton(text="DᴇʟᴇᴛEB 🗑️", callback_data="close_data")]
         )
 
     # IMDb Template & Metadata Resolution
@@ -833,7 +821,7 @@ async def auto_filter(client, msg, spoll=False):
 
 
 # --------------------------------------------------------------------------- #
-#  Spell Check & Supplemental Handlers                                        #
+#  Spell Check Handler                                                        #
 # --------------------------------------------------------------------------- #
 
 async def advantage_spell_chok(msg):
@@ -846,35 +834,17 @@ async def advantage_spell_chok(msg):
         ),
         InlineKeyboardButton(
             text="🔮 𝗜𝗠𝗗𝗕 🔮",
-            url=f"https://imdb.com/find?q={search}")
-
+            url=f"https://imdb.com/find?q={search}"
+        )
     ]]
     
-    user_mention = msg.from_user.mention if msg.from_user else "My Friend"
-    spl = await msg.reply_photo(
-            photo="https://envs.sh/RCE.jpg", 
-            caption=NON_IMG.format(user_mention=user_mention, mv_rqst=mv_rqst),
-            reply_markup=InlineKeyboardMarkup(btn)
-    )
+    user_mention = msg.from_user.mention if msg.from_user else "Friend"
     
-    await asyncio.sleep(99)
-    await spl.delete()
-    await msg.delete()
-    return
-
-async def advantage_theater_only_chok(msg):
-    mv_rqst = msg.text
-    user_mention = msg.from_user.mention if msg.from_user else "My Friend"
-    btn = [[
-        InlineKeyboardButton(text="Dᴇʟᴇᴛᴇ 🗑️", callback_data="close_data")
-    ]]
-    spl = await msg.reply_photo(
-            photo=NOR_IMG, 
-            caption=OTT_NOT_RELEASED_TXT.format(user_mention=user_mention, mv_rqst=mv_rqst),
-            reply_markup=InlineKeyboardMarkup(btn)
+    await msg.reply_photo(
+        photo="https://envs.sh/RCE.jpg", 
+        caption=NON_IMG.format(user_mention=user_mention, mv_rqst=mv_rqst),
+        reply_markup=InlineKeyboardMarkup(btn)
     )
-    await asyncio.sleep(99)
-    await spl.delete()
     await msg.delete()
     return
 
