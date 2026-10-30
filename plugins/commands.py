@@ -135,7 +135,6 @@ async def start(client, message):
 
         settings = await get_settings(grp_id)
         
-        # Safe title extraction to prevent UnboundLocalError
         title = "Group"
         try:
             chat = await client.get_chat(grp_id)
@@ -319,7 +318,7 @@ async def start(client, message):
         
     buttons = [
         [
-            InlineKeyboardButton('💥 Gʀᴏᴜᴩ', url="https://t.me/+iEbhY7mM4oE1OTVl"),
+            InlineKeyboardButton('💥 Gʀᴏ𝐮ᴩ', url="https://t.me/+iEbhY7mM4oE1OTVl"),
             InlineKeyboardButton('Dᴇʟᴇᴛᴇ ⚠️', callback_data='close_data')
         ],
         [
@@ -452,7 +451,7 @@ async def delete_all_index_confirm(bot, message):
 
 
 # --------------------------------------------------------------------------- #
-#  /settings Command Handler (Group & Private PM Support with Admin Check)    #
+#  /settings Command Handler (Group & Direct Private PM Full Menu)            #
 # --------------------------------------------------------------------------- #
 
 @Client.on_message(filters.command('settings') & (filters.group | filters.private))
@@ -509,7 +508,7 @@ async def settings(client, message):
             reply_to_message_id=message.id
         )
 
-    # 2. Private Chat (PM) Settings Handler
+    # 2. Private Chat (PM) Settings Handler -> Direct Full Menu for Group Admins / Bot Admins
     elif chat_type == enums.ChatType.PRIVATE:
         grpid = await active_connection(str(userid))
         if grpid is not None:
@@ -522,14 +521,9 @@ async def settings(client, message):
             except:
                 is_admin = False
 
+            # If user is NOT group admin and NOT bot admin, deny access strictly
             if not is_admin and userid not in ADMINS:
-                warning_msg = await message.reply("⚠️ You do not have admin rights or permissions in the connected group!")
-                await asyncio.sleep(3)
-                try:
-                    await warning_msg.delete()
-                    await message.delete()
-                except:
-                    pass
+                await message.reply("⚠️ ഈ കമാൻഡ് ഉപയോഗിക്കാൻ നിങ്ങൾക്ക് അനുവാദമില്ല!")
                 return
 
             settings = await get_settings(grp_id)
@@ -568,18 +562,12 @@ async def settings(client, message):
                 )
             return
         else:
-            warning_msg = await message.reply("⚠️ You are not connected to any group right now!\n\nPlease go to your group, connect first, and then use `/settings` in PM.")
-            await asyncio.sleep(4)
-            try:
-                await warning_msg.delete()
-                await message.delete()
-            except:
-                pass
+            await message.reply("⚠️ You are not connected to any group right now!\n\nPlease go to your group, connect first, and then use `/settings` in PM.")
             return
 
 
 # --------------------------------------------------------------------------- #
-#  Group Settings Menu & Pagination Callback Handlers                         #
+#  Group & PM Settings Menu Pagination & Update Handlers                      #
 # --------------------------------------------------------------------------- #
 
 @Client.on_callback_query(filters.regex(r"^set_group_menu#"))
@@ -598,7 +586,6 @@ async def set_group_menu_handler(client, query):
 
     settings = await get_settings(grp_id)
     
-    # Safe title extraction
     title = "Group"
     try:
         chat = await client.get_chat(grp_id)
@@ -635,7 +622,7 @@ async def set_group_menu_handler(client, query):
                     InlineKeyboardButton('Close', callback_data='close_data')
                 ]
             ]
-            text = f"<b>⚙️ Group Settings for {title} (Page 1/2)</b>"
+            text = f"<b>⚙️ Settings for {title} (Page 1/2)</b>"
         else:
             antilink = settings.get("antilink", False)
             buttons = [
@@ -660,7 +647,7 @@ async def set_group_menu_handler(client, query):
                     InlineKeyboardButton('Close', callback_data='close_data')
                 ]
             ]
-            text = f"<b>⚙️ Group Settings for {title} (Page 2/2)</b>"
+            text = f"<b>⚙️ Settings for {title} (Page 2/2)</b>"
 
         await query.message.edit_text(text, reply_markup=InlineKeyboardMarkup(buttons))
     await query.answer()
@@ -688,7 +675,6 @@ async def settings_update_handler(client, query):
 
     settings = await get_settings(grp_id)
     
-    # Safe title extraction
     title = "Group"
     try:
         chat = await client.get_chat(grp_id)
@@ -725,7 +711,7 @@ async def settings_update_handler(client, query):
                     InlineKeyboardButton('Close', callback_data='close_data')
                 ]
             ]
-            text = f"<b>⚙️ Group Settings for {title} (Page 1/2)</b>"
+            text = f"<b>⚙️ Settings for {title} (Page 1/2)</b>"
         else:
             antilink = settings.get("antilink", False)
             buttons = [
@@ -750,7 +736,7 @@ async def settings_update_handler(client, query):
                     InlineKeyboardButton('Close', callback_data='close_data')
                 ]
             ]
-            text = f"<b>⚙️ Group Settings for {title} (Page 2/2)</b>"
+            text = f"<b>⚙️ Settings for {title} (Page 2/2)</b>"
 
         reply_markup = InlineKeyboardMarkup(buttons)
         await query.message.edit_text(text, reply_markup=reply_markup)
