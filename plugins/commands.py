@@ -45,14 +45,20 @@ async def start(client, message):
         await asyncio.sleep(2) 
         if not await db.get_chat(message.chat.id):
             total = await client.get_chat_members_count(message.chat.id)
-            await client.send_message(LOG_CHANNEL, script.LOG_TEXT_G.format(message.chat.title, message.chat.id, total, "Unknown"))       
+            try:
+                await client.send_message(LOG_CHANNEL, script.LOG_TEXT_G.format(message.chat.title, message.chat.id, total, "Unknown"))       
+            except Exception as e:
+                logger.error(f"Group Log Error: {e}")
             await db.add_chat(message.chat.id, message.chat.title)
         return 
 
     # Private User Registration Check
     if not await db.is_user_exist(message.from_user.id):
         await db.add_user(message.from_user.id, message.from_user.first_name)
-        await client.send_message(LOG_CHANNEL, script.LOG_TEXT_P.format(message.from_user.id, message.from_user.mention))
+        try:
+            await client.send_message(LOG_CHANNEL, script.LOG_TEXT_P.format(message.from_user.id, message.from_user.mention))
+        except Exception as e:
+            logger.error(f"User Log Error: {e}")
 
     # Standard Private Start / No File Payload
     if len(message.command) != 2:
@@ -88,13 +94,13 @@ async def start(client, message):
             try:
                 kk, file_id = message.command[1].split("_", 1)
                 pre = 'checksubp' if kk == 'filep' else 'checksub' 
-                btn.append([InlineKeyboardButton("🔁 Tʀʏ Aɢᴀɪɴ 🔁", callback_data=f"{pre}#{file_id}")])
+                btn.append([InlineKeyboardButton("🔁 Tʀʏ Aɢᴀɪ𝗻 🔁", callback_data=f"{pre}#{file_id}")])
             except (IndexError, ValueError):
                 btn.append([InlineKeyboardButton("🔁 Tʀʏ Aɢ𝗮𝗶𝗻 🔁", url=f"https://t.me/{temp.U_NAME}?start={message.command[1]}")])
         await client.send_photo(
             chat_id=message.from_user.id,
             photo=FORCE_IMG,
-            caption="**താഴെ ഉള്ള 𝗝𝗼𝗶𝗻 𝗖𝗵𝗮𝗻𝗻𝗲𝗹 ക്ലിക്ക് ചെയ്ത് കഴിഞ്ഞ് 𝗧𝗿𝘆 𝗔𝗴𝗮𝗶𝗻 ക്ലിക്ക് ചെയ്‌താൽ നിങ്ങൾക് സിനിമ ലഭിക്കുന്നതാണ്.!\n\nClick the 𝗝𝗼𝗶𝗻 𝗖𝗵𝗮𝗻𝗻𝗲𝗹 and then click 𝗧𝗿𝘆 𝗔𝗴𝗮𝗶𝗻 and you will get the File.!**",
+            caption="**Please click the Join Channel button below and then click Try Again to get your file!**",
             reply_markup=InlineKeyboardMarkup(btn),
             parse_mode=enums.ParseMode.MARKDOWN
         )
@@ -185,7 +191,7 @@ async def start(client, message):
         pre = ""
 
     if data.split("-", 1)[0] == "BATCH":
-        sts = await message.reply("Please wait")
+        sts = await message.reply("Please wait...")
         file_id = data.split("-", 1)[1]
         msgs = BATCH_FILES.get(file_id)
         if not msgs:
@@ -234,7 +240,7 @@ async def start(client, message):
         return
 
     elif data.split("-", 1)[0] == "DSTORE":
-        sts = await message.reply("Please wait")
+        sts = await message.reply("Please wait...")
         b_string = data.split("-", 1)[1]
         decoded = (base64.urlsafe_b64decode(b_string + "=" * (-len(b_string) % 4))).decode("ascii")
         try:
@@ -300,7 +306,7 @@ async def start(client, message):
             return
         except:
             pass
-        return await message.reply('No such file exist.')
+        return await message.reply('No such file exists.')
     
     files = files_[0]
     title = files.file_name
@@ -396,14 +402,14 @@ async def delete(bot, message):
         if media is not None:
             break
     else:
-        await msg.edit('This is not supported file format')
+        await msg.edit('This is not a supported file format!')
         return
     
     file_id, file_ref = unpack_new_file_id(media.file_id)
 
     result = await Media.collection.delete_one({'_id': file_id})
     if result.deleted_count:
-        await msg.edit('File is successfully deleted from database')
+        await msg.edit('File successfully deleted from database!')
     else:
         file_name = re.sub(r"(_|\-|\.|\+)", " ", str(media.file_name))
         result = await Media.collection.delete_many({
@@ -412,7 +418,7 @@ async def delete(bot, message):
             'mime_type': media.mime_type
         })
         if result.deleted_count:
-            await msg.edit('File is successfully deleted from database')
+            await msg.edit('File successfully deleted from database!')
         else:
             result = await Media.collection.delete_many({
                 'file_name': media.file_name,
@@ -420,9 +426,9 @@ async def delete(bot, message):
                 'mime_type': media.mime_type
             })
             if result.deleted_count:
-                await msg.edit('File is successfully deleted from database')
+                await msg.edit('File successfully deleted from database!')
             else:
-                await msg.edit('File not found in database')
+                await msg.edit('File not found in database!')
 
 
 # --------------------------------------------------------------------------- #
@@ -432,7 +438,7 @@ async def delete(bot, message):
 @Client.on_message(filters.command('deleteall') & filters.user(ADMINS))
 async def delete_all_index(bot, message):
     await message.reply_text(
-        'This will delete all indexed files.\nDo you want to continue??',
+        'This will delete all indexed files.\nDo you want to continue?',
         reply_markup=InlineKeyboardMarkup(
             [
                 [InlineKeyboardButton(text="YES", callback_data="autofilter_delete")],
@@ -445,8 +451,8 @@ async def delete_all_index(bot, message):
 @Client.on_callback_query(filters.regex(r'^autofilter_delete'))
 async def delete_all_index_confirm(bot, message):
     await Media.collection.drop()
-    await message.answer('Tʜᴇᴛᴇْر & Oᴛᴛ Kᴜ Kᴀsᴜ Iʟʟᴀʏᴀ 💌 Pᴀʀᴀᴠాల্ল Nᴀ Iʀᴜᴋᴇɴ')
-    await message.message.edit('Succesfully Deleted All The Indexed Files.')
+    await message.answer('All indexed files have been successfully cleared!', show_alert=True)
+    await message.message.edit('Successfully deleted all the indexed files.')
 
 
 # --------------------------------------------------------------------------- #
@@ -472,11 +478,11 @@ async def settings(client, message):
 
         if not is_admin and userid not in ADMINS:
             warning_caption = (
-                f"<b>👋 ഹലോ {message.from_user.mention},\n\n"
-                "❌ <code>/settings</code> കമാൻഡ് ഉപയോഗിക്കാൻ നിങ്ങൾക്ക് അനുവാദമില്ല!\n"
-                "⚠️ ഈ ഗ്രൂപ്പിന്റെ ക്രമീകരണങ്ങൾ (Settings) മാറ്റാൻ ഗ്രൂപ്പ് അഡ്മിൻമാർക്ക് മാത്രമേ അധികാരമുള്ളൂ.</b>"
+                f"<b>👋 Hello {message.from_user.mention},\n\n"
+                "❌ You do not have permission to use the <code>/settings</code> command!\n"
+                "⚠️ Only group administrators are allowed to change these settings.</b>"
             )
-            btn = [[InlineKeyboardButton("Dᴇʟᴇᴛᴇ 🗑️", callback_data="close_data")]]
+            btn = [[InlineKeyboardButton("Delete 🗑️", callback_data="close_data")]]
             sent_msg = await message.reply_photo(
                 photo=SET_IMG,
                 caption=warning_caption,
@@ -521,7 +527,7 @@ async def settings(client, message):
                 is_admin = False
 
             if not is_admin and userid not in ADMINS:
-                warning_msg = await message.reply("⚠️ നിങ്ങൾ കണക്ട് ചെയ്തിരിക്കുന്ന ഗ്രൂപ്പിൽ നിങ്ങൾക്ക് അഡ്മിൻ പദവിയോ അധികാരമോ ഇല്ല!")
+                warning_msg = await message.reply("⚠️ You do not have admin rights or permissions in the connected group!")
                 await asyncio.sleep(3)
                 try:
                     await warning_msg.delete()
@@ -577,7 +583,7 @@ async def settings(client, message):
                 )
             return
         else:
-            warning_msg = await message.reply("⚠️ നിങ്ങൾ നിലവിൽ ഒരു ഗ്രൂപ്പുമായി കണക്ട് ചെയ്തിട്ടില്ല!\n\nഗ്രൂപ്പിൽ പോയി കണക്ട് ചെയ്തതിനു ശേഷം പ്രൈവറ്റിൽ `/settings` ഉപയോഗിക്കുക.")
+            warning_msg = await message.reply("⚠️ You are not connected to any group right now!\n\nPlease go to your group, connect first, and then use `/settings` in PM.")
             await asyncio.sleep(4)
             try:
                 await warning_msg.delete()
@@ -593,10 +599,10 @@ async def settings(client, message):
 
 @Client.on_message(filters.command('set_template'))
 async def save_template(client, message):
-    sts = await message.reply("Checking template")
+    sts = await message.reply("Checking template...")
     userid = message.from_user.id if message.from_user else None
     if not userid:
-        return await message.reply(f"You are anonymous admin. Use /connect {message.chat.id} in PM")
+        return await message.reply(f"You are an anonymous admin. Use /connect {message.chat.id} in PM")
     chat_type = message.chat.type
 
     if chat_type == enums.ChatType.PRIVATE:
@@ -607,7 +613,7 @@ async def save_template(client, message):
                 chat = await client.get_chat(grpid)
                 title = chat.title
             except:
-                await message.reply_text("Make sure I'm present in your group!!", quote=True)
+                await message.reply_text("Make sure I'm present in your group!", quote=True)
                 return
         else:
             await message.reply_text("I'm not connected to any groups!", quote=True)
@@ -628,7 +634,7 @@ async def save_template(client, message):
         return
 
     if len(message.command) < 2:
-        return await sts.edit("No Input!!")
+        return await sts.edit("No Input Provided!")
     template = message.text.split(" ", 1)[1]
     await save_group_settings(grp_id, 'template', template)
-    await sts.edit(f"Successfully changed template for {title} to\n\n{template}")
+    await sts.edit(f"Successfully changed template for {title} to:\n\n{template}")
