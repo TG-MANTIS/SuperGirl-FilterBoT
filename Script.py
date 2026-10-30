@@ -21,13 +21,22 @@ class script(object):
 
 <b>〰〰〰〰〰〰〰〰〰〰〰〰〰〰〰〰</b>"""
     
-    STATUS_TXT = """<b><u>📊 STATUS BOARD 📊</u></b>
+    STATUS_TXT = """<b>📊 𝙂𝙇𝙊𝘽𝘼𝙇 𝙎𝙏𝘼𝙏𝙐𝙎 𝘽𝙊𝘼𝙍𝘿 📊</b>
 
-<b>➥ Total Files: <code>{}</code></b>
-<b>➥ Total Members: <code>{}</code></b>
-<b>➥ Total Chats: <code>{}</code></b>
-<b>➥ Used Storage: <code>{}</code></b>
-<b>〰〰〰〰〰〰〰〰〰〰〰〰〰〰〰〰</b>"""
+<b>📂 Database 1:</b>
+   • Total Files: <code>{db1_count}</code>
+   • Used Storage: <code>{db1_size}</code>
+
+<b>📂 Database 2:</b>
+   • Total Files: <code>{db2_count}</code>
+   • Used Storage: <code>{db2_size}</code>
+
+<b>📂 Database 3:</b>
+   • Total Files: <code>{db3_count}</code>
+   • Used Storage: <code>{db3_size}</code>
+
+<b>👥 Total Members:</b> <code>{users}</code>
+<b>💬 Total Chats:</b> <code>{chats}</code>"""
     
     LOG_TEXT_G = """#NewGroup
 Group = {}(<code>{}</code>)
