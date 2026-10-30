@@ -162,19 +162,19 @@ async def next_page(bot, query):
         btn.append(
             [InlineKeyboardButton("⭅ Bᴀᴄᴋ", callback_data=f"next_{req}_{key}_{off_set}"),
              InlineKeyboardButton(f" {math.ceil(int(offset) / 10) + 1} / {math.ceil(total / 10)}", callback_data="pages"),
-             InlineKeyboardButton("Dᴇʟᴇᴛᴇ 🗑️", callback_data="close_data")]
+             InlineKeyboardButton("Delete 🗑️", callback_data="close_data")]
         )
     elif off_set is None:
         btn.append(
-            [InlineKeyboardButton("❖ Pᴀɢᴇꜱ", callback_data="pages"),
+            [InlineKeyboardButton("❖ Pages", callback_data="pages"),
              InlineKeyboardButton(f" {math.ceil(int(offset) / 10) + 1} / {math.ceil(total / 10)}", callback_data="pages"),
-             InlineKeyboardButton("Nᴇxᴛ ⇛", callback_data=f"next_{req}_{key}_{n_offset}")])
+             InlineKeyboardButton("Next ⇛", callback_data=f"next_{req}_{key}_{n_offset}")])
     else:
         btn.append(
             [
                 InlineKeyboardButton("⭅ Bᴀᴄᴋ", callback_data=f"next_{req}_{key}_{off_set}"),
                 InlineKeyboardButton(f" {math.ceil(int(offset) / 10) + 1} / {math.ceil(total / 10)}", callback_data="pages"),
-                InlineKeyboardButton("Nᴇxᴛ ⇛", callback_data=f"next_{req}_{key}_{n_offset}")
+                InlineKeyboardButton("Next ⇛", callback_data=f"next_{req}_{key}_{n_offset}")
             ],
         )
     try:
@@ -337,7 +337,7 @@ async def cb_handler(client: Client, query: CallbackQuery):
                 parse_mode=enums.ParseMode.MARKDOWN
             )
         return await query.answer('♥️hello Bro Please Share And Support')
-    elif query.data == "backcb":
+    elif "backcb" in query.data:
         await query.answer()
 
         userid = query.from_user.id
@@ -379,7 +379,159 @@ async def cb_handler(client: Client, query: CallbackQuery):
             alert = alerts[int(i)]
             alert = alert.replace("\\n", "\n").replace("\\t", "\t")
             await query.answer(alert, show_alert=True)
-    if query.data.startswith("file"):
+    elif query.data.startswith("set_group_menu#"):
+        data_parts = query.data.split("#")
+        grp_id = int(data_parts[1])
+        page = int(data_parts[2]) if len(data_parts) > 2 else 1
+        
+        user_id = query.from_user.id
+        try:
+            member = await client.get_chat_member(grp_id, user_id)
+            if not (member.status in [enums.ChatMemberStatus.OWNER, enums.ChatMemberStatus.ADMINISTRATOR] or user_id in ADMINS):
+                return await query.answer("⚠️ You need to be an Admin to change settings!", show_alert=True)
+        except:
+            pass
+
+        settings = await get_settings(grp_id)
+        chat = await client.get_chat(grp_id)
+        title = chat.title
+
+        if settings is not None:
+            if page == 1:
+                buttons = [
+                    [
+                        InlineKeyboardButton('Filter Button', callback_data=f'setgs#button#{settings["button"]}#{grp_id}#1'),
+                        InlineKeyboardButton('Single' if settings["button"] else 'Double', callback_data=f'setgs#button#{settings["button"]}#{grp_id}#1')
+                    ],
+                    [
+                        InlineKeyboardButton('Bot PM', callback_data=f'setgs#botpm#{settings["botpm"]}#{grp_id}#1'),
+                        InlineKeyboardButton('✅ Yes' if settings["botpm"] else '❌ No', callback_data=f'setgs#botpm#{settings["botpm"]}#{grp_id}#1')
+                    ],
+                    [
+                        InlineKeyboardButton('File Secure', callback_data=f'setgs#file_secure#{settings["file_secure"]}#{grp_id}#1'),
+                        InlineKeyboardButton('✅ Yes' if settings["file_secure"] else '❌ No', callback_data=f'setgs#file_secure#{settings["file_secure"]}#{grp_id}#1')
+                    ],
+                    [
+                        InlineKeyboardButton('IMDB', callback_data=f'setgs#imdb#{settings["imdb"]}#{grp_id}#1'),
+                        InlineKeyboardButton('✅ Yes' if settings["imdb"] else '❌ No', callback_data=f'setgs#imdb#{settings["imdb"]}#{grp_id}#1')
+                    ],
+                    [
+                        InlineKeyboardButton('Spell Check', callback_data=f'setgs#spell_check#{settings["spell_check"]}#{grp_id}#1'),
+                        InlineKeyboardButton('✅ Yes' if settings["spell_check"] else '❌ No', callback_data=f'setgs#spell_check#{settings["spell_check"]}#{grp_id}#1')
+                    ],
+                    [
+                        InlineKeyboardButton('Next ⇛', callback_data=f'set_group_menu#{grp_id}#2'),
+                        InlineKeyboardButton('Close', callback_data='close_data')
+                    ]
+                ]
+                text = f"<b>⚙️ Group Settings for {title} (Page 1/2)</b>"
+            else:
+                antilink = settings.get("antilink", False)
+                buttons = [
+                    [
+                        InlineKeyboardButton('Welcome', callback_data=f'setgs#welcome#{settings["welcome"]}#{grp_id}#2'),
+                        InlineKeyboardButton('✅ Yes' if settings["welcome"] else '❌ No', callback_data=f'setgs#welcome#{settings["welcome"]}#{grp_id}#2')
+                    ],
+                    [
+                        InlineKeyboardButton('Goodbye', callback_data=f'setgs#goodbye#{settings.get("goodbye", False)}#{grp_id}#2'),
+                        InlineKeyboardButton('✅ Yes' if settings.get("goodbye", False) else '❌ No', callback_data=f'setgs#goodbye#{settings.get("goodbye", False)}#{grp_id}#2')
+                    ],
+                    [
+                        InlineKeyboardButton('Force Sub', callback_data=f'setgs#forcesub#{settings.get("forcesub", True)}#{grp_id}#2'),
+                        InlineKeyboardButton('✅ Yes' if settings.get("forcesub", True) else '❌ No', callback_data=f'setgs#forcesub#{settings.get("forcesub", True)}#{grp_id}#2')
+                    ],
+                    [
+                        InlineKeyboardButton('Anti-Link 🛡️', callback_data=f'setgs#antilink#{antilink}#{grp_id}#2'),
+                        InlineKeyboardButton('✅ On' if antilink else '❌ Off', callback_data=f'setgs#antilink#{antilink}#{grp_id}#2')
+                    ],
+                    [
+                        InlineKeyboardButton('⭅ Back', callback_data=f'set_group_menu#{grp_id}#1'),
+                        InlineKeyboardButton('Close', callback_data='close_data')
+                    ]
+                ]
+                text = f"<b>⚙️ Group Settings for {title} (Page 2/2)</b>"
+
+            await query.message.edit_text(text, reply_markup=InlineKeyboardMarkup(buttons))
+        await query.answer()
+    elif query.data.startswith("setgs"):
+        ident, set_type, status, grp_id, page = query.data.split("#")
+        grpid = int(grp_id)
+        page_num = int(page)
+
+        user_id = query.from_user.id
+        try:
+            member = await client.get_chat_member(grpid, user_id)
+            if not (member.status in [enums.ChatMemberStatus.OWNER, enums.ChatMemberStatus.ADMINISTRATOR] or user_id in ADMINS):
+                return await query.answer("⚠️ You need to be an Admin to change settings!", show_alert=True)
+        except:
+            pass
+
+        new_status = False if status == "True" else True
+        await save_group_settings(grpid, set_type, new_status)
+
+        settings = await get_settings(grpid)
+        chat = await client.get_chat(grpid)
+        title = chat.title
+
+        if settings is not None:
+            if page_num == 1:
+                buttons = [
+                    [
+                        InlineKeyboardButton('Filter Button', callback_data=f'setgs#button#{settings["button"]}#{grp_id}#1'),
+                        InlineKeyboardButton('Single' if settings["button"] else 'Double', callback_data=f'setgs#button#{settings["button"]}#{grp_id}#1')
+                    ],
+                    [
+                        InlineKeyboardButton('Bot PM', callback_data=f'setgs#botpm#{settings["botpm"]}#{grp_id}#1'),
+                        InlineKeyboardButton('✅ Yes' if settings["botpm"] else '❌ No', callback_data=f'setgs#botpm#{settings["botpm"]}#{grp_id}#1')
+                    ],
+                    [
+                        InlineKeyboardButton('File Secure', callback_data=f'setgs#file_secure#{settings["file_secure"]}#{grp_id}#1'),
+                        InlineKeyboardButton('✅ Yes' if settings["file_secure"] else '❌ No', callback_data=f'setgs#file_secure#{settings["file_secure"]}#{grp_id}#1')
+                    ],
+                    [
+                        InlineKeyboardButton('IMDB', callback_data=f'setgs#imdb#{settings["imdb"]}#{grp_id}#1'),
+                        InlineKeyboardButton('✅ Yes' if settings["imdb"] else '❌ No', callback_data=f'setgs#imdb#{settings["imdb"]}#{grp_id}#1')
+                    ],
+                    [
+                        InlineKeyboardButton('Spell Check', callback_data=f'setgs#spell_check#{settings["spell_check"]}#{grp_id}#1'),
+                        InlineKeyboardButton('✅ Yes' if settings["spell_check"] else '❌ No', callback_data=f'setgs#spell_check#{settings["spell_check"]}#{grp_id}#1')
+                    ],
+                    [
+                        InlineKeyboardButton('Next ⇛', callback_data=f'set_group_menu#{grp_id}#2'),
+                        InlineKeyboardButton('Close', callback_data='close_data')
+                    ]
+                ]
+                text = f"<b>⚙️ Group Settings for {title} (Page 1/2)</b>"
+            else:
+                antilink = settings.get("antilink", False)
+                buttons = [
+                    [
+                        InlineKeyboardButton('Welcome', callback_data=f'setgs#welcome#{settings["welcome"]}#{grp_id}#2'),
+                        InlineKeyboardButton('✅ Yes' if settings["welcome"] else '❌ No', callback_data=f'setgs#welcome#{settings["welcome"]}#{grp_id}#2')
+                    ],
+                    [
+                        InlineKeyboardButton('Goodbye', callback_data=f'setgs#goodbye#{settings.get("goodbye", False)}#{grp_id}#2'),
+                        InlineKeyboardButton('✅ Yes' if settings.get("goodbye", False) else '❌ No', callback_data=f'setgs#goodbye#{settings.get("goodbye", False)}#{grp_id}#2')
+                    ],
+                    [
+                        InlineKeyboardButton('Force Sub', callback_data=f'setgs#forcesub#{settings.get("forcesub", True)}#{grp_id}#2'),
+                        InlineKeyboardButton('✅ Yes' if settings.get("forcesub", True) else '❌ No', callback_data=f'setgs#forcesub#{settings.get("forcesub", True)}#{grp_id}#2')
+                    ],
+                    [
+                        InlineKeyboardButton('Anti-Link 🛡️', callback_data=f'setgs#antilink#{antilink}#{grp_id}#2'),
+                        InlineKeyboardButton('✅ On' if antilink else '❌ Off', callback_data=f'setgs#antilink#{antilink}#{grp_id}#2')
+                    ],
+                    [
+                        InlineKeyboardButton('⭅ Back', callback_data=f'set_group_menu#{grp_id}#1'),
+                        InlineKeyboardButton('Close', callback_data='close_data')
+                    ]
+                ]
+                text = f"<b>⚙️ Group Settings for {title} (Page 2/2)</b>"
+
+            reply_markup = InlineKeyboardMarkup(buttons)
+            await query.message.edit_text(text, reply_markup=reply_markup)
+        await query.answer('Done.!👍')
+    elif query.data.startswith("file"):
         ident, file_id = query.data.split("#")
         files_ = await get_file_details(file_id)
         if not files_:
@@ -420,10 +572,10 @@ async def cb_handler(client: Client, query: CallbackQuery):
                     reply_markup=InlineKeyboardMarkup(
                         [
                          [
-                          InlineKeyboardButton('💥 Gʀᴏᴜᴩ', url="https://t.me/+iEbhY7mM4oE1OTVl"),
-                          InlineKeyboardButton('Dᴇʟᴇᴛᴇ ⚠️', callback_data='close_data')
+                          InlineKeyboardButton('💥 𝐆𝐫𝐨𝐮𝐩', url="https://t.me/+iEbhY7mM4oE1OTVl"),
+                          InlineKeyboardButton('D𝐞𝐥𝐞𝐭𝐞 ⚠️', callback_data='close_data')
                           ],[
-                          InlineKeyboardButton(text=f'⚙️ Fɪʟᴇ Sɪᴢᴇ 【 {size} 】⚙️', callback_data='gxneo')
+                          InlineKeyboardButton(text=f'⚙️ 𝐅𝐢𝐥𝐞 𝐒𝐢𝐳𝐞 【 {size} 】⚙️', callback_data='gxneo')
                          ]
                         ]
                     )
@@ -468,10 +620,10 @@ async def cb_handler(client: Client, query: CallbackQuery):
             reply_markup=InlineKeyboardMarkup(
                 [
                  [
-                  InlineKeyboardButton('💥 Gʀᴏᴜᴩ', url="https://t.me/+iEbhY7mM4oE1OTVl"),
-                  InlineKeyboardButton('Dᴇʟᴇᴛᴇ ⚠️', callback_data='close_data')
+                  InlineKeyboardButton('💥 𝐆𝐫𝐨𝐮𝐩', url="https://t.me/+iEbhY7mM4oE1OTVl"),
+                  InlineKeyboardButton('D𝐞𝐥𝐞𝐭𝐞 ⚠️', callback_data='close_data')
                   ],[
-                  InlineKeyboardButton(text=f'⚙️ Fɪʟᴇ Sɪᴢᴇ 【 {size} 】⚙️', callback_data='gxneo')
+                  InlineKeyboardButton(text=f'⚙️ 𝐅𝐢𝐥𝐞 𝐒𝐢𝐳𝐞 【 {size} 】⚙️', callback_data='gxneo')
                  ]
                 ]
             )
@@ -480,8 +632,8 @@ async def cb_handler(client: Client, query: CallbackQuery):
         await query.answer()
     elif query.data == "start":
         buttons = [[
-            InlineKeyboardButton('✘ Cʟᴏꜱᴇ', callback_data='close_data'),
-            InlineKeyboardButton('Aʙᴏᴜᴛ 〄', callback_data='about')
+            InlineKeyboardButton('✘ Close', callback_data='close_data'),
+            InlineKeyboardButton('About 〄', callback_data='about')
         ]]
         reply_markup = InlineKeyboardMarkup(buttons)
         await query.message.edit_text(
@@ -491,9 +643,9 @@ async def cb_handler(client: Client, query: CallbackQuery):
         )
     elif query.data == "about":
         buttons = [[
-            InlineKeyboardButton('🔙 Bᴀᴄᴋ', callback_data='start'),
-            InlineKeyboardButton('⏍ Sᴛᴀᴛᴜꜱ ⏍', callback_data='stats'),
-            InlineKeyboardButton('Cʟᴏꜱᴇ ✘', callback_data='close_data')
+            InlineKeyboardButton('🔙 Back', callback_data='start'),
+            InlineKeyboardButton('⏍ Status ⏍', callback_data='stats'),
+            InlineKeyboardButton('Close ✘', callback_data='close_data')
         ]]
         reply_markup = InlineKeyboardMarkup(buttons)
         await query.message.edit_text(
@@ -503,8 +655,8 @@ async def cb_handler(client: Client, query: CallbackQuery):
         )
     elif query.data == "stats":
         buttons = [[
-            InlineKeyboardButton('🔙 Bᴀᴄᴋ', callback_data='about'),
-            InlineKeyboardButton('Rᴇꜰʀᴇꜱʜ ✦', callback_data='rfrsh')
+            InlineKeyboardButton('🔙 Back', callback_data='about'),
+            InlineKeyboardButton('Refresh ✦', callback_data='rfrsh')
         ]]
         reply_markup = InlineKeyboardMarkup(buttons)
         total = await Media.count_documents()
@@ -522,8 +674,8 @@ async def cb_handler(client: Client, query: CallbackQuery):
     elif query.data == "rfrsh":
         await query.answer("Fetching MongoDb DataBase")
         buttons = [[
-            InlineKeyboardButton('🔙 Bᴀᴄᴋ', callback_data='about'),
-            InlineKeyboardButton('Rᴇꜰʀᴇꜱʜ ✦', callback_data='rfrsh')
+            InlineKeyboardButton('🔙 Back', callback_data='about'),
+            InlineKeyboardButton('Refresh ✦', callback_data='rfrsh')
         ]]
         await client.edit_message_media(
             query.message.chat.id, 
@@ -543,131 +695,6 @@ async def cb_handler(client: Client, query: CallbackQuery):
         else:
             await query.answer("🔮 𝐈𝐧𝐟𝐨𝐫𝐦𝐚𝐭𝐢𝐨𝐧 🔮\n\nIt's only for my admins\n\n©𝐓𝐞𝐚𝐦 𝐂𝐢𝐧𝐞𝐦𝐚 𝐅𝐢𝐥𝐱™️", show_alert=True)
             await query.message.edit_text(text="umfi അല്ലെ 😂 എത്ര നോക്കി നിന്നാലും നിനക്ക് കാണാൻ പറ്റില്ല 😎", reply_markup=reply_markup)
-    elif query.data.startswith("set_group_menu#"):
-        _, grp_id = query.data.split("#")
-        grpid = int(grp_id)
-        
-        user_id = query.from_user.id
-        try:
-            member = await client.get_chat_member(grpid, user_id)
-            if not (member.status in [enums.ChatMemberStatus.OWNER, enums.ChatMemberStatus.ADMINISTRATOR] or user_id in ADMINS):
-                return await query.answer("⚠️ You need to be an Admin to change settings!", show_alert=True)
-        except:
-            pass
-
-        settings = await get_settings(grpid)
-        if settings is not None:
-            buttons = [
-                [
-                    InlineKeyboardButton('Filter Button', callback_data=f'setgs#button#{settings["button"]}#{str(grpid)}'),
-                    InlineKeyboardButton('Single' if settings["button"] else 'Double', callback_data=f'setgs#button#{settings["button"]}#{str(grpid)}')
-                ],
-                [
-                    InlineKeyboardButton('Bot PM', callback_data=f'setgs#botpm#{settings["botpm"]}#{str(grpid)}'),
-                    InlineKeyboardButton('✅ Yes' if settings["botpm"] else '❌ No', callback_data=f'setgs#botpm#{settings["botpm"]}#{str(grpid)}')
-                ],
-                [
-                    InlineKeyboardButton('File Secure', callback_data=f'setgs#file_secure#{settings["file_secure"]}#{str(grpid)}'),
-                    InlineKeyboardButton('✅ Yes' if settings["file_secure"] else '❌ No', callback_data=f'setgs#file_secure#{settings["file_secure"]}#{str(grpid)}')
-                ],
-                [
-                    InlineKeyboardButton('IMDB', callback_data=f'setgs#imdb#{settings["imdb"]}#{str(grpid)}'),
-                    InlineKeyboardButton('✅ Yes' if settings["imdb"] else '❌ No', callback_data=f'setgs#imdb#{settings["imdb"]}#{str(grpid)}')
-                ],
-                [
-                    InlineKeyboardButton('Spell Check', callback_data=f'setgs#spell_check#{settings["spell_check"]}#{str(grpid)}'),
-                    InlineKeyboardButton('✅ Yes' if settings["spell_check"] else '❌ No', callback_data=f'setgs#spell_check#{settings["spell_check"]}#{str(grpid)}')
-                ],
-                [
-                    InlineKeyboardButton('Welcome', callback_data=f'setgs#welcome#{settings["welcome"]}#{str(grpid)}'),
-                    InlineKeyboardButton('✅ Yes' if settings["welcome"] else '❌ No', callback_data=f'setgs#welcome#{settings["welcome"]}#{str(grpid)}')
-                ],
-                [
-                    InlineKeyboardButton('Goodbye', callback_data=f'setgs#goodbye#{settings.get("goodbye", False)}#{str(grpid)}'),
-                    InlineKeyboardButton('✅ Yes' if settings.get("goodbye", False) else '❌ No', callback_data=f'setgs#goodbye#{settings.get("goodbye", False)}#{str(grpid)}')
-                ],
-                [
-                    InlineKeyboardButton('Force Sub', callback_data=f'setgs#forcesub#{settings.get("forcesub", True)}#{str(grpid)}'),
-                    InlineKeyboardButton('✅ Yes' if settings.get("forcesub", True) else '❌ No', callback_data=f'setgs#forcesub#{settings.get("forcesub", True)}#{str(grpid)}')
-                ],
-                [
-                    InlineKeyboardButton('🔒 Close Menu', callback_data='close_data')
-                ]
-            ]
-            reply_markup = InlineKeyboardMarkup(buttons)
-            await query.message.edit_text(f"<b>⚙️ Group Settings for {query.message.chat.title}</b>", reply_markup=reply_markup)
-        await query.answer()
-    elif query.data.startswith("setgs"):
-        ident, set_type, status, grp_id = query.data.split("#")
-        grpid = int(grp_id)
-
-        user_id = query.from_user.id
-        try:
-            member = await client.get_chat_member(grpid, user_id)
-            if not (member.status in [enums.ChatMemberStatus.OWNER, enums.ChatMemberStatus.ADMINISTRATOR] or user_id in ADMINS):
-                return await query.answer("⚠️ You need to be an Admin to change settings!", show_alert=True)
-        except:
-            pass
-
-        if status == "True":
-            await save_group_settings(grpid, set_type, False)
-        else:
-            await save_group_settings(grpid, set_type, True)
-
-        settings = await get_settings(grpid)
-
-        if settings is not None:
-            buttons = [
-                [
-                    InlineKeyboardButton('Filter Button',
-                                         callback_data=f'setgs#button#{settings["button"]}#{str(grp_id)}'),
-                    InlineKeyboardButton('Single' if settings["button"] else 'Double',
-                                         callback_data=f'setgs#button#{settings["button"]}#{str(grp_id)}')
-                ],
-                [
-                    InlineKeyboardButton('Bot PM', callback_data=f'setgs#botpm#{settings["botpm"]}#{str(grp_id)}'),
-                    InlineKeyboardButton('✅ Yes' if settings["botpm"] else '❌ No',
-                                         callback_data=f'setgs#botpm#{settings["botpm"]}#{str(grp_id)}')
-                ],
-                [
-                    InlineKeyboardButton('File Secure',
-                                         callback_data=f'setgs#file_secure#{settings["file_secure"]}#{str(grp_id)}'),
-                    InlineKeyboardButton('✅ Yes' if settings["file_secure"] else '❌ No',
-                                         callback_data=f'setgs#file_secure#{settings["file_secure"]}#{str(grp_id)}')
-                ],
-                [
-                    InlineKeyboardButton('IMDB', callback_data=f'setgs#imdb#{settings["imdb"]}#{str(grp_id)}'),
-                    InlineKeyboardButton('✅ Yes' if settings["imdb"] else '❌ No',
-                                         callback_data=f'setgs#imdb#{settings["imdb"]}#{str(grp_id)}')
-                ],
-                [
-                    InlineKeyboardButton('Spell Check',
-                                         callback_data=f'setgs#spell_check#{settings["spell_check"]}#{str(grp_id)}'),
-                    InlineKeyboardButton('✅ Yes' if settings["spell_check"] else '❌ No',
-                                         callback_data=f'setgs#spell_check#{settings["spell_check"]}#{str(grp_id)}')
-                ],
-                [
-                    InlineKeyboardButton('Welcome', callback_data=f'setgs#welcome#{settings["welcome"]}#{str(grp_id)}'),
-                    InlineKeyboardButton('✅ Yes' if settings["welcome"] else '❌ No',
-                                         callback_data=f'setgs#welcome#{settings["welcome"]}#{str(grp_id)}')
-                ],
-                [
-                    InlineKeyboardButton('Goodbye', callback_data=f'setgs#goodbye#{settings.get("goodbye", False)}#{str(grp_id)}'),
-                    InlineKeyboardButton('✅ Yes' if settings.get("goodbye", False) else '❌ No',
-                                         callback_data=f'setgs#goodbye#{settings.get("goodbye", False)}#{str(grp_id)}')
-                ],
-                [
-                    InlineKeyboardButton('Force Sub', callback_data=f'setgs#forcesub#{settings.get("forcesub", True)}#{str(grp_id)}'),
-                    InlineKeyboardButton('✅ Yes' if settings.get("forcesub", True) else '❌ No',
-                                         callback_data=f'setgs#forcesub#{settings.get("forcesub", True)}#{str(grp_id)}')
-                ],
-                [
-                    InlineKeyboardButton('🔒 Close Menu', callback_data='close_data')
-                ]
-            ]
-            reply_markup = InlineKeyboardMarkup(buttons)
-            await query.message.edit_reply_markup(reply_markup)
-    await query.answer('Done.!👍')
 
 
 # --------------------------------------------------------------------------- #
@@ -749,13 +776,13 @@ async def auto_filter(client, msg, spoll=False):
         BUTTONS[key] = search
         req = message.from_user.id if message.from_user else 0
         btn.append(
-            [InlineKeyboardButton("❖ Pᴀɢᴇꜱ", callback_data="pages"),
+            [InlineKeyboardButton("❖ Pages", callback_data="pages"),
              InlineKeyboardButton(text=f" 1/{math.ceil(int(total_results) / 10)}", callback_data="pages"),
-             InlineKeyboardButton(text="Nᴇxᴛ ⇛", callback_data=f"next_{req}_{key}_{offset}")]
+             InlineKeyboardButton(text="Next ⇛", callback_data=f"next_{req}_{key}_{offset}")]
         )
     else:
         btn.append(
-            [InlineKeyboardButton(text="DᴇʟᴇᴛEB 🗑️", callback_data="close_data")]
+            [InlineKeyboardButton(text="Delete 🗑️", callback_data="close_data")]
         )
 
     # IMDb Template & Metadata Resolution
@@ -829,11 +856,11 @@ async def advantage_spell_chok(msg):
     search = msg.text.replace(" ", "+")
     btn = [[
         InlineKeyboardButton(
-            text="🔎 𝗚𝗼𝗼𝗴𝗹𝗲 🔍",
+            text="🔎 Google 🔍",
             url=f"https://google.com/search?q={search}"
         ),
         InlineKeyboardButton(
-            text="🔮 𝗜𝗠𝗗𝗕 🔮",
+            text="🔮 IMDb 🔮",
             url=f"https://imdb.com/find?q={search}"
         )
     ]]
