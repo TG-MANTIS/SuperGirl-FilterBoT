@@ -19,7 +19,7 @@ from pyrogram import Client, filters, enums
 from pyrogram.errors import FloodWait, UserIsBlocked, MessageNotModified, PeerIdInvalid
 from utils import get_size, is_subscribed, get_poster, search_gagala, temp, get_settings, save_group_settings
 from database.users_chats_db import db
-from database.ia_filterdb import Media, get_file_details, get_search_results
+from database.ia_filterdb import Media, get_file_details, get_search_results, get_databases_stats
 from database.filters_mdb import (
     del_all,
     find_filter,
@@ -678,15 +678,26 @@ async def cb_handler(client: Client, query: CallbackQuery):
             InlineKeyboardButton('Refresh ✦', callback_data='rfrsh')
         ]]
         reply_markup = InlineKeyboardMarkup(buttons)
-        total = await Media.count_documents()
+        
+        # Multiple Database Stats Breakdown
+        db_stats = await get_databases_stats()
+        db_breakdown_text = ""
+        for stat in db_stats:
+            size_mb = get_size(stat['size'])
+            db_breakdown_text += f"<b>🔸 Database {stat['db_index']} Files:</b> {stat['count']} | <b>Size:</b> {size_mb}\n"
+        
+        total = sum(stat['count'] for stat in db_stats)
         users = await db.total_users_count()
         chats = await db.total_chat_count()
-        monsize = await db.get_db_size()
-        free = 536870912 - monsize
-        monsize = get_size(monsize)
-        free = get_size(free)
+        
         if query.from_user.id in ADMINS:
-            await query.message.edit_text(text=script.STATUS_TXT.format(total, users, chats, monsize, free), reply_markup=reply_markup, parse_mode=enums.ParseMode.HTML)
+            status_text = (
+                f"<b>📊 𝙂𝙇𝙊𝘽𝘼𝙇 𝙎𝙏𝘼𝙏𝙐𝙎 𝘽𝙊𝘼𝙍𝘿 📊</b>\n\n"
+                f"{db_breakdown_text}\n"
+                f"<b>👥 Total Members:</b> {users}\n"
+                f"<b>💬 Total Chats:</b> {chats}"
+            )
+            await query.message.edit_text(text=status_text, reply_markup=reply_markup, parse_mode=enums.ParseMode.HTML)
         else:
             await query.answer("🔮 𝐈𝐧𝐟𝐨𝐫𝐦𝐚𝐭𝐢𝐨𝐧 🔮\n\nIt's only for my admins\n\n©𝐓𝐞𝐚𝐦 𝐂𝐢𝐧𝐞𝐦𝐚 𝐅𝐢𝐥𝐱™️", show_alert=True)
             await query.message.edit_text(text="നോക്കി നിന്നോ ഇപ്പോൾ കിട്ടും 😏", reply_markup=reply_markup)
@@ -702,15 +713,25 @@ async def cb_handler(client: Client, query: CallbackQuery):
             InputMediaPhoto(random.choice(PICS))
         )    
         reply_markup = InlineKeyboardMarkup(buttons)
-        total = await Media.count_documents()
+        
+        # Multiple Database Stats Breakdown
+        db_stats = await get_databases_stats()
+        db_breakdown_text = ""
+        for stat in db_stats:
+            size_mb = get_size(stat['size'])
+            db_breakdown_text += f"<b>🔸 Database {stat['db_index']} Files:</b> {stat['count']} | <b>Size:</b> {size_mb}\n"
+        
         users = await db.total_users_count()
         chats = await db.total_chat_count()
-        monsize = await db.get_db_size()
-        free = 536870912 - monsize
-        monsize = get_size(monsize)
-        free = get_size(free)
+        
         if query.from_user.id in ADMINS:
-            await query.message.edit_text(text=script.STATUS_TXT.format(total, users, chats, monsize, free), reply_markup=reply_markup, parse_mode=enums.ParseMode.HTML)
+            status_text = (
+                f"<b>📊 𝙂𝙇𝙊𝘽𝘼𝙇 𝙎𝙏𝘼𝙏𝙐𝙎 𝘽𝙊𝘼𝙍𝘿 📊</b>\n\n"
+                f"{db_breakdown_text}\n"
+                f"<b>👥 Total Members:</b> {users}\n"
+                f"<b>💬 Total Chats:</b> {chats}"
+            )
+            await query.message.edit_text(text=status_text, reply_markup=reply_markup, parse_mode=enums.ParseMode.HTML)
         else:
             await query.answer("🔮 𝐈𝐧𝐟𝐨𝐫𝐦𝐚𝐭𝐢𝐨𝐧 🔮\n\nIt's only for my admins\n\n©𝐓𝐞𝐚𝐦 𝐂𝐢𝐧𝐞𝐦𝐚 𝐅𝐢𝐥𝐱™️", show_alert=True)
             await query.message.edit_text(text="umfi അല്ലെ 😂 എത്ര നോക്കി നിന്നാലും നിനക്ക് കാണാൻ പറ്റില്ല 😎", reply_markup=reply_markup)
