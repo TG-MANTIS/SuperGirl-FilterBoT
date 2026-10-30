@@ -33,7 +33,7 @@ logger.setLevel(logging.INFO)
 PM_BUTTONS = {}
 BUTTONS = {}
 
-# Notification Text for Spell Check / No File Found
+# Notification Text for Spell Check / No File Found (Group View)
 NON_IMG = """<b>👋 Hello {user_mention},</b>
 
 <b>❌ <i>Could not find <code>{mv_rqst}</code> in our database!</i></b>
@@ -714,7 +714,46 @@ async def auto_filter(client, msg, spoll=False):
             files, offset, total_results = await get_search_results(search.lower(), offset=0, filter=True)
             if not files:
                 if settings.get("spell_check", True):
-                    return await advantage_spell_chok(msg)
+                    # Check if the message is in Private Chat or Group
+                    if message.chat.type == enums.ChatType.PRIVATE:
+                        user_mention = message.from_user.mention if message.from_user else "Friend"
+                        
+                        msg_text = (
+                            f"<b>Hey {user_mention} 👋</b>\n\n"
+                            f"<b>❗ <i>No Results found for <code>{message.text}</code>..</i> 🥹</b>\n\n"
+                            f"<i>Please check the spelling or use the buttons below to find the correct title!</i>"
+                        )
+                        
+                        search_query = message.text.replace(" ", "+")
+                        btn = [[
+                            InlineKeyboardButton(
+                                text="🔎 Google 🔍",
+                                url=f"https://google.com/search?q={search_query}"
+                            ),
+                            InlineKeyboardButton(
+                                text="🔮 IMDb 🔮",
+                                url=f"https://imdb.com/find?q={search_query}"
+                            )
+                        ],
+                        [
+                            InlineKeyboardButton('Close ✘', callback_data='close_data')
+                        ]]
+                        
+                        sent_msg = await message.reply_text(
+                            text=msg_text,
+                            reply_markup=InlineKeyboardMarkup(btn)
+                        )
+                        
+                        # Auto delete after 5 seconds
+                        await asyncio.sleep(5)
+                        try:
+                            await sent_msg.delete()
+                            await message.delete()
+                        except:
+                            pass
+                        return
+                    else:
+                        return await advantage_spell_chok(msg)
                 else:
                     return
         else:
@@ -910,7 +949,7 @@ async def manual_filters(client, message, text=False):
                             reply_to_message_id=reply_id
                         )
                     else:
-                        button = eval(button) if 'button' in locals() else []
+                        button = eval(btn) if btn else []
                         await message.reply_cached_media(
                             fileid,
                             caption=reply_text or "",
