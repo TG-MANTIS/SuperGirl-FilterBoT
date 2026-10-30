@@ -168,6 +168,29 @@ async def get_file_details(query):
     return []
 
 
+async def get_databases_stats():
+    """Get individual file count and storage size for each connected database"""
+    stats = []
+    for idx, (MediaModel, db_inst) in enumerate(zip(media_classes, dbs), start=1):
+        try:
+            count = await MediaModel.count_documents({})
+            db_stats = await db_inst.command("dbStats")
+            storage_size = db_stats.get("dataSize", 0)
+            stats.append({
+                "db_index": idx,
+                "count": count,
+                "size": storage_size
+            })
+        except Exception as e:
+            logger.error(f"Error fetching stats for Database {idx}: {e}")
+            stats.append({
+                "db_index": idx,
+                "count": 0,
+                "size": 0
+            })
+    return stats
+
+
 def encode_file_id(s: bytes) -> str:
     r = b""
     n = 0
