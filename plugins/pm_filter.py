@@ -69,10 +69,13 @@ async def pm_text(bot, message):
     user_id = message.from_user.id
     if content.startswith("/") or content.startswith("#"): return  
     
-    await bot.send_message(
-        chat_id=LOG_CHANNEL,
-        text=f"<b>#PM_MSG\n\n★Name : {user}\n\n★ID : {user_id}\n\n★Message : {content}</b>"
-    ) 
+    try:
+        await bot.send_message(
+            chat_id=LOG_CHANNEL,
+            text=f"<b>#PM_MSG\n\n★Name : {user}\n\n★ID : {user_id}\n\n★Message : {content}</b>"
+        ) 
+    except Exception:
+        pass
     
     await auto_filter(bot, message)
 
@@ -105,7 +108,12 @@ async def next_page(bot, query):
         return
     
     chat_id = query.message.chat.id
-    settings = await get_settings(chat_id)
+    
+    if query.message.chat.type == enums.ChatType.PRIVATE:
+        grpid = await active_connection(str(query.from_user.id))
+        settings = await get_settings(int(grpid)) if grpid else await get_settings(chat_id)
+    else:
+        settings = await get_settings(chat_id)
     
     is_series = bool(re.search(r's\d+e\d+|season|episode|ep\d+|bbhin|bigg boss', search, re.IGNORECASE)) or any(re.search(r's\d+e\d+|season|episode|ep\d+', f.file_name, re.IGNORECASE) for f in files)
     
@@ -117,9 +125,10 @@ async def next_page(bot, query):
             se_match = re.search(r'(s\d+\s*e\d+|season\s*\d+|ep\s*\d+)', f_name, re.IGNORECASE)
             se_tag = f"[{se_match.group(0).upper()}] " if se_match else ""
             
+            # Series button WITH 🔗 emoji added here
             btn.append([
                 InlineKeyboardButton(
-                    text=f"[{f_size}] {se_tag}{f_name}", callback_data=f'files#{file.file_id}'
+                    text=f"🔗 {f_size} {se_tag}{f_name}", callback_data=f'files#{file.file_id}'
                 )
             ])
     else:
@@ -127,7 +136,7 @@ async def next_page(bot, query):
             btn = [
                 [
                     InlineKeyboardButton(
-                        text=f"🔗 {get_size(file.file_size)}  {file.file_name}", callback_data=f'files#{file.file_id}'
+                        text=f"🔗 {get_size(file.file_size)} {file.file_name}", callback_data=f'files#{file.file_id}'
                     ),
                 ]
                 for file in files
@@ -542,7 +551,12 @@ async def cb_handler(client: Client, query: CallbackQuery):
         f_caption = files.caption
         
         chat_id = query.message.chat.id
-        settings = await get_settings(chat_id)
+        
+        if query.message.chat.type == enums.ChatType.PRIVATE:
+            grpid = await active_connection(str(query.from_user.id))
+            settings = await get_settings(int(grpid)) if grpid else await get_settings(chat_id)
+        else:
+            settings = await get_settings(chat_id)
         
         if CUSTOM_FILE_CAPTION:
             try:
@@ -589,7 +603,12 @@ async def cb_handler(client: Client, query: CallbackQuery):
             await query.answer(url=f"https://t.me/{temp.U_NAME}?start={ident}_{file_id}")
     elif query.data.startswith("checksub"):
         chat_id = query.message.chat.id
-        settings = await get_settings(chat_id)
+        if query.message.chat.type == enums.ChatType.PRIVATE:
+            grpid = await active_connection(str(query.from_user.id))
+            settings = await get_settings(int(grpid)) if grpid else await get_settings(chat_id)
+        else:
+            settings = await get_settings(chat_id)
+            
         if settings.get("forcesub", True) and AUTH_CHANNEL and not await is_subscribed(client, query):
             await query.answer("I Like Your Smartness, But Don't Be Oversmart Okay", show_alert=True)
             return
@@ -705,7 +724,17 @@ async def auto_filter(client, msg, spoll=False):
     if not spoll:
         message = msg
         chat_id = message.chat.id
-        settings = await get_settings(chat_id)
+        
+        # If message is in Private Chat, fetch settings from user's active connected group
+        if message.chat.type == enums.ChatType.PRIVATE:
+            grpid = await active_connection(str(message.from_user.id))
+            if grpid is not None:
+                settings = await get_settings(int(grpid))
+            else:
+                settings = await get_settings(chat_id)
+        else:
+            settings = await get_settings(chat_id)
+
         if message.text.startswith("/"): return  
         if re.findall("((^\/|^,|^!|^\.|^[\U0001F600-\U000E007F]).*)", message.text):
             return
@@ -714,7 +743,7 @@ async def auto_filter(client, msg, spoll=False):
             files, offset, total_results = await get_search_results(search.lower(), offset=0, filter=True)
             if not files:
                 if settings.get("spell_check", True):
-                    # แยก (Separate) Private Chat and Group behavior here cleanly:
+                    # Private Chat Specific No Results View
                     if message.chat.type == enums.ChatType.PRIVATE:
                         user_mention = message.from_user.mention if message.from_user else "Friend"
                         
@@ -757,9 +786,19 @@ async def auto_filter(client, msg, spoll=False):
         else:
             return
     else:
-        settings = await get_settings(msg.message.chat.id)
+        chat_id = msg.message.chat.id
+        if msg.message.chat.type == enums.ChatType.PRIVATE:
+            grpid = await active_connection(str(msg.from_user.id))
+            if grpid is not None:
+                settings = await get_settings(int(grpid))
+            else:
+                settings = await get_settings(chat_id)
+        else:
+            settings = await get_settings(chat_id)
+            
         message = msg.message.reply_to_message  
         search, files, offset, total_results = spoll
+        
     pre = 'filep' if settings.get('file_secure', False) else 'file'
     
     is_series = bool(re.search(r's\d+e\d+|season|episode|ep\d+|bbhin|bigg boss', search, re.IGNORECASE)) or any(re.search(r's\d+e\d+|season|episode|ep\d+', f.file_name, re.IGNORECASE) for f in files)
@@ -772,9 +811,10 @@ async def auto_filter(client, msg, spoll=False):
             se_match = re.search(r'(s\d+\s*e\d+|season\s*\d+|ep\s*\d+)', f_name, re.IGNORECASE)
             se_tag = f"[{se_match.group(0).upper()}] " if se_match else ""
             
+            # Series button WITH 🔗 emoji added here
             btn.append([
                 InlineKeyboardButton(
-                    text=f"[{f_size}] {se_tag}{f_name}", callback_data=f'{pre}#{file.file_id}'
+                    text=f"🔗 {f_size} {se_tag}{f_name}", callback_data=f'{pre}#{file.file_id}'
                 )
             ])
     else:
