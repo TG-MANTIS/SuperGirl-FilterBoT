@@ -1,4 +1,4 @@
-import re
+Import re
 from os import environ
 from Script import script
 
@@ -46,9 +46,11 @@ AUTH_CHANNEL = int(auth_channel) if auth_channel and id_pattern.search(auth_chan
 AUTH_GROUPS = [int(ch) for ch in auth_grp.split()] if auth_grp else None
 
 # --------------------------------------------------------------------------- #
-#  Database Configuration (MongoDB)                                          #
+#  Database Configuration (Flexible Multiple MongoDB URIs)                   #
 # --------------------------------------------------------------------------- #
 DATABASE_URI = environ.get('DATABASE_URI', "")
+DATABASE_URI_2 = environ.get('DATABASE_URI_2', "") # Optional 2nd Database
+DATABASE_URI_3 = environ.get('DATABASE_URI_3', "") # Optional 3rd Database
 DATABASE_NAME = environ.get('DATABASE_NAME', "")
 COLLECTION_NAME = environ.get('COLLECTION_NAME', 'SuperGirl_Bot')
 
