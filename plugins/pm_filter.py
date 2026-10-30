@@ -714,7 +714,7 @@ async def auto_filter(client, msg, spoll=False):
             files, offset, total_results = await get_search_results(search.lower(), offset=0, filter=True)
             if not files:
                 if settings.get("spell_check", True):
-                    # Check if the message is in Private Chat or Group
+                    # แยก (Separate) Private Chat and Group behavior here cleanly:
                     if message.chat.type == enums.ChatType.PRIVATE:
                         user_mention = message.from_user.mention if message.from_user else "Friend"
                         
@@ -734,9 +734,6 @@ async def auto_filter(client, msg, spoll=False):
                                 text="🔮 IMDb 🔮",
                                 url=f"https://imdb.com/find?q={search_query}"
                             )
-                        ],
-                        [
-                            InlineKeyboardButton('Close ✘', callback_data='close_data')
                         ]]
                         
                         sent_msg = await message.reply_text(
@@ -744,7 +741,7 @@ async def auto_filter(client, msg, spoll=False):
                             reply_markup=InlineKeyboardMarkup(btn)
                         )
                         
-                        # Auto delete after 5 seconds
+                        # Auto delete PM message after 5 seconds
                         await asyncio.sleep(5)
                         try:
                             await sent_msg.delete()
@@ -753,6 +750,7 @@ async def auto_filter(client, msg, spoll=False):
                             pass
                         return
                     else:
+                        # Group gets the original full Photo & Spell Check format
                         return await advantage_spell_chok(msg)
                 else:
                     return
@@ -887,7 +885,7 @@ async def auto_filter(client, msg, spoll=False):
 
 
 # --------------------------------------------------------------------------- #
-#  Spell Check Handler                                                        #
+#  Spell Check Handler (Group View)                                           #
 # --------------------------------------------------------------------------- #
 
 async def advantage_spell_chok(msg):
