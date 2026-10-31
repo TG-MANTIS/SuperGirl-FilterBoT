@@ -483,7 +483,7 @@ async def settings(client, message):
                 caption=warning_caption,
                 reply_markup=InlineKeyboardMarkup(btn)
             )
-            await asyncio.sleep(2)
+            await asyncio.sleep(4)
             try:
                 await sent_msg.delete()
                 await message.delete()
@@ -507,6 +507,7 @@ async def settings(client, message):
             quote=True,
             reply_to_message_id=message.id
         )
+        return
 
     # 2. Private Chat (PM) Settings Handler -> Direct Full Menu for Group Admins / Bot Admins
     elif chat_type == enums.ChatType.PRIVATE:
