@@ -125,7 +125,6 @@ async def next_page(bot, query):
             se_match = re.search(r'(s\d+\s*e\d+|season\s*\d+|ep\s*\d+)', f_name, re.IGNORECASE)
             se_tag = f"[{se_match.group(0).upper()}] " if se_match else ""
             
-            # Series button WITH 🔗 emoji added here
             btn.append([
                 InlineKeyboardButton(
                     text=f"🔗 {f_size} {se_tag}{f_name}", callback_data=f'files#{file.file_id}'
@@ -157,7 +156,8 @@ async def next_page(bot, query):
 
     btn.insert(0, 
         [
-            InlineKeyboardButton(f'🎬 {search} 🎬', 'dupe')     
+            InlineKeyboardButton('🔊 Language', callback_data=f'lang_menu#{req}#{key}'),
+            InlineKeyboardButton('🎥 Quality', callback_data=f'qual_menu#{req}#{key}')
         ]
     )
     
@@ -193,6 +193,176 @@ async def next_page(bot, query):
     except MessageNotModified:
         pass
     await query.answer()
+
+
+# --------------------------------------------------------------------------- #
+#  Language & Quality Selection Callback Handlers                             #
+# --------------------------------------------------------------------------- #
+
+@Client.on_callback_query(filters.regex(r"^(lang_menu|qual_menu|filter_apply|back_main_search)#"))
+async def filter_menu_handler(client, query):
+    data = query.data.split("#")
+    action = data[0]
+    req = data[1]
+    key = data[2]
+    
+    if int(req) not in [query.from_user.id, 0]:
+        return query.answer("This is not for you! ❌", show_alert=True)
+        
+    search = BUTTONS.get(key)
+    if not search:
+        return await query.answer("Session expired! Please search again.", show_alert=True)
+
+    if action == "lang_menu":
+        buttons = [
+            [
+                InlineKeyboardButton("Malayalam", callback_data=f"filter_apply#{req}#{key}#Malayalam"),
+                InlineKeyboardButton("Tamil", callback_data=f"filter_apply#{req}#{key}#Tamil")
+            ],
+            [
+                InlineKeyboardButton("Telugu", callback_data=f"filter_apply#{req}#{key}#Telugu"),
+                InlineKeyboardButton("Kannada", callback_data=f"filter_apply#{req}#{key}#Kannada")
+            ],
+            [
+                InlineKeyboardButton("Hindi", callback_data=f"filter_apply#{req}#{key}#Hindi"),
+                InlineKeyboardButton("English", callback_data=f"filter_apply#{req}#{key}#English")
+            ],
+            [
+                InlineKeyboardButton("Japanese", callback_data=f"filter_apply#{req}#{key}#Japanese"),
+                InlineKeyboardButton("Korean", callback_data=f"filter_apply#{req}#{key}#Korean")
+            ],
+            [
+                InlineKeyboardButton("Chinese", callback_data=f"filter_apply#{req}#{key}#Chinese"),
+                InlineKeyboardButton("Punjabi", callback_data=f"filter_apply#{req}#{key}#Punjabi")
+            ],
+            [
+                InlineKeyboardButton("Marathi", callback_data=f"filter_apply#{req}#{key}#Marathi"),
+                InlineKeyboardButton("Dual Audio", callback_data=f"filter_apply#{req}#{key}#Dual Audio")
+            ],
+            [
+                InlineKeyboardButton("Multi Audio", callback_data=f"filter_apply#{req}#{key}#Multi Audio"),
+                InlineKeyboardButton("Other", callback_data=f"filter_apply#{req}#{key}#Other")
+            ],
+            [
+                InlineKeyboardButton("« Back", callback_data=f"back_main_search#{req}#{key}"),
+                InlineKeyboardButton("Close ✘", callback_data="close_data")
+            ]
+        ]
+        await query.message.edit_reply_markup(reply_markup=InlineKeyboardMarkup(buttons))
+        await query.answer()
+
+    elif action == "qual_menu":
+        buttons = [
+            [
+                InlineKeyboardButton("480p", callback_data=f"filter_apply#{req}#{key}#480p"),
+                InlineKeyboardButton("720p", callback_data=f"filter_apply#{req}#{key}#720p")
+            ],
+            [
+                InlineKeyboardButton("1080p", callback_data=f"filter_apply#{req}#{key}#1080p"),
+                InlineKeyboardButton("2160p (4K)", callback_data=f"filter_apply#{req}#{key}#2160p")
+            ],
+            [
+                InlineKeyboardButton("« Back", callback_data=f"back_main_search#{req}#{key}"),
+                InlineKeyboardButton("Close ✘", callback_data="close_data")
+            ]
+        ]
+        await query.message.edit_reply_markup(reply_markup=InlineKeyboardMarkup(buttons))
+        await query.answer()
+
+    elif action == "back_main_search":
+        files, offset, total_results = await get_search_results(search, offset=0, filter=True)
+        btn = []
+        for file in files[:10]:
+            f_size = get_size(file.file_size)
+            btn.append([InlineKeyboardButton(text=f"🔗 {f_size} {file.file_name}", callback_data=f'files#{file.file_id}')])
+            
+        btn.insert(0, [
+            InlineKeyboardButton('🔊 Language', callback_data=f'lang_menu#{req}#{key}'),
+            InlineKeyboardButton('🎥 Quality', callback_data=f'qual_menu#{req}#{key}')
+        ])
+        
+        if total_results > 10:
+            btn.append([
+                InlineKeyboardButton("❖ Pages", callback_data="pages"),
+                InlineKeyboardButton(text=f"1/{math.ceil(total_results / 10)}", callback_data="pages"),
+                InlineKeyboardButton(text="Next ⇛", callback_data=f"next_{req}_{key}_10")
+            ])
+        else:
+            btn.append([InlineKeyboardButton(text="Delete 🗑️", callback_data="close_data")])
+            
+        await query.message.edit_reply_markup(reply_markup=InlineKeyboardMarkup(btn))
+        await query.answer()
+
+    elif action == "filter_apply":
+        target = data[3]
+        all_files, _, _ = await get_search_results(search, offset=0, filter=False)
+        filtered_files = []
+
+        # Comprehensive Short Forms Mapping & Smart Detection
+        lang_patterns = {
+            "Malayalam": [r"malayalam", r"\bmal\b", r"\bmlm\b"],
+            "Tamil": [r"tamil", r"\btam\b"],
+            "Telugu": [r"telugu", r"\btel\b"],
+            "Kannada": [r"kannada", r"\bkan\b"],
+            "Hindi": [r"hindi", r"\bhin\b"],
+            "English": [r"english", r"\beng\b", r"\bengsub\b"],
+            "Japanese": [r"japanese", r"\bjapan\b", r"\bjpn\b"],
+            "Korean": [r"korean", r"\bkor\b"],
+            "Chinese": [r"chinese", r"\bchi\b", r"\bmandarin\b"],
+            "Punjabi": [r"punjabi", r"\bpun\b"],
+            "Marathi": [r"marathi", r"\bmar\b"]
+        }
+
+        for f in all_files:
+            fname = f.file_name.lower()
+            
+            if target == "Dual Audio":
+                # Detect dual audio via explicit keyword or by counting at least 2 distinct language matches or '+' separator
+                matched_langs = 0
+                for lang, patterns in lang_patterns.items():
+                    if any(re.search(p, fname) for p in patterns):
+                        matched_langs += 1
+                if "dual" in fname or "dual audio" in fname or matched_langs >= 2 or "+" in fname:
+                    filtered_files.append(f)
+            
+            elif target == "Multi Audio":
+                # Detect multi audio via explicit keyword or 3+ distinct languages
+                matched_langs = 0
+                for lang, patterns in lang_patterns.items():
+                    if any(re.search(p, fname) for p in patterns):
+                        matched_langs += 1
+                if "multi" in fname or "multi audio" in fname or matched_langs >= 3:
+                    filtered_files.append(f)
+            
+            elif target in lang_patterns:
+                # Check full name or short forms (e.g., MAL, MLM, TAM, etc.)
+                patterns = lang_patterns[target]
+                if any(re.search(p, fname) for p in patterns):
+                    filtered_files.append(f)
+            
+            else:
+                # For quality (480p, 720p, etc.) or Other category
+                if target.lower() in fname:
+                    filtered_files.append(f)
+        
+        if not filtered_files:
+            return await query.answer("No files found", show_alert=True)
+            
+        btn = []
+        for file in filtered_files[:10]:
+            f_size = get_size(file.file_size)
+            btn.append([InlineKeyboardButton(text=f"🔗 {f_size} {file.file_name}", callback_data=f'files#{file.file_id}')])
+            
+        btn.insert(0, [
+            InlineKeyboardButton(f"📁 Filtered: {target}", callback_data="pages")
+        ])
+        btn.append([
+            InlineKeyboardButton("« Back to All", callback_data=f"back_main_search#{req}#{key}"),
+            InlineKeyboardButton("Close ✘", callback_data="close_data")
+        ])
+        
+        await query.message.edit_reply_markup(reply_markup=InlineKeyboardMarkup(btn))
+        await query.answer(f"Filtered by {target}!", show_alert=False)
 
 
 # --------------------------------------------------------------------------- #
@@ -570,7 +740,6 @@ async def cb_handler(client: Client, query: CallbackQuery):
             f_caption = f"{files.file_name}"
 
         try:
-            # Check Force Sub based on Group Settings
             if settings.get("forcesub", True) and AUTH_CHANNEL and not await is_subscribed(client, query):
                 await query.answer(url=f"https://t.me/{temp.U_NAME}?start={ident}_{file_id}")
                 return
@@ -679,7 +848,6 @@ async def cb_handler(client: Client, query: CallbackQuery):
         ]]
         reply_markup = InlineKeyboardMarkup(buttons)
         
-        # Multiple Database Stats Breakdown via Script template
         db_stats = await get_databases_stats()
         db_data = {stat['db_index']: {'count': stat['count'], 'size': get_size(stat['size'])} for stat in db_stats}
         
@@ -714,7 +882,6 @@ async def cb_handler(client: Client, query: CallbackQuery):
         )    
         reply_markup = InlineKeyboardMarkup(buttons)
         
-        # Multiple Database Stats Breakdown via Script template
         db_stats = await get_databases_stats()
         db_data = {stat['db_index']: {'count': stat['count'], 'size': get_size(stat['size'])} for stat in db_stats}
         
@@ -747,7 +914,6 @@ async def auto_filter(client, msg, spoll=False):
         message = msg
         chat_id = message.chat.id
         
-        # If message is in Private Chat, fetch settings from user's active connected group
         if message.chat.type == enums.ChatType.PRIVATE:
             grpid = await active_connection(str(message.from_user.id))
             if grpid is not None:
@@ -765,7 +931,6 @@ async def auto_filter(client, msg, spoll=False):
             files, offset, total_results = await get_search_results(search.lower(), offset=0, filter=True)
             if not files:
                 if settings.get("spell_check", True):
-                    # Private Chat Specific No Results View
                     if message.chat.type == enums.ChatType.PRIVATE:
                         user_mention = message.from_user.mention if message.from_user else "Friend"
                         
@@ -792,7 +957,6 @@ async def auto_filter(client, msg, spoll=False):
                             reply_markup=InlineKeyboardMarkup(btn)
                         )
                         
-                        # Auto delete PM message after 5 seconds
                         await asyncio.sleep(5)
                         try:
                             await sent_msg.delete()
@@ -801,7 +965,6 @@ async def auto_filter(client, msg, spoll=False):
                             pass
                         return
                     else:
-                        # Group gets the original full Photo & Spell Check format
                         return await advantage_spell_chok(msg)
                 else:
                     return
@@ -833,7 +996,6 @@ async def auto_filter(client, msg, spoll=False):
             se_match = re.search(r'(s\d+\s*e\d+|season\s*\d+|ep\s*\d+)', f_name, re.IGNORECASE)
             se_tag = f"[{se_match.group(0).upper()}] " if se_match else ""
             
-            # Series button WITH 🔗 emoji added here
             btn.append([
                 InlineKeyboardButton(
                     text=f"🔗 {f_size} {se_tag}{f_name}", callback_data=f'{pre}#{file.file_id}'
@@ -864,16 +1026,18 @@ async def auto_filter(client, msg, spoll=False):
                 for file in files
             ]   
 
+    req = message.from_user.id if message.from_user else 0
+    key = f"{message.chat.id}-{message.id}"
+    BUTTONS[key] = search
+    
     btn.insert(0, 
         [
-            InlineKeyboardButton(f'🎬 {search} 🎬', 'dupe')
+            InlineKeyboardButton('🔊 Language', callback_data=f'lang_menu#{req}#{key}'),
+            InlineKeyboardButton('🎥 Quality', callback_data=f'qual_menu#{req}#{key}')
         ]
     )
 
     if offset != "":
-        key = f"{message.chat.id}-{message.id}"
-        BUTTONS[key] = search
-        req = message.from_user.id if message.from_user else 0
         btn.append(
             [InlineKeyboardButton("❖ Pages", callback_data="pages"),
              InlineKeyboardButton(text=f" 1/{math.ceil(int(total_results) / 10)}", callback_data="pages"),
@@ -884,7 +1048,6 @@ async def auto_filter(client, msg, spoll=False):
             [InlineKeyboardButton(text="Delete 🗑️", callback_data="close_data")]
         )
 
-    # IMDb Template & Metadata Resolution
     imdb = None
     imdb = await get_poster(search, file=(files[0]).file_name) if settings.get("imdb", True) else None
     if imdb:
