@@ -207,7 +207,7 @@ async def filter_menu_handler(client, query):
     key = data[2]
     
     if int(req) not in [query.from_user.id, 0]:
-        return query.answer("This is not for you! ❌", show_alert=True)
+        return await query.answer("This is not for you! ❌", show_alert=True)
         
     search = BUTTONS.get(key)
     if not search:
@@ -298,7 +298,6 @@ async def filter_menu_handler(client, query):
         all_files, _, _ = await get_search_results(search, offset=0, filter=False)
         filtered_files = []
 
-        # Comprehensive Short Forms Mapping & Smart Detection
         lang_patterns = {
             "Malayalam": [r"malayalam", r"\bmal\b", r"\bmlm\b"],
             "Tamil": [r"tamil", r"\btam\b"],
@@ -317,7 +316,6 @@ async def filter_menu_handler(client, query):
             fname = f.file_name.lower()
             
             if target == "Dual Audio":
-                # Detect dual audio via explicit keyword or by counting at least 2 distinct language matches or '+' separator
                 matched_langs = 0
                 for lang, patterns in lang_patterns.items():
                     if any(re.search(p, fname) for p in patterns):
@@ -326,7 +324,6 @@ async def filter_menu_handler(client, query):
                     filtered_files.append(f)
             
             elif target == "Multi Audio":
-                # Detect multi audio via explicit keyword or 3+ distinct languages
                 matched_langs = 0
                 for lang, patterns in lang_patterns.items():
                     if any(re.search(p, fname) for p in patterns):
@@ -335,13 +332,11 @@ async def filter_menu_handler(client, query):
                     filtered_files.append(f)
             
             elif target in lang_patterns:
-                # Check full name or short forms (e.g., MAL, MLM, TAM, etc.)
                 patterns = lang_patterns[target]
                 if any(re.search(p, fname) for p in patterns):
                     filtered_files.append(f)
             
             else:
-                # For quality (480p, 720p, etc.) or Other category
                 if target.lower() in fname:
                     filtered_files.append(f)
         
@@ -763,7 +758,8 @@ async def cb_handler(client: Client, query: CallbackQuery):
                         ]
                     )
                 )
-                await query.answer('Check PM, I have sent files in pm', show_alert=True)
+                # Popup ഒഴിവാക്കി ടോസ്റ്റ് നോട്ടിഫിക്കേഷൻ മാത്രം നൽകുന്നു
+                await query.answer('Sending file...', show_alert=False)
         except UserIsBlocked:
             await query.answer('Unblock the bot mahn !', show_alert=True)
         except PeerIdInvalid:
@@ -799,7 +795,7 @@ async def cb_handler(client: Client, query: CallbackQuery):
                 f_caption = f_caption
         if f_caption is None:
             f_caption = f"{title}"
-        await query.answer()
+        await query.answer('Sending file...', show_alert=False)
         await client.send_cached_media(
             chat_id=query.from_user.id,
             file_id=file_id,
