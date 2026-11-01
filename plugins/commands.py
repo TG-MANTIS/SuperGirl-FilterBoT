@@ -9,7 +9,7 @@ import asyncio
 from Script import script
 from pyrogram import Client, filters, enums
 from pyrogram.errors import ChatAdminRequired, FloodWait, MessageNotModified
-from pyrogram.types import InlineKeyboardButton, InlineKeyboardMarkup, WebAppInfo
+from pyrogram.types import InlineKeyboardButton, InlineKeyboardMarkup
 from database.ia_filterdb import Media, get_file_details, unpack_new_file_id
 from database.users_chats_db import db
 from info import CHANNELS, ADMINS, AUTH_CHANNEL, LOG_CHANNEL, PICS, SET_IMG, BATCH_FILE_CAPTION, CUSTOM_FILE_CAPTION, PROTECT_CONTENT, FORCE_IMG
@@ -338,17 +338,9 @@ async def start(client, message):
     if f_caption is None:
         f_caption = f"{files.file_name}"
         
-    # സ്ട്രീമിംഗ് വെബ് ആപ്പ് ലിങ്കുകൾ (താങ്കളുടെ ഡൊമെയ്ൻ അനുസരിച്ച് മാറ്റുക)
-    streaming_web_url = f"https://yourdomain.com/stream/{file_id}"
-    preview_web_url = f"https://yourdomain.com/preview/{file_id}"
-
-    # താങ്കൾ ആവശ്യപ്പെട്ട ഫൈനൽ ലേഔട്ട് (Watch Online & Quick Watch മുകളിൽ, Group & Delete നടുവിൽ, File Size ഏറ്റവും താഴെ)
+    # സ്ട്രീമിംഗ് ബട്ടണുകൾ ഒഴിവാക്കി ഗ്രൂപ്പും ഡിലീറ്റും ഫയൽ സൈസും മാത്രം ഉൾപ്പെടുത്തിയ ലേഔട്ട്
     file_keyboard = InlineKeyboardMarkup(
         [
-            [
-                InlineKeyboardButton("▶️ Watch Online", web_app=WebAppInfo(url=streaming_web_url)),
-                InlineKeyboardButton("⚡ Quick Watch", web_app=WebAppInfo(url=preview_web_url))
-            ],
             [
                 InlineKeyboardButton('👥 Group', url="https://t.me/+iEbhY7mM4oE1OTVl"),
                 InlineKeyboardButton('❌ Delete', callback_data='close_data')
