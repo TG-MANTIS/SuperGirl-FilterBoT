@@ -14,7 +14,7 @@ from database.connections_mdb import active_connection, all_connections, delete_
     make_inactive
 from info import ADMINS, AUTH_CHANNEL, AUTH_USERS, CUSTOM_FILE_CAPTION, AUTH_GROUPS, P_TTI_SHOW_OFF, IMDB, \
     SINGLE_BUTTON, SPELL_CHECK_REPLY, IMDB_TEMPLATE, LOG_CHANNEL, PICS, NOR_IMG, FILMS_LINK
-from pyrogram.types import InlineKeyboardMarkup, InlineKeyboardButton, CallbackQuery, InputMediaPhoto, WebAppInfo
+from pyrogram.types import InlineKeyboardMarkup, InlineKeyboardButton, CallbackQuery, InputMediaPhoto
 from pyrogram import Client, filters, enums
 from pyrogram.errors import FloodWait, UserIsBlocked, MessageNotModified, PeerIdInvalid
 from utils import get_size, is_subscribed, get_poster, search_gagala, temp, get_settings, save_group_settings
@@ -758,18 +758,12 @@ async def cb_handler(client: Client, query: CallbackQuery):
                 await query.answer(url=f"https://t.me/{temp.U_NAME}?start={ident}_{file_id}")
                 return
             else:
-                streaming_url = f"https://yourdomain.com/stream/{file_id}" 
-                preview_url = f"https://yourdomain.com/preview/{file_id}"
-
+                # സ്ട്രീമിംഗ് ബട്ടണുകൾ പൂർണ്ണമായി ഒഴിവാക്കി ലളിതമായ ലേഔട്ട് നൽകിയിരിക്കുന്നു
                 file_keyboard = InlineKeyboardMarkup(
                     [
                         [
-                            InlineKeyboardButton("▶️ Watch Online", web_app=WebAppInfo(url=streaming_url)),
-                            InlineKeyboardButton("⚡ Quick Watch", web_app=WebAppInfo(url=preview_url))
-                        ],
-                        [
-                            InlineKeyboardButton('👥 Group', url="https://t.me/+iEbhY7mM4oE1OTVl"),
-                            InlineKeyboardButton('❌ Delete', callback_data='close_data')
+                            InlineKeyboardButton('🚸 Group', url="https://t.me/+iEbhY7mM4oE1OTVl"),
+                            InlineKeyboardButton('Delete 🗑️', callback_data='close_data')
                         ],
                         [
                             InlineKeyboardButton(text=f'⚙️ File Size: {size}', callback_data='gxneo')
@@ -822,18 +816,11 @@ async def cb_handler(client: Client, query: CallbackQuery):
             f_caption = f"{title}"
         await query.answer('Sending file...', show_alert=False)
         
-        streaming_url = f"https://yourdomain.com/stream/{file_id}"
-        preview_url = f"https://yourdomain.com/preview/{file_id}"
-
         file_keyboard = InlineKeyboardMarkup(
             [
                 [
-                    InlineKeyboardButton("▶️ Watch Online", web_app=WebAppInfo(url=streaming_url)),
-                    InlineKeyboardButton("⚡ Quick Watch", web_app=WebAppInfo(url=preview_url))
-                ],
-                [
-                    InlineKeyboardButton('👥 Group', url="https://t.me/+iEbhY7mM4oE1OTVl"),
-                    InlineKeyboardButton('❌ Delete', callback_data='close_data')
+                    InlineKeyboardButton('🚸 Group', url="https://t.me/+iEbhY7mM4oE1OTVl"),
+                    InlineKeyboardButton('Delete 🗑️', callback_data='close_data')
                 ],
                 [
                     InlineKeyboardButton(text=f'⚙️ File Size: {size}', callback_data='gxneo')
@@ -1005,7 +992,7 @@ async def auto_filter(client, msg, spoll=False):
     else:
         chat_id = msg.message.chat.id
         if msg.message.chat.type == enums.ChatType.PRIVATE:
-            grpid = await active_connection(str(msg.from_user.id))
+            grpid = await active_connection(str(msg.message.from_user.id))
             if grpid is not None:
                 settings = await get_settings(int(grpid))
             else:
@@ -1064,7 +1051,7 @@ async def auto_filter(client, msg, spoll=False):
     
     btn.insert(0, 
         [
-            InlineKeyboardButton('🔊 Language', callback_data=f'lang_now#{req}#{key}' if False else f'lang_menu#{req}#{key}'), # placeholder
+            InlineKeyboardButton('🔊 Language', callback_data=f'lang_menu#{req}#{key}'),
             InlineKeyboardButton('🎥 Quality', callback_data=f'qual_menu#{req}#{key}')
         ]
     )
