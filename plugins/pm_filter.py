@@ -14,7 +14,7 @@ from database.connections_mdb import active_connection, all_connections, delete_
     make_inactive
 from info import ADMINS, AUTH_CHANNEL, AUTH_USERS, CUSTOM_FILE_CAPTION, AUTH_GROUPS, P_TTI_SHOW_OFF, IMDB, \
     SINGLE_BUTTON, SPELL_CHECK_REPLY, IMDB_TEMPLATE, LOG_CHANNEL, PICS, NOR_IMG, FILMS_LINK
-from pyrogram.types import InlineKeyboardMarkup, InlineKeyboardButton, CallbackQuery, InputMediaPhoto
+from pyrogram.types import InlineKeyboardMarkup, InlineKeyboardButton, CallbackQuery, InputMediaPhoto, WebAppInfo
 from pyrogram import Client, filters, enums
 from pyrogram.errors import FloodWait, UserIsBlocked, MessageNotModified, PeerIdInvalid
 from utils import get_size, is_subscribed, get_poster, search_gagala, temp, get_settings, save_group_settings
@@ -630,7 +630,10 @@ async def cb_handler(client: Client, query: CallbackQuery):
                 ]
                 text = f"<b>⚙️ Group Settings for {title} (Page 2/2)</b>"
 
-            await query.message.edit_text(text, reply_markup=InlineKeyboardMarkup(buttons))
+            try:
+                await query.message.edit_text(text, reply_markup=InlineKeyboardMarkup(buttons))
+            except MessageNotModified:
+                pass
         await query.answer()
     elif query.data.startswith("setgs"):
         ident, set_type, status, grp_id, page = query.data.split("#")
@@ -713,7 +716,10 @@ async def cb_handler(client: Client, query: CallbackQuery):
                 text = f"<b>⚙️ Group Settings for {title} (Page 2/2)</b>"
 
             reply_markup = InlineKeyboardMarkup(buttons)
-            await query.message.edit_text(text, reply_markup=reply_markup)
+            try:
+                await query.message.edit_text(text, reply_markup=reply_markup)
+            except MessageNotModified:
+                pass
         await query.answer('Done.!👍')
     elif query.data.startswith("file"):
         ident, file_id = query.data.split("#")
@@ -752,22 +758,21 @@ async def cb_handler(client: Client, query: CallbackQuery):
                 await query.answer(url=f"https://t.me/{temp.U_NAME}?start={ident}_{file_id}")
                 return
             else:
-                streaming_url = f"https://t.me/{temp.U_NAME}?start=stream_{file_id}" 
-                preview_url = f"https://t.me/{temp.U_NAME}?start=preview_{file_id}"
+                streaming_url = f"https://yourdomain.com/stream/{file_id}" 
+                preview_url = f"https://yourdomain.com/preview/{file_id}"
 
                 file_keyboard = InlineKeyboardMarkup(
                     [
                         [
+                            InlineKeyboardButton("▶️ Watch Online", web_app=WebAppInfo(url=streaming_url)),
+                            InlineKeyboardButton("⚡ Quick Watch", web_app=WebAppInfo(url=preview_url))
+                        ],
+                        [
+                            InlineKeyboardButton('👥 Group', url="https://t.me/+iEbhY7mM4oE1OTVl"),
+                            InlineKeyboardButton('❌ Delete', callback_data='close_data')
+                        ],
+                        [
                             InlineKeyboardButton(text=f'⚙️ File Size: {size}', callback_data='gxneo')
-                        ],
-                        [
-                            InlineKeyboardButton('👥 Join Group', url="https://t.me/+iEbhY7mM4oE1OTVl")
-                        ],
-                        [
-                            InlineKeyboardButton('🎬 Watch Options', callback_data=f'watch_options#{file_id}')
-                        ],
-                        [
-                            InlineKeyboardButton('❌ Delete / Close', callback_data='close_data')
                         ]
                     ]
                 )
@@ -786,69 +791,6 @@ async def cb_handler(client: Client, query: CallbackQuery):
             await query.answer(url=f"https://t.me/{temp.U_NAME}?start={ident}_{file_id}")
         except Exception as e:
             await query.answer(url=f"https://t.me/{temp.U_NAME}?start={ident}_{file_id}")
-    elif query.data.startswith("watch_options#"):
-        _, file_id = query.data.split("#")
-        files_ = await get_file_details(file_id)
-        if not files_:
-            return await query.answer('File not found!', show_alert=True)
-        files = files_[0]
-        size = get_size(files.file_size)
-        
-        streaming_url = f"https://t.me/{temp.U_NAME}?start=stream_{file_id}"
-        preview_url = f"https://t.me/{temp.U_NAME}?start=preview_{file_id}"
-
-        expanded_keyboard = InlineKeyboardMarkup(
-            [
-                [
-                    InlineKeyboardButton("▶️ Watch Online", url=streaming_url),
-                    InlineKeyboardButton("⚡ Quick Watch", url=preview_url)
-                ],
-                [
-                    InlineKeyboardButton(text=f'⚙️ File Size: {size}', callback_data='gxneo')
-                ],
-                [
-                    InlineKeyboardButton('👥 Join Group', url="https://t.me/+iEbhY7mM4oE1OTVl")
-                ],
-                [
-                    InlineKeyboardButton("🔙 Back", callback_data=f'back_to_main_menu#{file_id}'),
-                    InlineKeyboardButton('❌ Close', callback_data='close_data')
-                ]
-            ]
-        )
-        try:
-            await query.message.edit_reply_markup(reply_markup=expanded_keyboard)
-            await query.answer()
-        except MessageNotModified:
-            pass
-    elif query.data.startswith("back_to_main_menu#"):
-        _, file_id = query.data.split("#")
-        files_ = await get_file_details(file_id)
-        if not files_:
-            return await query.answer('File not found!', show_alert=True)
-        files = files_[0]
-        size = get_size(files.file_size)
-
-        original_keyboard = InlineKeyboardMarkup(
-            [
-                [
-                    InlineKeyboardButton(text=f'⚙️ File Size: {size}', callback_data='gxneo')
-                ],
-                [
-                    InlineKeyboardButton('👥 Join Group', url="https://t.me/+iEbhY7mM4oE1OTVl")
-                ],
-                [
-                    InlineKeyboardButton('🎬 Watch Options', callback_data=f'watch_options#{file_id}')
-                ],
-                [
-                    InlineKeyboardButton('❌ Delete / Close', callback_data='close_data')
-                ]
-            ]
-        )
-        try:
-            await query.message.edit_reply_markup(reply_markup=original_keyboard)
-            await query.answer()
-        except MessageNotModified:
-            pass
     elif query.data.startswith("checksub"):
         chat_id = query.message.chat.id
         if query.message.chat.type == enums.ChatType.PRIVATE:
@@ -880,19 +822,21 @@ async def cb_handler(client: Client, query: CallbackQuery):
             f_caption = f"{title}"
         await query.answer('Sending file...', show_alert=False)
         
+        streaming_url = f"https://yourdomain.com/stream/{file_id}"
+        preview_url = f"https://yourdomain.com/preview/{file_id}"
+
         file_keyboard = InlineKeyboardMarkup(
             [
                 [
+                    InlineKeyboardButton("▶️ Watch Online", web_app=WebAppInfo(url=streaming_url)),
+                    InlineKeyboardButton("⚡ Quick Watch", web_app=WebAppInfo(url=preview_url))
+                ],
+                [
+                    InlineKeyboardButton('👥 Group', url="https://t.me/+iEbhY7mM4oE1OTVl"),
+                    InlineKeyboardButton('❌ Delete', callback_data='close_data')
+                ],
+                [
                     InlineKeyboardButton(text=f'⚙️ File Size: {size}', callback_data='gxneo')
-                ],
-                [
-                    InlineKeyboardButton('👥 Join Group', url="https://t.me/+iEbhY7mM4oE1OTVl")
-                ],
-                [
-                    InlineKeyboardButton('🎬 Watch Options', callback_data=f'watch_options#{file_id}')
-                ],
-                [
-                    InlineKeyboardButton('❌ Delete / Close', callback_data='close_data')
                 ]
             ]
         )
