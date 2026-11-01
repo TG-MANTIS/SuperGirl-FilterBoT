@@ -837,7 +837,7 @@ async def cb_handler(client: Client, query: CallbackQuery):
     elif query.data == "pages":
         await query.answer()
     elif query.data == "start":
-        user_settings = await get_settings(query.from_user.id)
+        user_settings = await get_settings(str(query.from_user.id))
         start_pic_enabled = user_settings.get("start_pic", True) if user_settings else True
 
         buttons = [[
@@ -869,7 +869,10 @@ async def cb_handler(client: Client, query: CallbackQuery):
                     parse_mode=enums.ParseMode.HTML
                 )
             except:
-                await query.message.delete()
+                try:
+                    await query.message.delete()
+                except:
+                    pass
                 await client.send_message(
                     chat_id=query.message.chat.id,
                     text=script.START_TXT.format(query.from_user.mention, temp.U_NAME, temp.B_NAME),
@@ -877,7 +880,7 @@ async def cb_handler(client: Client, query: CallbackQuery):
                     parse_mode=enums.ParseMode.HTML
                 )
     elif query.data == "about":
-        user_settings = await get_settings(query.from_user.id)
+        user_settings = await get_settings(str(query.from_user.id))
         start_pic_enabled = user_settings.get("start_pic", True) if user_settings else True
 
         buttons = [[
@@ -910,7 +913,10 @@ async def cb_handler(client: Client, query: CallbackQuery):
                     parse_mode=enums.ParseMode.HTML
                 )
             except:
-                await query.message.delete()
+                try:
+                    await query.message.delete()
+                except:
+                    pass
                 await client.send_message(
                     chat_id=query.message.chat.id,
                     text=script.ABOUT_TXT.format(temp.B_NAME),
@@ -947,7 +953,7 @@ async def cb_handler(client: Client, query: CallbackQuery):
             await query.message.edit_text(text="നോക്കി നിന്നോ ഇപ്പോൾ കിട്ടും 😏", reply_markup=reply_markup)
     elif query.data == "rfrsh":
         await query.answer("Fetching MongoDb DataBase")
-        user_settings = await get_settings(query.from_user.id)
+        user_settings = await get_settings(str(query.from_user.id))
         start_pic_enabled = user_settings.get("start_pic", True) if user_settings else True
 
         buttons = [[
