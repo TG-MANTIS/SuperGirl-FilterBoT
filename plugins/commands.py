@@ -8,8 +8,8 @@ import random
 import asyncio
 from Script import script
 from pyrogram import Client, filters, enums
-from pyrogram.errors import ChatAdminRequired, FloodWait
-from pyrogram.types import InlineKeyboardButton, InlineKeyboardMarkup
+from pyrogram.errors import ChatAdminRequired, FloodWait, MessageNotModified
+from pyrogram.types import InlineKeyboardButton, InlineKeyboardMarkup, WebAppInfo
 from database.ia_filterdb import Media, get_file_details, unpack_new_file_id
 from database.users_chats_db import db
 from info import CHANNELS, ADMINS, AUTH_CHANNEL, LOG_CHANNEL, PICS, SET_IMG, BATCH_FILE_CAPTION, CUSTOM_FILE_CAPTION, PROTECT_CONTENT, FORCE_IMG
@@ -338,20 +338,23 @@ async def start(client, message):
     if f_caption is None:
         f_caption = f"{files.file_name}"
         
-    # ഫയൽ അയക്കുമ്പോൾ pm_filter.py-യിലേതുപോലെ Watch Options ബട്ടൺ സെറ്റ് ചെയ്യുന്നു
+    # സ്ട്രീമിംഗ് വെബ് ആപ്പ് ലിങ്കുകൾ (താങ്കളുടെ ഡൊമെയ്ൻ അനുസരിച്ച് മാറ്റുക)
+    streaming_web_url = f"https://yourdomain.com/stream/{file_id}"
+    preview_web_url = f"https://yourdomain.com/preview/{file_id}"
+
+    # താങ്കൾ ആവശ്യപ്പെട്ട ഫൈനൽ ലേഔട്ട് (Watch Online & Quick Watch മുകളിൽ, Group & Delete നടുവിൽ, File Size ഏറ്റവും താഴെ)
     file_keyboard = InlineKeyboardMarkup(
         [
             [
+                InlineKeyboardButton("▶️ Watch Online", web_app=WebAppInfo(url=streaming_web_url)),
+                InlineKeyboardButton("⚡ Quick Watch", web_app=WebAppInfo(url=preview_web_url))
+            ],
+            [
+                InlineKeyboardButton('👥 Group', url="https://t.me/+iEbhY7mM4oE1OTVl"),
+                InlineKeyboardButton('❌ Delete', callback_data='close_data')
+            ],
+            [
                 InlineKeyboardButton(text=f'⚙️ File Size: {size}', callback_data='gxneo')
-            ],
-            [
-                InlineKeyboardButton('👥 Join Group', url="https://t.me/+iEbhY7mM4oE1OTVl")
-            ],
-            [
-                InlineKeyboardButton('🎬 Watch Options', callback_data=f'watch_options#{file_id}')
-            ],
-            [
-                InlineKeyboardButton('❌ Delete / Close', callback_data='close_data')
             ]
         ]
     )
@@ -711,7 +714,10 @@ async def set_group_menu_handler(client, query):
             ]
             text = f"<b>⚙️ Settings for {title} (Page 2/2)</b>"
 
-        await query.message.edit_text(text, reply_markup=InlineKeyboardMarkup(buttons))
+        try:
+            await query.message.edit_text(text, reply_markup=InlineKeyboardMarkup(buttons))
+        except MessageNotModified:
+            pass
     await query.answer()
 
 
@@ -815,7 +821,10 @@ async def settings_update_handler(client, query):
             text = f"<b>⚙️ Settings for {title} (Page 2/2)</b>"
 
         reply_markup = InlineKeyboardMarkup(buttons)
-        await query.message.edit_text(text, reply_markup=reply_markup)
+        try:
+            await query.message.edit_text(text, reply_markup=reply_markup)
+        except MessageNotModified:
+            pass
     await query.answer('Done.!👍')
 
 
