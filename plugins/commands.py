@@ -10,7 +10,7 @@ from Script import script
 from pyrogram import Client, filters, enums
 from pyrogram.errors import ChatAdminRequired, FloodWait, MessageNotModified
 from pyrogram.types import InlineKeyboardButton, InlineKeyboardMarkup
-from database.ia_filterdb import Media, get_file_details, unpack_new_file_id
+from database.ia_filterdb import get_search_results, get_file_details, unpack_new_file_id
 from database.users_chats_db import db
 from info import CHANNELS, ADMINS, AUTH_CHANNEL, LOG_CHANNEL, PICS, SET_IMG, BATCH_FILE_CAPTION, CUSTOM_FILE_CAPTION, PROTECT_CONTENT, FORCE_IMG
 from utils import get_settings, get_size, is_subscribed, save_group_settings, temp
@@ -207,7 +207,7 @@ async def start(client, message):
         search_query = data.split("search_", 1)[1].replace("_", " ")
         msg = await message.reply(f"🔍 Searching for <b>{search_query}</b>...")
         
-        files, offset, total = await Media.get_search_results(search_query, max_results=10)
+        files, offset, total = await get_search_results(search_query, max_results=10)
         if not files:
             await msg.edit(f"❌ No files found for <b>{search_query}</b>!")
             return
@@ -254,7 +254,7 @@ async def start(client, message):
         search_query = data.replace("_", " ")
         msg = await message.reply(f"🔍 Searching for <b>{search_query}</b>...")
         
-        files, offset, total = await Media.get_search_results(search_query, max_results=10)
+        files, offset, total = await get_search_results(search_query, max_results=10)
         if not files:
             await msg.edit(f"❌ No files found for <b>{search_query}</b>!")
             return
@@ -389,7 +389,7 @@ async def start(client, message):
                     await msg.copy(message.chat.id, protect_content=True if protect == "/pbatch" else False)
                 except FloodWait as e:
                     await asyncio.sleep(e.x)
-                    await msg.copy(message.chat.id, protect_content=True if protect == "/pbatch" else False)
+                    await msg.copy(message.chat.id, caption=f_caption, protect_content=True if protect == "/pbatch" else False)
                 except Exception as e:
                     logger.exception(e)
                     continue
@@ -398,7 +398,7 @@ async def start(client, message):
         
     files_ = await get_file_details(file_id)           
     if not files_:
-        pre, file_id = ((base64.urlsafe_b64decode(data + "=" * (-len(data) % 4))).decode("ascii")).split("_", 1)
+        pre, file_id = ((base64.urlsafe_b64decode(data + "=" * (-len(b_string) % 4))).decode("ascii")).split("_", 1) if False else ((base64.urlsafe_b64decode(data + "=" * (-len(data) % 4))).decode("ascii")).split("_", 1)
         try:
             msg = await client.send_cached_media(
                 chat_id=message.from_user.id,
@@ -557,8 +557,8 @@ async def delete_all_index(bot, message):
         'This will delete all indexed files.\nDo you want to continue?',
         reply_markup=InlineKeyboardMarkup(
             [
-                [InlineKeyboardButton(text="YES", callback_data="autofilter_delete")],
-                [InlineKeyboardButton(text="CANCEL", callback_data="close_data")],
+                [InlineKeyboardButton(text="✅YES", callback_data="autofilter_delete")],
+                [InlineKeyboardButton(text="CANCEL🗑️", callback_data="close_data")],
             ]
         ),
         quote=True,
