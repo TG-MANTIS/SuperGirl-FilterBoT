@@ -106,7 +106,7 @@ async def start(client, message):
             try:
                 kk, file_id = message.command[1].split("_", 1)
                 pre = 'checksubp' if kk == 'filep' else 'checksub' 
-                btn.append([InlineKeyboardButton("🔁 Tʀʏ Aɢ𝐚𝗶𝗻 🔁", callback_data=f"{pre}#{file_id}")])
+                btn.append([InlineKeyboardButton("🔁 Tʀʏ Aɢ𝗮𝗶𝗻 🔁", callback_data=f"{pre}#{file_id}")])
             except (IndexError, ValueError):
                 btn.append([InlineKeyboardButton("🔁 Tʀʏ Aɢ𝗮𝗶𝗻 🔁", url=f"https://t.me/{temp.U_NAME}?start={message.command[1]}")])
         await client.send_photo(
@@ -200,6 +200,53 @@ async def start(client, message):
                 reply_markup=reply_markup,
                 parse_mode=enums.ParseMode.HTML
             )
+        return
+
+    # Handle Direct Channel Deep Link Search (e.g. ?start=search_MovieName)
+    if data.startswith("search_"):
+        search_query = data.split("search_", 1)[1].replace("_", " ")
+        msg = await message.reply(f"🔍 Searching for <b>{search_query}</b>...")
+        
+        files, offset, total = await Media.get_search_results(search_query, max_results=10)
+        if not files:
+            await msg.edit(f"❌ No files found for <b>{search_query}</b>!")
+            return
+        
+        await msg.edit(f"✅ Found files for <b>{search_query}</b>! Sending results...")
+        for file in files:
+            title = file.file_name
+            size = get_size(file.file_size)
+            f_caption = file.caption
+            if CUSTOM_FILE_CAPTION:
+                try:
+                    f_caption = CUSTOM_FILE_CAPTION.format(file_name='' if title is None else title, file_size='' if size is None else size, file_caption='' if f_caption is None else f_caption)
+                except Exception as e:
+                    logger.exception(e)
+            if f_caption is None:
+                f_caption = f"{title}"
+                
+            file_keyboard = InlineKeyboardMarkup(
+                [
+                    [
+                        InlineKeyboardButton('🚸 Group', url="https://t.me/+iEbhY7mM4oE1OTVl"),
+                        InlineKeyboardButton('Delete 🗑️', callback_data='close_data')
+                    ],
+                    [
+                        InlineKeyboardButton(text=f'⚙️ File Size: {size}', callback_data='gxneo')
+                    ]
+                ]
+            )
+            try:
+                await client.send_cached_media(
+                    chat_id=message.from_user.id,
+                    file_id=file.file_id,
+                    caption=f_caption,
+                    reply_markup=file_keyboard,
+                    protect_content=PROTECT_CONTENT,
+                )
+                await asyncio.sleep(0.5)
+            except Exception as e:
+                logger.error(f"Deep link search file send error: {e}")
         return
 
     # Handle Deep Link Search (Query text passed via start link like ?start=Movie_Name)
