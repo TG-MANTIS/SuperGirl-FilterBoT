@@ -601,6 +601,7 @@ async def cb_handler(client: Client, query: CallbackQuery):
                 text = f"<b>⚙️ Group Settings for {title} (Page 1/2)</b>"
             else:
                 antilink = settings.get("antilink", False)
+                start_pic = settings.get("start_pic", True)  # Start Pic Status (True/False)
                 buttons = [
                     [
                         InlineKeyboardButton('Welcome', callback_data=f'setgs#welcome#{settings["welcome"]}#{grp_id}#2'),
@@ -617,6 +618,10 @@ async def cb_handler(client: Client, query: CallbackQuery):
                     [
                         InlineKeyboardButton('Anti-Link 🛡️', callback_data=f'setgs#antilink#{antilink}#{grp_id}#2'),
                         InlineKeyboardButton('✅ On' if antilink else '❌ Off', callback_data=f'setgs#antilink#{antilink}#{grp_id}#2')
+                    ],
+                    [
+                        InlineKeyboardButton('Start Pic 🖼️', callback_data=f'setgs#start_pic#{start_pic}#{grp_id}#2'),
+                        InlineKeyboardButton('✅ On' if start_pic else '❌ Off', callback_data=f'setgs#start_pic#{start_pic}#{grp_id}#2')
                     ],
                     [
                         InlineKeyboardButton('⭅ Back', callback_data=f'set_group_menu#{grp_id}#1'),
@@ -678,6 +683,7 @@ async def cb_handler(client: Client, query: CallbackQuery):
                 text = f"<b>⚙️ Group Settings for {title} (Page 1/2)</b>"
             else:
                 antilink = settings.get("antilink", False)
+                start_pic = settings.get("start_pic", True)
                 buttons = [
                     [
                         InlineKeyboardButton('Welcome', callback_data=f'setgs#welcome#{settings["welcome"]}#{grp_id}#2'),
@@ -694,6 +700,10 @@ async def cb_handler(client: Client, query: CallbackQuery):
                     [
                         InlineKeyboardButton('Anti-Link 🛡️', callback_data=f'setgs#antilink#{antilink}#{grp_id}#2'),
                         InlineKeyboardButton('✅ On' if antilink else '❌ Off', callback_data=f'setgs#antilink#{antilink}#{grp_id}#2')
+                    ],
+                    [
+                        InlineKeyboardButton('Start Pic 🖼️', callback_data=f'setgs#start_pic#{start_pic}#{grp_id}#2'),
+                        InlineKeyboardButton('✅ On' if start_pic else '❌ Off', callback_data=f'setgs#start_pic#{start_pic}#{grp_id}#2')
                     ],
                     [
                         InlineKeyboardButton('⭅ Back', callback_data=f'set_group_menu#{grp_id}#1'),
@@ -742,23 +752,33 @@ async def cb_handler(client: Client, query: CallbackQuery):
                 await query.answer(url=f"https://t.me/{temp.U_NAME}?start={ident}_{file_id}")
                 return
             else:
+                streaming_url = f"https://t.me/{temp.U_NAME}?start=stream_{file_id}" 
+                preview_url = f"https://t.me/{temp.U_NAME}?start=preview_{file_id}"
+
+                file_keyboard = InlineKeyboardMarkup(
+                    [
+                        [
+                            InlineKeyboardButton(text=f'⚙️ File Size: {size}', callback_data='gxneo')
+                        ],
+                        [
+                            InlineKeyboardButton('👥 Join Group', url="https://t.me/+iEbhY7mM4oE1OTVl")
+                        ],
+                        [
+                            InlineKeyboardButton('🎬 Watch Options', callback_data=f'watch_options#{file_id}')
+                        ],
+                        [
+                            InlineKeyboardButton('❌ Delete / Close', callback_data='close_data')
+                        ]
+                    ]
+                )
+
                 await client.send_cached_media(
                     chat_id=query.from_user.id,
                     file_id=file_id,
                     caption=f_caption,
                     protect_content=True if ident == "filep" else False,
-                    reply_markup=InlineKeyboardMarkup(
-                        [
-                         [
-                          InlineKeyboardButton('💥 𝐆𝐫𝐨𝐮𝐩', url="https://t.me/+iEbhY7mM4oE1OTVl"),
-                          InlineKeyboardButton('D𝐞𝐥𝐞𝐭𝐞 ⚠️', callback_data='close_data')
-                          ],[
-                          InlineKeyboardButton(text=f'⚙️ 𝐅𝐢𝐥𝐞 𝐒𝐢𝐳𝐞 【 {size} 】⚙️', callback_data='gxneo')
-                         ]
-                        ]
-                    )
+                    reply_markup=file_keyboard
                 )
-                # Popup ഒഴിവാക്കി ടോസ്റ്റ് നോട്ടിഫിക്കേഷൻ മാത്രം നൽകുന്നു
                 await query.answer('Sending file...', show_alert=False)
         except UserIsBlocked:
             await query.answer('Unblock the bot mahn !', show_alert=True)
@@ -766,6 +786,69 @@ async def cb_handler(client: Client, query: CallbackQuery):
             await query.answer(url=f"https://t.me/{temp.U_NAME}?start={ident}_{file_id}")
         except Exception as e:
             await query.answer(url=f"https://t.me/{temp.U_NAME}?start={ident}_{file_id}")
+    elif query.data.startswith("watch_options#"):
+        _, file_id = query.data.split("#")
+        files_ = await get_file_details(file_id)
+        if not files_:
+            return await query.answer('File not found!', show_alert=True)
+        files = files_[0]
+        size = get_size(files.file_size)
+        
+        streaming_url = f"https://t.me/{temp.U_NAME}?start=stream_{file_id}"
+        preview_url = f"https://t.me/{temp.U_NAME}?start=preview_{file_id}"
+
+        expanded_keyboard = InlineKeyboardMarkup(
+            [
+                [
+                    InlineKeyboardButton("▶️ Watch Online", url=streaming_url),
+                    InlineKeyboardButton("⚡ Quick Watch", url=preview_url)
+                ],
+                [
+                    InlineKeyboardButton(text=f'⚙️ File Size: {size}', callback_data='gxneo')
+                ],
+                [
+                    InlineKeyboardButton('👥 Join Group', url="https://t.me/+iEbhY7mM4oE1OTVl")
+                ],
+                [
+                    InlineKeyboardButton("🔙 Back", callback_data=f'back_to_main_menu#{file_id}'),
+                    InlineKeyboardButton('❌ Close', callback_data='close_data')
+                ]
+            ]
+        )
+        try:
+            await query.message.edit_reply_markup(reply_markup=expanded_keyboard)
+            await query.answer()
+        except MessageNotModified:
+            pass
+    elif query.data.startswith("back_to_main_menu#"):
+        _, file_id = query.data.split("#")
+        files_ = await get_file_details(file_id)
+        if not files_:
+            return await query.answer('File not found!', show_alert=True)
+        files = files_[0]
+        size = get_size(files.file_size)
+
+        original_keyboard = InlineKeyboardMarkup(
+            [
+                [
+                    InlineKeyboardButton(text=f'⚙️ File Size: {size}', callback_data='gxneo')
+                ],
+                [
+                    InlineKeyboardButton('👥 Join Group', url="https://t.me/+iEbhY7mM4oE1OTVl")
+                ],
+                [
+                    InlineKeyboardButton('🎬 Watch Options', callback_data=f'watch_options#{file_id}')
+                ],
+                [
+                    InlineKeyboardButton('❌ Delete / Close', callback_data='close_data')
+                ]
+            ]
+        )
+        try:
+            await query.message.edit_reply_markup(reply_markup=original_keyboard)
+            await query.answer()
+        except MessageNotModified:
+            pass
     elif query.data.startswith("checksub"):
         chat_id = query.message.chat.id
         if query.message.chat.type == enums.ChatType.PRIVATE:
@@ -796,21 +879,30 @@ async def cb_handler(client: Client, query: CallbackQuery):
         if f_caption is None:
             f_caption = f"{title}"
         await query.answer('Sending file...', show_alert=False)
+        
+        file_keyboard = InlineKeyboardMarkup(
+            [
+                [
+                    InlineKeyboardButton(text=f'⚙️ File Size: {size}', callback_data='gxneo')
+                ],
+                [
+                    InlineKeyboardButton('👥 Join Group', url="https://t.me/+iEbhY7mM4oE1OTVl")
+                ],
+                [
+                    InlineKeyboardButton('🎬 Watch Options', callback_data=f'watch_options#{file_id}')
+                ],
+                [
+                    InlineKeyboardButton('❌ Delete / Close', callback_data='close_data')
+                ]
+            ]
+        )
+
         await client.send_cached_media(
             chat_id=query.from_user.id,
             file_id=file_id,
             caption=f_caption,
             protect_content=True if ident == 'checksubp' else False,
-            reply_markup=InlineKeyboardMarkup(
-                [
-                 [
-                  InlineKeyboardButton('💥 𝐆𝐫𝐨𝐮𝐩', url="https://t.me/+iEbhY7mM4oE1OTVl"),
-                  InlineKeyboardButton('D𝐞𝐥𝐞𝐭𝐞 ⚠️', callback_data='close_data')
-                  ],[
-                  InlineKeyboardButton(text=f'⚙️ 𝐅𝐢𝐥𝐞 𝐒𝐢𝐳𝐞 【 {size} 】⚙️', callback_data='gxneo')
-                 ]
-                ]
-            )
+            reply_markup=file_keyboard
         )
     elif query.data == "pages":
         await query.answer()
@@ -1028,7 +1120,7 @@ async def auto_filter(client, msg, spoll=False):
     
     btn.insert(0, 
         [
-            InlineKeyboardButton('🔊 Language', callback_data=f'lang_menu#{req}#{key}'),
+            InlineKeyboardButton('🔊 Language', callback_data=f'lang_now#{req}#{key}' if False else f'lang_menu#{req}#{key}'), # placeholder
             InlineKeyboardButton('🎥 Quality', callback_data=f'qual_menu#{req}#{key}')
         ]
     )
