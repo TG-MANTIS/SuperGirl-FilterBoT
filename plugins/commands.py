@@ -60,10 +60,11 @@ async def start(client, message):
         except Exception as e:
             logger.error(f"User Log Error: {e}")
 
-    # Standard Private Start / No File Payload
+    # Standard Private Start / No File Payload (Checking connected group settings for start_pic)
     if len(message.command) != 2:
-        user_settings = await get_settings(message.from_user.id)
-        start_pic_enabled = user_settings.get("start_pic", True) if user_settings else True
+        grpid = await active_connection(str(message.from_user.id))
+        settings = await get_settings(int(grpid)) if grpid else None
+        start_pic_enabled = settings.get("start_pic", True) if settings else True
 
         buttons = [[
             InlineKeyboardButton('✘ Cʟᴏꜱᴇ', callback_data='close_data'),
@@ -118,8 +119,9 @@ async def start(client, message):
         return
 
     if len(message.command) == 2 and message.command[1] in ["subscribe", "error", "okay", "help"]:
-        user_settings = await get_settings(message.from_user.id)
-        start_pic_enabled = user_settings.get("start_pic", True) if user_settings else True
+        grpid = await active_connection(str(message.from_user.id))
+        settings = await get_settings(int(grpid)) if grpid else None
+        start_pic_enabled = settings.get("start_pic", True) if settings else True
 
         buttons = [[
             InlineKeyboardButton('✘ Cʟᴏꜱᴇ', callback_data='close_data'),
@@ -584,11 +586,13 @@ async def settings(client, message):
     # 2. Private Chat (PM) Settings Handler
     elif chat_type == enums.ChatType.PRIVATE:
         grpid = await active_connection(str(userid))
+        title = "Group"
         if grpid is not None:
             grp_id = grpid
             try:
                 chat = await client.get_chat(grp_id)
-                title = chat.title
+                if chat and chat.title:
+                    title = chat.title
                 member = await client.get_chat_member(grp_id, userid)
                 is_admin = member.status in [enums.ChatMemberStatus.OWNER, enums.ChatMemberStatus.ADMINISTRATOR]
             except:
@@ -634,24 +638,7 @@ async def settings(client, message):
                 )
             return
         else:
-            userid_str = str(userid)
-            settings = await get_settings(userid_str)
-            start_pic = settings.get("start_pic", True) if settings else True
-
-            buttons = [
-                [
-                    InlineKeyboardButton('Start Pic 🖼️', callback_data=f'setgs#start_pic#{start_pic}#{userid_str}#1'),
-                    InlineKeyboardButton('✅ On' if start_pic else '❌ Off', callback_data=f'setgs#start_pic#{start_pic}#{userid_str}#1')
-                ],
-                [
-                    InlineKeyboardButton('Close', callback_data='close_data')
-                ]
-            ]
-            await message.reply_text(
-                "<b>⚙️ Bot Personal Settings Panel</b>\n\nManage your personal start picture setting here:",
-                reply_markup=InlineKeyboardMarkup(buttons),
-                quote=True
-            )
+            await message.reply("⚠️ Please connect to any group first using /connect to manage group settings!")
             return
 
 
@@ -681,7 +668,7 @@ async def set_group_menu_handler(client, query):
 
     settings = await get_settings(grp_id)
     
-    title = "Group / Personal"
+    title = "Group"
     if isinstance(grp_id, int):
         try:
             chat = await client.get_chat(grp_id)
@@ -689,8 +676,6 @@ async def set_group_menu_handler(client, query):
                 title = chat.title
         except Exception as e:
             logger.error(f"Error fetching chat title: {e}")
-    else:
-        title = "Personal"
 
     if settings is not None:
         if page == 1:
@@ -787,7 +772,7 @@ async def settings_update_handler(client, query):
 
     settings = await get_settings(grp_id)
     
-    title = "Group / Personal"
+    title = "Group"
     if isinstance(grp_id, int):
         try:
             chat = await client.get_chat(grp_id)
@@ -795,8 +780,6 @@ async def settings_update_handler(client, query):
                 title = chat.title
         except Exception as e:
             logger.error(f"Error fetching chat title: {e}")
-    else:
-        title = "Personal"
 
     if settings is not None:
         if page == 1:
