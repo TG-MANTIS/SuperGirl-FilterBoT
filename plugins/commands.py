@@ -62,17 +62,28 @@ async def start(client, message):
 
     # Standard Private Start / No File Payload
     if len(message.command) != 2:
+        user_settings = await get_settings(message.from_user.id)
+        start_pic_enabled = user_settings.get("start_pic", True) if user_settings else True
+
         buttons = [[
             InlineKeyboardButton('✘ Cʟᴏꜱᴇ', callback_data='close_data'),
             InlineKeyboardButton('Aʙᴏᴜᴛ 〄', callback_data='about')
         ]]
         reply_markup = InlineKeyboardMarkup(buttons)
-        await message.reply_photo(
-            photo=random.choice(PICS),
-            caption=script.START_TXT.format(message.from_user.mention, temp.U_NAME, temp.B_NAME),
-            reply_markup=reply_markup,
-            parse_mode=enums.ParseMode.HTML
-        )
+        
+        if start_pic_enabled:
+            await message.reply_photo(
+                photo=random.choice(PICS),
+                caption=script.START_TXT.format(message.from_user.mention, temp.U_NAME, temp.B_NAME),
+                reply_markup=reply_markup,
+                parse_mode=enums.ParseMode.HTML
+            )
+        else:
+            await message.reply_text(
+                text=script.START_TXT.format(message.from_user.mention, temp.U_NAME, temp.B_NAME),
+                reply_markup=reply_markup,
+                parse_mode=enums.ParseMode.HTML
+            )
         return
 
     # Force Subscription Check (/start with payload)
@@ -107,22 +118,33 @@ async def start(client, message):
         return
 
     if len(message.command) == 2 and message.command[1] in ["subscribe", "error", "okay", "help"]:
+        user_settings = await get_settings(message.from_user.id)
+        start_pic_enabled = user_settings.get("start_pic", True) if user_settings else True
+
         buttons = [[
             InlineKeyboardButton('✘ Cʟᴏꜱᴇ', callback_data='close_data'),
             InlineKeyboardButton('Aʙᴏᴜᴛ 〄', callback_data='about')
         ]]
         reply_markup = InlineKeyboardMarkup(buttons)
-        await message.reply_photo(
-            photo=random.choice(PICS),
-            caption=script.START_TXT.format(message.from_user.mention, temp.U_NAME, temp.B_NAME),
-            reply_markup=reply_markup,
-            parse_mode=enums.ParseMode.HTML
-        )
+        
+        if start_pic_enabled:
+            await message.reply_photo(
+                photo=random.choice(PICS),
+                caption=script.START_TXT.format(message.from_user.mention, temp.U_NAME, temp.B_NAME),
+                reply_markup=reply_markup,
+                parse_mode=enums.ParseMode.HTML
+            )
+        else:
+            await message.reply_text(
+                text=script.START_TXT.format(message.from_user.mention, temp.U_NAME, temp.B_NAME),
+                reply_markup=reply_markup,
+                parse_mode=enums.ParseMode.HTML
+            )
         return
 
     data = message.command[1]
     
-    # Handle Private Settings Panel Redirect from Group (Safe Error-Free Title Handling)
+    # Handle Private Settings Panel Redirect from Group
     if data.startswith("settings_"):
         grp_id = int(data.split("_")[1])
         user_id = message.from_user.id
@@ -316,20 +338,29 @@ async def start(client, message):
     if f_caption is None:
         f_caption = f"{files.file_name}"
         
-    buttons = [
+    # ഫയൽ അയക്കുമ്പോൾ pm_filter.py-യിലേതുപോലെ Watch Options ബട്ടൺ സെറ്റ് ചെയ്യുന്നു
+    file_keyboard = InlineKeyboardMarkup(
         [
-            InlineKeyboardButton('💥 Gʀᴏ𝐮ᴩ', url="https://t.me/+iEbhY7mM4oE1OTVl"),
-            InlineKeyboardButton('Dᴇʟᴇᴛᴇ ⚠️', callback_data='close_data')
-        ],
-        [
-            InlineKeyboardButton(text=f'⚙️ Fɪʟᴇ Sɪᴢᴇ 【 {size} 】⚙️', callback_data='gxneo')
+            [
+                InlineKeyboardButton(text=f'⚙️ File Size: {size}', callback_data='gxneo')
+            ],
+            [
+                InlineKeyboardButton('👥 Join Group', url="https://t.me/+iEbhY7mM4oE1OTVl")
+            ],
+            [
+                InlineKeyboardButton('🎬 Watch Options', callback_data=f'watch_options#{file_id}')
+            ],
+            [
+                InlineKeyboardButton('❌ Delete / Close', callback_data='close_data')
+            ]
         ]
-    ]
+    )
+
     await client.send_cached_media(
         chat_id=message.from_user.id,
         file_id=file_id,
         caption=f_caption,
-        reply_markup=InlineKeyboardMarkup(buttons),
+        reply_markup=file_keyboard,
         protect_content=True if pre == 'filep' else False,
     )
 
@@ -509,7 +540,7 @@ async def settings(client, message):
         )
         return
 
-    # 2. Private Chat (PM) Settings Handler -> Direct Full Menu for Group Admins / Bot Admins
+    # 2. Private Chat (PM) Settings Handler
     elif chat_type == enums.ChatType.PRIVATE:
         grpid = await active_connection(str(userid))
         if grpid is not None:
@@ -522,7 +553,6 @@ async def settings(client, message):
             except:
                 is_admin = False
 
-            # If user is NOT group admin and NOT bot admin, deny access strictly
             if not is_admin and userid not in ADMINS:
                 await message.reply("⚠️ ഈ കമാൻഡ് ഉപയോഗിക്കാൻ നിങ്ങൾക്ക് അനുവാദമില്ല!")
                 return
@@ -563,7 +593,24 @@ async def settings(client, message):
                 )
             return
         else:
-            await message.reply("⚠️ You are not connected to any group right now!\n\nPlease go to your group, connect first, and then use `/settings` in PM.")
+            userid_str = str(userid)
+            settings = await get_settings(userid_str)
+            start_pic = settings.get("start_pic", True) if settings else True
+
+            buttons = [
+                [
+                    InlineKeyboardButton('Start Pic 🖼️', callback_data=f'setgs#start_pic#{start_pic}#{userid_str}#1'),
+                    InlineKeyboardButton('✅ On' if start_pic else '❌ Off', callback_data=f'setgs#start_pic#{start_pic}#{userid_str}#1')
+                ],
+                [
+                    InlineKeyboardButton('Close', callback_data='close_data')
+                ]
+            ]
+            await message.reply_text(
+                "<b>⚙️ Bot Personal Settings Panel</b>\n\nManage your personal start picture setting here:",
+                reply_markup=InlineKeyboardMarkup(buttons),
+                quote=True
+            )
             return
 
 
@@ -574,49 +621,58 @@ async def settings(client, message):
 @Client.on_callback_query(filters.regex(r"^set_group_menu#"))
 async def set_group_menu_handler(client, query):
     data_parts = query.data.split("#")
-    grp_id = int(data_parts[1])
+    grp_id_raw = data_parts[1]
     page = int(data_parts[2]) if len(data_parts) > 2 else 1
     
     user_id = query.from_user.id
     try:
-        member = await client.get_chat_member(grp_id, user_id)
-        if not (member.status in [enums.ChatMemberStatus.OWNER, enums.ChatMemberStatus.ADMINISTRATOR] or user_id in ADMINS):
-            return await query.answer("⚠️ You need to be an Admin to change settings!", show_alert=True)
-    except:
-        pass
+        grp_id = int(grp_id_raw)
+    except ValueError:
+        grp_id = grp_id_raw
+
+    if isinstance(grp_id, int):
+        try:
+            member = await client.get_chat_member(grp_id, user_id)
+            if not (member.status in [enums.ChatMemberStatus.OWNER, enums.ChatMemberStatus.ADMINISTRATOR] or user_id in ADMINS):
+                return await query.answer("⚠️ You need to be an Admin to change settings!", show_alert=True)
+        except:
+            pass
 
     settings = await get_settings(grp_id)
     
-    title = "Group"
-    try:
-        chat = await client.get_chat(grp_id)
-        if chat and chat.title:
-            title = chat.title
-    except Exception as e:
-        logger.error(f"Error fetching chat title: {e}")
+    title = "Group / Personal"
+    if isinstance(grp_id, int):
+        try:
+            chat = await client.get_chat(grp_id)
+            if chat and chat.title:
+                title = chat.title
+        except Exception as e:
+            logger.error(f"Error fetching chat title: {e}")
+    else:
+        title = "Personal"
 
     if settings is not None:
         if page == 1:
             buttons = [
                 [
-                    InlineKeyboardButton('Filter Button', callback_data=f'setgs#button#{settings["button"]}#{grp_id}#1'),
-                    InlineKeyboardButton('Single' if settings["button"] else 'Double', callback_data=f'setgs#button#{settings["button"]}#{grp_id}#1')
+                    InlineKeyboardButton('Filter Button', callback_data=f'setgs#button#{settings.get("button", True)}#{grp_id}#1'),
+                    InlineKeyboardButton('Single' if settings.get("button", True) else 'Double', callback_data=f'setgs#button#{settings.get("button", True)}#{grp_id}#1')
                 ],
                 [
-                    InlineKeyboardButton('Bot PM', callback_data=f'setgs#botpm#{settings["botpm"]}#{grp_id}#1'),
-                    InlineKeyboardButton('✅ Yes' if settings["botpm"] else '❌ No', callback_data=f'setgs#botpm#{settings["botpm"]}#{grp_id}#1')
+                    InlineKeyboardButton('Bot PM', callback_data=f'setgs#botpm#{settings.get("botpm", True)}#{grp_id}#1'),
+                    InlineKeyboardButton('✅ Yes' if settings.get("botpm", True) else '❌ No', callback_data=f'setgs#botpm#{settings.get("botpm", True)}#{grp_id}#1')
                 ],
                 [
-                    InlineKeyboardButton('File Secure', callback_data=f'setgs#file_secure#{settings["file_secure"]}#{grp_id}#1'),
-                    InlineKeyboardButton('✅ Yes' if settings["file_secure"] else '❌ No', callback_data=f'setgs#file_secure#{settings["file_secure"]}#{grp_id}#1')
+                    InlineKeyboardButton('File Secure', callback_data=f'setgs#file_secure#{settings.get("file_secure", False)}#{grp_id}#1'),
+                    InlineKeyboardButton('✅ Yes' if settings.get("file_secure", False) else '❌ No', callback_data=f'setgs#file_secure#{settings.get("file_secure", False)}#{grp_id}#1')
                 ],
                 [
-                    InlineKeyboardButton('IMDB', callback_data=f'setgs#imdb#{settings["imdb"]}#{grp_id}#1'),
-                    InlineKeyboardButton('✅ Yes' if settings["imdb"] else '❌ No', callback_data=f'setgs#imdb#{settings["imdb"]}#{grp_id}#1')
+                    InlineKeyboardButton('IMDB', callback_data=f'setgs#imdb#{settings.get("imdb", True)}#{grp_id}#1'),
+                    InlineKeyboardButton('✅ Yes' if settings.get("imdb", True) else '❌ No', callback_data=f'setgs#imdb#{settings.get("imdb", True)}#{grp_id}#1')
                 ],
                 [
-                    InlineKeyboardButton('Spell Check', callback_data=f'setgs#spell_check#{settings["spell_check"]}#{grp_id}#1'),
-                    InlineKeyboardButton('✅ Yes' if settings["spell_check"] else '❌ No', callback_data=f'setgs#spell_check#{settings["spell_check"]}#{grp_id}#1')
+                    InlineKeyboardButton('Spell Check', callback_data=f'setgs#spell_check#{settings.get("spell_check", True)}#{grp_id}#1'),
+                    InlineKeyboardButton('✅ Yes' if settings.get("spell_check", True) else '❌ No', callback_data=f'setgs#spell_check#{settings.get("spell_check", True)}#{grp_id}#1')
                 ],
                 [
                     InlineKeyboardButton('Next ⇛', callback_data=f'set_group_menu#{grp_id}#2'),
@@ -626,10 +682,11 @@ async def set_group_menu_handler(client, query):
             text = f"<b>⚙️ Settings for {title} (Page 1/2)</b>"
         else:
             antilink = settings.get("antilink", False)
+            start_pic = settings.get("start_pic", True)
             buttons = [
                 [
-                    InlineKeyboardButton('Welcome', callback_data=f'setgs#welcome#{settings["welcome"]}#{grp_id}#2'),
-                    InlineKeyboardButton('✅ Yes' if settings["welcome"] else '❌ No', callback_data=f'setgs#welcome#{settings["welcome"]}#{grp_id}#2')
+                    InlineKeyboardButton('Welcome', callback_data=f'setgs#welcome#{settings.get("welcome", True)}#{grp_id}#2'),
+                    InlineKeyboardButton('✅ Yes' if settings.get("welcome", True) else '❌ No', callback_data=f'setgs#welcome#{settings.get("welcome", True)}#{grp_id}#2')
                 ],
                 [
                     InlineKeyboardButton('Goodbye', callback_data=f'setgs#goodbye#{settings.get("goodbye", False)}#{grp_id}#2'),
@@ -642,6 +699,10 @@ async def set_group_menu_handler(client, query):
                 [
                     InlineKeyboardButton('Anti-Link 🛡️', callback_data=f'setgs#antilink#{antilink}#{grp_id}#2'),
                     InlineKeyboardButton('✅ On' if antilink else '❌ Off', callback_data=f'setgs#antilink#{antilink}#{grp_id}#2')
+                ],
+                [
+                    InlineKeyboardButton('Start Pic 🖼️', callback_data=f'setgs#start_pic#{start_pic}#{grp_id}#2'),
+                    InlineKeyboardButton('✅ On' if start_pic else '❌ Off', callback_data=f'setgs#start_pic#{start_pic}#{grp_id}#2')
                 ],
                 [
                     InlineKeyboardButton('⭅ Back', callback_data=f'set_group_menu#{grp_id}#1'),
@@ -660,52 +721,61 @@ async def settings_update_handler(client, query):
     ident = data_parts[0]
     set_type = data_parts[1]
     status = data_parts[2]
-    grp_id = int(data_parts[3])
+    grp_id_raw = data_parts[3]
     page = int(data_parts[4]) if len(data_parts) > 4 else 1
 
     user_id = query.from_user.id
     try:
-        member = await client.get_chat_member(grp_id, user_id)
-        if not (member.status in [enums.ChatMemberStatus.OWNER, enums.ChatMemberStatus.ADMINISTRATOR] or user_id in ADMINS):
-            return await query.answer("⚠️ You need to be an Admin to change settings!", show_alert=True)
-    except:
-        pass
+        grp_id = int(grp_id_raw)
+    except ValueError:
+        grp_id = grp_id_raw
+
+    if isinstance(grp_id, int):
+        try:
+            member = await client.get_chat_member(grp_id, user_id)
+            if not (member.status in [enums.ChatMemberStatus.OWNER, enums.ChatMemberStatus.ADMINISTRATOR] or user_id in ADMINS):
+                return await query.answer("⚠️ You need to be an Admin to change settings!", show_alert=True)
+        except:
+            pass
 
     new_status = False if status == "True" else True
     await save_group_settings(grp_id, set_type, new_status)
 
     settings = await get_settings(grp_id)
     
-    title = "Group"
-    try:
-        chat = await client.get_chat(grp_id)
-        if chat and chat.title:
-            title = chat.title
-    except Exception as e:
-        logger.error(f"Error fetching chat title: {e}")
+    title = "Group / Personal"
+    if isinstance(grp_id, int):
+        try:
+            chat = await client.get_chat(grp_id)
+            if chat and chat.title:
+                title = chat.title
+        except Exception as e:
+            logger.error(f"Error fetching chat title: {e}")
+    else:
+        title = "Personal"
 
     if settings is not None:
         if page == 1:
             buttons = [
                 [
-                    InlineKeyboardButton('Filter Button', callback_data=f'setgs#button#{settings["button"]}#{grp_id}#1'),
-                    InlineKeyboardButton('Single' if settings["button"] else 'Double', callback_data=f'setgs#button#{settings["button"]}#{grp_id}#1')
+                    InlineKeyboardButton('Filter Button', callback_data=f'setgs#button#{settings.get("button", True)}#{grp_id}#1'),
+                    InlineKeyboardButton('Single' if settings.get("button", True) else 'Double', callback_data=f'setgs#button#{settings.get("button", True)}#{grp_id}#1')
                 ],
                 [
-                    InlineKeyboardButton('Bot PM', callback_data=f'setgs#botpm#{settings["botpm"]}#{grp_id}#1'),
-                    InlineKeyboardButton('✅ Yes' if settings["botpm"] else '❌ No', callback_data=f'setgs#botpm#{settings["botpm"]}#{grp_id}#1')
+                    InlineKeyboardButton('Bot PM', callback_data=f'setgs#botpm#{settings.get("botpm", True)}#{grp_id}#1'),
+                    InlineKeyboardButton('✅ Yes' if settings.get("botpm", True) else '❌ No', callback_data=f'setgs#botpm#{settings.get("botpm", True)}#{grp_id}#1')
                 ],
                 [
-                    InlineKeyboardButton('File Secure', callback_data=f'setgs#file_secure#{settings["file_secure"]}#{grp_id}#1'),
-                    InlineKeyboardButton('✅ Yes' if settings["file_secure"] else '❌ No', callback_data=f'setgs#file_secure#{settings["file_secure"]}#{grp_id}#1')
+                    InlineKeyboardButton('File Secure', callback_data=f'setgs#file_secure#{settings.get("file_secure", False)}#{grp_id}#1'),
+                    InlineKeyboardButton('✅ Yes' if settings.get("file_secure", False) else '❌ No', callback_data=f'setgs#file_secure#{settings.get("file_secure", False)}#{grp_id}#1')
                 ],
                 [
-                    InlineKeyboardButton('IMDB', callback_data=f'setgs#imdb#{settings["imdb"]}#{grp_id}#1'),
-                    InlineKeyboardButton('✅ Yes' if settings["imdb"] else '❌ No', callback_data=f'setgs#imdb#{settings["imdb"]}#{grp_id}#1')
+                    InlineKeyboardButton('IMDB', callback_data=f'setgs#imdb#{settings.get("imdb", True)}#{grp_id}#1'),
+                    InlineKeyboardButton('✅ Yes' if settings.get("imdb", True) else '❌ No', callback_data=f'setgs#imdb#{settings.get("imdb", True)}#{grp_id}#1')
                 ],
                 [
-                    InlineKeyboardButton('Spell Check', callback_data=f'setgs#spell_check#{settings["spell_check"]}#{grp_id}#1'),
-                    InlineKeyboardButton('✅ Yes' if settings["spell_check"] else '❌ No', callback_data=f'setgs#spell_check#{settings["spell_check"]}#{grp_id}#1')
+                    InlineKeyboardButton('Spell Check', callback_data=f'setgs#spell_check#{settings.get("spell_check", True)}#{grp_id}#1'),
+                    InlineKeyboardButton('✅ Yes' if settings.get("spell_check", True) else '❌ No', callback_data=f'setgs#spell_check#{settings.get("spell_check", True)}#{grp_id}#1')
                 ],
                 [
                     InlineKeyboardButton('Next ⇛', callback_data=f'set_group_menu#{grp_id}#2'),
@@ -715,10 +785,11 @@ async def settings_update_handler(client, query):
             text = f"<b>⚙️ Settings for {title} (Page 1/2)</b>"
         else:
             antilink = settings.get("antilink", False)
+            start_pic = settings.get("start_pic", True)
             buttons = [
                 [
-                    InlineKeyboardButton('Welcome', callback_data=f'setgs#welcome#{settings["welcome"]}#{grp_id}#2'),
-                    InlineKeyboardButton('✅ Yes' if settings["welcome"] else '❌ No', callback_data=f'setgs#welcome#{settings["welcome"]}#{grp_id}#2')
+                    InlineKeyboardButton('Welcome', callback_data=f'setgs#welcome#{settings.get("welcome", True)}#{grp_id}#2'),
+                    InlineKeyboardButton('✅ Yes' if settings.get("welcome", True) else '❌ No', callback_data=f'setgs#welcome#{settings.get("welcome", True)}#{grp_id}#2')
                 ],
                 [
                     InlineKeyboardButton('Goodbye', callback_data=f'setgs#goodbye#{settings.get("goodbye", False)}#{grp_id}#2'),
@@ -731,6 +802,10 @@ async def settings_update_handler(client, query):
                 [
                     InlineKeyboardButton('Anti-Link 🛡️', callback_data=f'setgs#antilink#{antilink}#{grp_id}#2'),
                     InlineKeyboardButton('✅ On' if antilink else '❌ Off', callback_data=f'setgs#antilink#{antilink}#{grp_id}#2')
+                ],
+                [
+                    InlineKeyboardButton('Start Pic 🖼️', callback_data=f'setgs#start_pic#{start_pic}#{grp_id}#2'),
+                    InlineKeyboardButton('✅ On' if start_pic else '❌ Off', callback_data=f'setgs#start_pic#{start_pic}#{grp_id}#2')
                 ],
                 [
                     InlineKeyboardButton('⭅ Back', callback_data=f'set_group_menu#{grp_id}#1'),
