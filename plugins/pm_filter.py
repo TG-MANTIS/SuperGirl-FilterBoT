@@ -837,8 +837,9 @@ async def cb_handler(client: Client, query: CallbackQuery):
     elif query.data == "pages":
         await query.answer()
     elif query.data == "start":
-        user_settings = await get_settings(str(query.from_user.id))
-        start_pic_enabled = user_settings.get("start_pic", True) if user_settings else True
+        grpid = await active_connection(str(query.from_user.id))
+        settings = await get_settings(int(grpid)) if grpid else None
+        start_pic_enabled = settings.get("start_pic", True) if settings else True
 
         buttons = [[
             InlineKeyboardButton('✘ Close', callback_data='close_data'),
@@ -880,8 +881,9 @@ async def cb_handler(client: Client, query: CallbackQuery):
                     parse_mode=enums.ParseMode.HTML
                 )
     elif query.data == "about":
-        user_settings = await get_settings(str(query.from_user.id))
-        start_pic_enabled = user_settings.get("start_pic", True) if user_settings else True
+        grpid = await active_connection(str(query.from_user.id))
+        settings = await get_settings(int(grpid)) if grpid else None
+        start_pic_enabled = settings.get("start_pic", True) if settings else True
 
         buttons = [[
             InlineKeyboardButton('🔙 Back', callback_data='start'),
@@ -953,8 +955,9 @@ async def cb_handler(client: Client, query: CallbackQuery):
             await query.message.edit_text(text="നോക്കി നിന്നോ ഇപ്പോൾ കിട്ടും 😏", reply_markup=reply_markup)
     elif query.data == "rfrsh":
         await query.answer("Fetching MongoDb DataBase")
-        user_settings = await get_settings(str(query.from_user.id))
-        start_pic_enabled = user_settings.get("start_pic", True) if user_settings else True
+        grpid = await active_connection(str(query.from_user.id))
+        settings = await get_settings(int(grpid)) if grpid else None
+        start_pic_enabled = settings.get("start_pic", True) if settings else True
 
         buttons = [[
             InlineKeyboardButton('🔙 Back', callback_data='about'),
@@ -1157,7 +1160,7 @@ async def auto_filter(client, msg, spoll=False):
                 kind=imdb['kind'],
                 imdb_id=imdb["imdb_id"],
                 cast=imdb["cast"],
-                runtime=imdb["runtime"],
+                runtime=imdb['runtime'],
                 countries=imdb["countries"],
                 certificates=imdb["certificates"],
                 languages=imdb["languages"],
