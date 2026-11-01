@@ -758,7 +758,6 @@ async def cb_handler(client: Client, query: CallbackQuery):
                 await query.answer(url=f"https://t.me/{temp.U_NAME}?start={ident}_{file_id}")
                 return
             else:
-                # സ്ട്രീമിംഗ് ബട്ടണുകൾ പൂർണ്ണമായി ഒഴിവാക്കി ലളിതമായ ലേഔട്ട് നൽകിയിരിക്കുന്നു
                 file_keyboard = InlineKeyboardMarkup(
                     [
                         [
@@ -838,28 +837,86 @@ async def cb_handler(client: Client, query: CallbackQuery):
     elif query.data == "pages":
         await query.answer()
     elif query.data == "start":
+        user_settings = await get_settings(query.from_user.id)
+        start_pic_enabled = user_settings.get("start_pic", True) if user_settings else True
+
         buttons = [[
             InlineKeyboardButton('✘ Close', callback_data='close_data'),
             InlineKeyboardButton('About 〄', callback_data='about')
         ]]
         reply_markup = InlineKeyboardMarkup(buttons)
-        await query.message.edit_text(
-            text=script.START_TXT.format(query.from_user.mention, temp.U_NAME, temp.B_NAME),
-            reply_markup=reply_markup,
-            parse_mode=enums.ParseMode.HTML
-        )
+        
+        if start_pic_enabled:
+            try:
+                await query.message.edit_media(
+                    media=InputMediaPhoto(random.choice(PICS), caption=script.START_TXT.format(query.from_user.mention, temp.U_NAME, temp.B_NAME)),
+                    reply_markup=reply_markup
+                )
+            except:
+                await query.message.delete()
+                await client.send_photo(
+                    chat_id=query.message.chat.id,
+                    photo=random.choice(PICS),
+                    caption=script.START_TXT.format(query.from_user.mention, temp.U_NAME, temp.B_NAME),
+                    reply_markup=reply_markup,
+                    parse_mode=enums.ParseMode.HTML
+                )
+        else:
+            try:
+                await query.message.edit_text(
+                    text=script.START_TXT.format(query.from_user.mention, temp.U_NAME, temp.B_NAME),
+                    reply_markup=reply_markup,
+                    parse_mode=enums.ParseMode.HTML
+                )
+            except:
+                await query.message.delete()
+                await client.send_message(
+                    chat_id=query.message.chat.id,
+                    text=script.START_TXT.format(query.from_user.mention, temp.U_NAME, temp.B_NAME),
+                    reply_markup=reply_markup,
+                    parse_mode=enums.ParseMode.HTML
+                )
     elif query.data == "about":
+        user_settings = await get_settings(query.from_user.id)
+        start_pic_enabled = user_settings.get("start_pic", True) if user_settings else True
+
         buttons = [[
             InlineKeyboardButton('🔙 Back', callback_data='start'),
             InlineKeyboardButton('⏍ Status ⏍', callback_data='stats'),
             InlineKeyboardButton('Close ✘', callback_data='close_data')
         ]]
         reply_markup = InlineKeyboardMarkup(buttons)
-        await query.message.edit_text(
-            text=script.ABOUT_TXT.format(temp.B_NAME),
-            reply_markup=reply_markup,
-            parse_mode=enums.ParseMode.HTML
-        )
+        
+        if start_pic_enabled:
+            try:
+                await query.message.edit_media(
+                    media=InputMediaPhoto(random.choice(PICS), caption=script.ABOUT_TXT.format(temp.B_NAME)),
+                    reply_markup=reply_markup
+                )
+            except:
+                await query.message.delete()
+                await client.send_photo(
+                    chat_id=query.message.chat.id,
+                    photo=random.choice(PICS),
+                    caption=script.ABOUT_TXT.format(temp.B_NAME),
+                    reply_markup=reply_markup,
+                    parse_mode=enums.ParseMode.HTML
+                )
+        else:
+            try:
+                await query.message.edit_text(
+                    text=script.ABOUT_TXT.format(temp.B_NAME),
+                    reply_markup=reply_markup,
+                    parse_mode=enums.ParseMode.HTML
+                )
+            except:
+                await query.message.delete()
+                await client.send_message(
+                    chat_id=query.message.chat.id,
+                    text=script.ABOUT_TXT.format(temp.B_NAME),
+                    reply_markup=reply_markup,
+                    parse_mode=enums.ParseMode.HTML
+                )
     elif query.data == "stats":
         buttons = [[
             InlineKeyboardButton('🔙 Back', callback_data='about'),
@@ -890,15 +947,13 @@ async def cb_handler(client: Client, query: CallbackQuery):
             await query.message.edit_text(text="നോക്കി നിന്നോ ഇപ്പോൾ കിട്ടും 😏", reply_markup=reply_markup)
     elif query.data == "rfrsh":
         await query.answer("Fetching MongoDb DataBase")
+        user_settings = await get_settings(query.from_user.id)
+        start_pic_enabled = user_settings.get("start_pic", True) if user_settings else True
+
         buttons = [[
             InlineKeyboardButton('🔙 Back', callback_data='about'),
             InlineKeyboardButton('Refresh ✦', callback_data='rfrsh')
         ]]
-        await client.edit_message_media(
-            query.message.chat.id, 
-            query.message.id, 
-            InputMediaPhoto(random.choice(PICS))
-        )    
         reply_markup = InlineKeyboardMarkup(buttons)
         
         db_stats = await get_databases_stats()
@@ -918,6 +973,17 @@ async def cb_handler(client: Client, query: CallbackQuery):
                 users=users,
                 chats=chats
             )
+            if start_pic_enabled:
+                try:
+                    await client.edit_message_media(
+                        query.message.chat.id, 
+                        query.message.id, 
+                        InputMediaPhoto(random.choice(PICS), caption=status_text),
+                        reply_markup=reply_markup
+                    )
+                    return
+                except:
+                    pass
             await query.message.edit_text(text=status_text, reply_markup=reply_markup, parse_mode=enums.ParseMode.HTML)
         else:
             await query.answer("🔮 𝐈𝐧𝐟𝐨𝐫𝐦𝐚𝐭𝐢𝐨𝐧 🔮\n\nIt's only for my admins\n\n©𝐓𝐞𝐚𝐦 𝐂𝐢𝐧𝐞𝐦𝐚 𝐅𝐢𝐥𝐱™️", show_alert=True)
