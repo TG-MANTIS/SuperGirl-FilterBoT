@@ -15,6 +15,7 @@ from database.users_chats_db import db
 from info import CHANNELS, ADMINS, AUTH_CHANNEL, LOG_CHANNEL, PICS, SET_IMG, BATCH_FILE_CAPTION, CUSTOM_FILE_CAPTION, PROTECT_CONTENT, FORCE_IMG
 from utils import get_settings, get_size, is_subscribed, save_group_settings, temp
 from database.connections_mdb import active_connection
+from plugins.pm_filter import auto_filter
 import re
 import json
 import base64
@@ -202,98 +203,18 @@ async def start(client, message):
             )
         return
 
-    # Handle Direct Channel Deep Link Search (e.g. ?start=search_MovieName)
+    # Handle Direct Channel Deep Link Search (e.g. ?start=search_MovieName) -> Triggers Auto-Filter Buttons
     if data.startswith("search_"):
         search_query = data.split("search_", 1)[1].replace("_", " ")
-        msg = await message.reply(f"🔍 Searching for <b>{search_query}</b>...")
-        
-        files, offset, total = await get_search_results(search_query, max_results=10)
-        if not files:
-            await msg.edit(f"❌ No files found for <b>{search_query}</b>!")
-            return
-        
-        await msg.edit(f"✅ Found files for <b>{search_query}</b>! Sending results...")
-        for file in files:
-            title = file.file_name
-            size = get_size(file.file_size)
-            f_caption = file.caption
-            if CUSTOM_FILE_CAPTION:
-                try:
-                    f_caption = CUSTOM_FILE_CAPTION.format(file_name='' if title is None else title, file_size='' if size is None else size, file_caption='' if f_caption is None else f_caption)
-                except Exception as e:
-                    logger.exception(e)
-            if f_caption is None:
-                f_caption = f"{title}"
-                
-            file_keyboard = InlineKeyboardMarkup(
-                [
-                    [
-                        InlineKeyboardButton('🚸 Group', url="https://t.me/+iEbhY7mM4oE1OTVl"),
-                        InlineKeyboardButton('Delete 🗑️', callback_data='close_data')
-                    ],
-                    [
-                        InlineKeyboardButton(text=f'⚙️ File Size: {size}', callback_data='gxneo')
-                    ]
-                ]
-            )
-            try:
-                await client.send_cached_media(
-                    chat_id=message.from_user.id,
-                    file_id=file.file_id,
-                    caption=f_caption,
-                    reply_markup=file_keyboard,
-                    protect_content=PROTECT_CONTENT,
-                )
-                await asyncio.sleep(0.5)
-            except Exception as e:
-                logger.error(f"Deep link search file send error: {e}")
+        message.text = search_query
+        await auto_filter(client, message)
         return
 
-    # Handle Deep Link Search (Query text passed via start link like ?start=Movie_Name)
+    # Handle Deep Link Search (Query text passed via start link like ?start=Movie_Name) -> Triggers Auto-Filter Buttons
     if not "_" in data and not data.startswith("BATCH") and not data.startswith("DSTORE"):
         search_query = data.replace("_", " ")
-        msg = await message.reply(f"🔍 Searching for <b>{search_query}</b>...")
-        
-        files, offset, total = await get_search_results(search_query, max_results=10)
-        if not files:
-            await msg.edit(f"❌ No files found for <b>{search_query}</b>!")
-            return
-        
-        await msg.edit(f"✅ Found files for <b>{search_query}</b>! Sending results...")
-        for file in files:
-            title = file.file_name
-            size = get_size(file.file_size)
-            f_caption = file.caption
-            if CUSTOM_FILE_CAPTION:
-                try:
-                    f_caption = CUSTOM_FILE_CAPTION.format(file_name='' if title is None else title, file_size='' if size is None else size, file_caption='' if f_caption is None else f_caption)
-                except Exception as e:
-                    logger.exception(e)
-            if f_caption is None:
-                f_caption = f"{title}"
-                
-            file_keyboard = InlineKeyboardMarkup(
-                [
-                    [
-                        InlineKeyboardButton('🚸 Group', url="https://t.me/+iEbhY7mM4oE1OTVl"),
-                        InlineKeyboardButton('Delete 🗑️', callback_data='close_data')
-                    ],
-                    [
-                        InlineKeyboardButton(text=f'⚙️ File Size: {size}', callback_data='gxneo')
-                    ]
-                ]
-            )
-            try:
-                await client.send_cached_media(
-                    chat_id=message.from_user.id,
-                    file_id=file.file_id,
-                    caption=f_caption,
-                    reply_markup=file_keyboard,
-                    protect_content=PROTECT_CONTENT,
-                )
-                await asyncio.sleep(0.5)
-            except Exception as e:
-                logger.error(f"Deep link file send error: {e}")
+        message.text = search_query
+        await auto_filter(client, message)
         return
 
     # Handle Batch Files & Single Files Delivery
@@ -389,7 +310,7 @@ async def start(client, message):
                     await msg.copy(message.chat.id, protect_content=True if protect == "/pbatch" else False)
                 except FloodWait as e:
                     await asyncio.sleep(e.x)
-                    await msg.copy(message.chat.id, caption=f_caption, protect_content=True if protect == "/pbatch" else False)
+                    await msg.copy(message.chat.id, protect_content=True if protect == "/pbatch" else False)
                 except Exception as e:
                     logger.exception(e)
                     continue
