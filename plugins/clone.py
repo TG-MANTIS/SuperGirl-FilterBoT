@@ -1,6 +1,7 @@
 import os
 import logging
 import asyncio
+import re
 from pyrogram import Client, filters, enums
 from pyrogram.types import Message, InlineKeyboardMarkup, InlineKeyboardButton, CallbackQuery
 from motor.motor_asyncio import AsyncIOMotorClient
@@ -21,16 +22,17 @@ ACTIVE_CLONES = {}
 # Dictionary to temporarily store token requests
 PENDING_CLONES = {}
 
+# Regex pattern to match Telegram Bot Token (e.g. 123456789:ABCdefGhIJKlmNoPQRsTUVwxyZ)
+TOKEN_REGEX = re.compile(r'\d{8,10}:[a-zA-Z0-9_-]{35}')
+
 # Common Guide Text Function
 def get_clone_guide_text():
     return (
         "<b>🤖 How to Create Your Own Clone Bot?</b>\n\n"
-        "Want to create your own movie filter bot? Follow these simple steps:\n\n"
-        "1️⃣ First, open the official Telegram bot <b>@BotFather</b>.\n"
-        "2️⃣ Send the command <code>/newbot</code> and follow the instructions to set a name and username for your bot.\n"
-        "3️⃣ Copy the <b>Bot Token</b> provided by BotFather.\n"
-        "4️⃣ Send that token here using the <code>/clone</code> command in the following format:\n\n"
-        "👉 <code>/clone YOUR_BOT_TOKEN_HERE</code>\n\n"
+        "Want to create your own movie filter bot? You can submit your bot token in <b>two easy ways</b>:\n\n"
+        "1️⃣ **Forward Method (Easiest):** Simply forward the success message you received from <b>@BotFather</b> directly here!\n"
+        "2️⃣ **Direct Method:** Or copy your Bot Token from @BotFather and send it here using the <code>/clone</code> command or directly.\n\n"
+        "👉 <i>Example:</i> <code>/clone YOUR_BOT_TOKEN</code> (or just send the token/forward message directly)\n\n"
         "<i>Once approved by the admin, your custom bot will be live and ready to use! 🎉</i>"
     )
 
@@ -49,29 +51,30 @@ async def clone_guide_callback(client, query: CallbackQuery):
     await query.answer()
 
 
-# 2. /clone Command Handler (Handles both Guide display & Token submission)
-@Client.on_message(filters.command("clone") & filters.private)
-async def clone_bot_handler(client, message: Message):
-    # If user only types /clone without token, show the guide instructions
-    if len(message.command) < 2:
+# Helper function to process token submission (Supports both /clone command, direct text, and forwarded messages)
+async def process_token_submission(client, message: Message, text_to_check: str):
+    match = TOKEN_REGEX.search(text_to_check)
+    if not match:
         guide_text = get_clone_guide_text()
         buttons = InlineKeyboardMarkup([
             [InlineKeyboardButton("🔙 Back to Start", callback_data="start")]
         ])
-        return await message.reply_text(guide_text, reply_markup=buttons, parse_mode=enums.ParseMode.HTML)
+        return await message.reply_text(
+            "❌ <b>Invalid Bot Token found!</b> Please make sure you send a valid token or forward the correct message from @BotFather.\n\n" + guide_text,
+            reply_markup=buttons,
+            parse_mode=enums.ParseMode.HTML
+        )
     
-    bot_token = message.command[1]
+    bot_token = match.group(0)
     user_id = message.from_user.id
     user_name = message.from_user.first_name
 
-    # Inform user about the 24-hour review process
     await message.reply_text(
         "⏳ <b>Request Received!</b>\n\n"
         "Your clone bot request has been submitted successfully and is currently under review.\n"
         "Please wait up to <b>24 hours</b> for admin approval. Once approved, your bot will be activated automatically!"
     )
 
-    # Send Request to Admin Log Channel with Approve/Reject buttons
     buttons = InlineKeyboardMarkup([
         [
             InlineKeyboardButton("✅ Approve", callback_data=f"approve_clone_{user_id}"),
@@ -85,7 +88,6 @@ async def clone_bot_handler(client, message: Message):
         f"🔑 <b>Token:</b> <code>{bot_token}</code>"
     )
 
-    # Save temporary data
     PENDING_CLONES[str(user_id)] = bot_token
 
     try:
@@ -95,7 +97,29 @@ async def clone_bot_handler(client, message: Message):
         logger.error(f"Failed to send clone request to log channel: {e}")
 
 
-# 3. Admin Actions (Approve, Reject, or Delete/Revoke Clone Bot)
+# 2. /clone Command Handler
+@Client.on_message(filters.command("clone") & filters.private)
+async def clone_command_handler(client, message: Message):
+    if len(message.command) < 2:
+        guide_text = get_clone_guide_text()
+        buttons = InlineKeyboardMarkup([
+            [InlineKeyboardButton("🔙 Back to Start", callback_data="start")]
+        ])
+        return await message.reply_text(guide_text, reply_markup=buttons, parse_mode=enums.ParseMode.HTML)
+    
+    await process_token_submission(client, message, message.text)
+
+
+# 3. Direct Text / Forwarded Message Token Handler (If user sends token or forwards directly without /clone)
+@Client.on_message(filters.private & ~filters.command(["start", "clone", "help", "settings"]))
+async def direct_token_handler(client, message: Message):
+    # Check if text or caption contains a token pattern
+    text_content = message.text or message.caption or ""
+    if TOKEN_REGEX.search(text_content):
+        await process_token_submission(client, message, text_content)
+
+
+# 4. Admin Actions (Approve, Reject, or Delete/Revoke Clone Bot)
 @Client.on_callback_query(filters.regex(r"^(approve|reject|delete)_clone_"))
 async def clone_approval_callback(client, query: CallbackQuery):
     if query.from_user.id not in ADMINS:
@@ -115,7 +139,6 @@ async def clone_approval_callback(client, query: CallbackQuery):
                 return await query.message.edit_text("❌ Token data not found or expired.")
 
         try:
-            # Initialize the cloned bot client
             clone_client = Client(
                 f"clone_{target_user_id}",
                 api_id=int(os.environ.get("API_ID", 0)),
@@ -125,27 +148,50 @@ async def clone_approval_callback(client, query: CallbackQuery):
             
             @clone_client.on_message(filters.command("start") & filters.private)
             async def clone_start(c, m):
-                await m.reply_sticker("CAACAgUAAxkBAAEJ...your_sticker_file_id_here...")
+                await m.reply_text("👋 Hello! I am your custom clone filter bot. Send me any movie name to search.")
 
-            @clone_client.on_message(filters.command("broadcast") & filters.private)
-            async def clone_broadcast(c, m):
-                if m.from_user.id != target_user_id:
-                    return
-                if not m.reply_to_message:
-                    return await m.reply_text("Please reply to a message to broadcast!")
-                
-                await m.reply_text("✅ Broadcast initiated successfully.")
-
-            # Auto-Filter Logic inside Cloned Bot (Clean caption, no force-sub)
+            # Auto-Filter Logic inside Cloned Bot with Spelling Checker & Pagination Layout
             @clone_client.on_message(filters.group & filters.text & filters.incoming)
             async def clone_auto_filter(c, m):
                 if m.text.startswith("/"):
                     return
-                query_text = m.text.lower()
+                query_text = m.text.lower().strip()
                 if 2 < len(query_text) < 100:
                     files, offset, total_results = await get_search_results(query_text, offset=0, filter=True)
+                    
+                    # If no direct results found, try spelling check (fuzzy/similar search)
                     if not files:
-                        return
+                        # Fetch wider search or check similarity using split/partial keywords
+                        alt_query = query_text.split()[0] if " " in query_text else query_text[:4]
+                        alt_files, _, alt_total = await get_search_results(alt_query, offset=0, filter=True)
+                        
+                        if alt_files:
+                            # Extract unique movie titles/suggestions
+                            suggestions = []
+                            seen = set()
+                            for f in alt_files:
+                                name = f.file_name
+                                if name not in seen:
+                                    seen.add(name)
+                                    suggestions.append(name)
+                                    if len(suggestions) >= 3:
+                                        break
+                            
+                            sugg_btns = [
+                                [InlineKeyboardButton(text=f"🎬 {sug}", callback_data=f'clone_file#{f.file_id}')]
+                                for sug, f in zip(suggestions, alt_files[:3])
+                            ]
+                            sugg_btns.append([InlineKeyboardButton("Delete 🗑️", callback_data="close_data")])
+                            
+                            return await m.reply_text(
+                                f"<b>❌ No results found for \"<code>{m.text}</code>\".\n👉 Did you mean one of these?</b>",
+                                reply_markup=InlineKeyboardMarkup(sugg_btns)
+                            )
+                        else:
+                            return await m.reply_text(
+                                f"<b>❌ Sorry, no files found for \"<code>{m.text}</code>\"!\nPlease check the spelling or request an admin.</b>",
+                                reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("Delete 🗑️", callback_data="close_data")]])
+                            )
                     
                     btn = [
                         [
@@ -156,12 +202,77 @@ async def clone_approval_callback(client, query: CallbackQuery):
                         ]
                         for file in files[:10]
                     ]
-                    btn.append([InlineKeyboardButton("Delete 🗑️", callback_data="close_data")])
+                    
+                    max_pages = (total_results + 9) // 10
+                    
+                    # Navigation Row Layout for Page 1
+                    if total_results > 10:
+                        btn.append([
+                            InlineKeyboardButton("Delete 🗑️", callback_data="close_data"),
+                            InlineKeyboardButton(f"1/{max_pages}", callback_data="pages"),
+                            InlineKeyboardButton("NEXT ⏩", callback_data=f"clone_next_{query_text}_1")
+                        ])
+                    else:
+                        btn.append([InlineKeyboardButton("Delete 🗑️", callback_data="close_data")])
                     
                     await m.reply_text(
                         f"<b>📂 Here are the results for: <code>{m.text}</code></b>",
                         reply_markup=InlineKeyboardMarkup(btn)
                     )
+
+            # Pagination Next/Back Callback for Cloned Bots
+            @clone_client.on_callback_query(filters.regex(r"^clone_(next|back)_"))
+            async def clone_paginate_handler(c, q):
+                data_parts = q.data.split("_")
+                action = data_parts[1]
+                query_text = data_parts[2]
+                page = int(data_parts[3])
+                
+                offset = page * 10
+                files, _, total_results = await get_search_results(query_text, offset=offset, filter=True)
+                
+                if not files:
+                    return await q.answer("No more files found!", show_alert=True)
+                
+                btn = [
+                    [
+                        InlineKeyboardButton(
+                            text=f"🔗 {get_size(file.file_size)} {file.file_name}",
+                            callback_data=f'clone_file#{file.file_id}'
+                        )
+                    ]
+                    for file in files[:10]
+                ]
+                
+                max_pages = (total_results + 9) // 10
+                
+                # Dynamic Navigation Layout based on page position
+                if page == 0:
+                    nav_buttons = [
+                        InlineKeyboardButton("Delete 🗑️", callback_data="close_data"),
+                        InlineKeyboardButton(f"1/{max_pages}", callback_data="pages"),
+                        InlineKeyboardButton("NEXT ⏩", callback_data=f"clone_next_{query_text}_1")
+                    ]
+                elif page < max_pages - 1:
+                    nav_buttons = [
+                        InlineKeyboardButton("⏪ BACK", callback_data=f"clone_back_{query_text}_{page - 1}"),
+                        InlineKeyboardButton(f"{page + 1}/{max_pages}", callback_data="pages"),
+                        InlineKeyboardButton("NEXT ⏩", callback_data=f"clone_next_{query_text}_{page + 1}")
+                    ]
+                else:
+                    nav_buttons = [
+                        InlineKeyboardButton("⏪ BACK", callback_data=f"clone_back_{query_text}_{page - 1}"),
+                        InlineKeyboardButton(f"{page + 1}/{max_pages}", callback_data="pages"),
+                        InlineKeyboardButton("Delete 🗑️", callback_data="close_data")
+                    ]
+                
+                btn.append(nav_buttons)
+                
+                try:
+                    await q.message.edit_reply_markup(reply_markup=InlineKeyboardMarkup(btn))
+                except Exception:
+                    pass
+                await q.answer()
 
             @clone_client.on_callback_query(filters.regex(r"^clone_file#"))
             async def clone_file_callback(c, q):
@@ -196,20 +307,17 @@ async def clone_approval_callback(client, query: CallbackQuery):
             await clone_client.start()
             ACTIVE_CLONES[target_user_id] = clone_client
 
-            # Save to Database
             await clones_collection.update_one(
                 {"user_id": target_user_id},
                 {"$set": {"token": bot_token, "status": "approved"}},
                 upsert=True
             )
 
-            # Update Admin Log Message with Delete/Revoke Button
             revoke_button = InlineKeyboardMarkup([
                 [InlineKeyboardButton("🗑️ Delete / Revoke Bot", callback_data=f"delete_clone_{target_user_id}")]
             ])
             await query.message.edit_text(query.message.text + "\n\n✅ **STATUS: APPROVED & LIVE**", reply_markup=revoke_button)
 
-            # Notify User
             await client.send_message(
                 target_user_id,
                 "🎉 <b>Success!</b> Your clone bot has been approved by the admin and is now live and running!"
@@ -219,7 +327,6 @@ async def clone_approval_callback(client, query: CallbackQuery):
             await query.message.reply_text(f"❌ Failed to start clone bot: {e}")
 
     elif action == "delete":
-        # Stop and remove the clone bot completely from memory and database
         try:
             if target_user_id in ACTIVE_CLONES:
                 await ACTIVE_CLONES[target_user_id].stop()
@@ -227,14 +334,11 @@ async def clone_approval_callback(client, query: CallbackQuery):
         except Exception as e:
             logger.error(f"Error stopping clone client: {e}")
 
-        # Remove from database and pending list
         await clones_collection.delete_one({"user_id": target_user_id})
         PENDING_CLONES.pop(str(target_user_id), None)
 
-        # Update Admin Log Message
         await query.message.edit_text(query.message.text + "\n\n❌ **STATUS: DELETED / REVOKED BY ADMIN**")
         
-        # Notify User about removal
         try:
             await client.send_message(
                 target_user_id,
@@ -245,7 +349,6 @@ async def clone_approval_callback(client, query: CallbackQuery):
         await query.answer("Clone bot successfully deleted and revoked!", show_alert=True)
 
     else:
-        # Rejected
         PENDING_CLONES.pop(str(target_user_id), None)
         await query.message.edit_text(query.message.text + "\n\n❌ **STATUS: REJECTED**")
         try:
