@@ -4,7 +4,7 @@ import asyncio
 from pyrogram import Client, filters, enums
 from pyrogram.types import Message, InlineKeyboardMarkup, InlineKeyboardButton, CallbackQuery
 from motor.motor_asyncio import AsyncIOMotorClient
-from info import ADMINS, DATABASE_URI, DATABASE_NAME, LOG_CHANNEL, CUSTOM_FILE_CAPTION
+from info import ADMINS, DATABASE_URI, DATABASE_NAME, LOG_CHANNEL
 from database.ia_filterdb import get_search_results, get_file_details
 from utils import get_size
 
@@ -21,14 +21,44 @@ ACTIVE_CLONES = {}
 # Dictionary to temporarily store token requests
 PENDING_CLONES = {}
 
+# Common Guide Text Function
+def get_clone_guide_text():
+    return (
+        "<b>🤖 How to Create Your Own Clone Bot?</b>\n\n"
+        "Want to create your own movie filter bot? Follow these simple steps:\n\n"
+        "1️⃣ First, open the official Telegram bot <b>@BotFather</b>.\n"
+        "2️⃣ Send the command <code>/newbot</code> and follow the instructions to set a name and username for your bot.\n"
+        "3️⃣ Copy the <b>Bot Token</b> provided by BotFather.\n"
+        "4️⃣ Send that token here using the <code>/clone</code> command in the following format:\n\n"
+        "👉 <code>/clone YOUR_BOT_TOKEN_HERE</code>\n\n"
+        "<i>Once approved by the admin, your custom bot will be live and ready to use! 🎉</i>"
+    )
+
+# 1. Button Click / Guide Handler (When user clicks 'Create Clone Bot' button from start)
+@Client.on_callback_query(filters.regex(r"^open_clone_guide$"))
+async def clone_guide_callback(client, query: CallbackQuery):
+    guide_text = get_clone_guide_text()
+    buttons = InlineKeyboardMarkup([
+        [InlineKeyboardButton("🔙 Back to Start", callback_data="start")]
+    ])
+    
+    try:
+        await query.message.edit_text(guide_text, reply_markup=buttons, parse_mode=enums.ParseMode.HTML)
+    except Exception:
+        await query.message.reply_text(guide_text, reply_markup=buttons, parse_mode=enums.ParseMode.HTML)
+    await query.answer()
+
+
+# 2. /clone Command Handler (Handles both Guide display & Token submission)
 @Client.on_message(filters.command("clone") & filters.private)
 async def clone_bot_handler(client, message: Message):
+    # If user only types /clone without token, show the guide instructions
     if len(message.command) < 2:
-        return await message.reply_text(
-            "<b>⚠️ Invalid Format!</b>\n\n"
-            "Please send your bot token along with the command.\n"
-            "<b>Example:</b> <code>/clone YOUR_BOT_TOKEN_FROM_BOTFATHER</code>"
-        )
+        guide_text = get_clone_guide_text()
+        buttons = InlineKeyboardMarkup([
+            [InlineKeyboardButton("🔙 Back to Start", callback_data="start")]
+        ])
+        return await message.reply_text(guide_text, reply_markup=buttons, parse_mode=enums.ParseMode.HTML)
     
     bot_token = message.command[1]
     user_id = message.from_user.id
@@ -65,7 +95,8 @@ async def clone_bot_handler(client, message: Message):
         logger.error(f"Failed to send clone request to log channel: {e}")
 
 
-@Client.on_callback_query(filters.regex(r"^(approve|reject)_clone_"))
+# 3. Admin Actions (Approve, Reject, or Delete/Revoke Clone Bot)
+@Client.on_callback_query(filters.regex(r"^(approve|reject|delete)_clone_"))
 async def clone_approval_callback(client, query: CallbackQuery):
     if query.from_user.id not in ADMINS:
         return await query.answer("You are not authorized!", show_alert=True)
@@ -94,7 +125,6 @@ async def clone_approval_callback(client, query: CallbackQuery):
             
             @clone_client.on_message(filters.command("start") & filters.private)
             async def clone_start(c, m):
-                # Sticker-only start message (No text, no buttons)
                 await m.reply_sticker("CAACAgUAAxkBAAEJ...your_sticker_file_id_here...")
 
             @clone_client.on_message(filters.command("broadcast") & filters.private)
@@ -104,10 +134,9 @@ async def clone_approval_callback(client, query: CallbackQuery):
                 if not m.reply_to_message:
                     return await m.reply_text("Please reply to a message to broadcast!")
                 
-                # Simple broadcast logic for clone owner
                 await m.reply_text("✅ Broadcast initiated successfully.")
 
-            # Auto-Filter Logic inside Cloned Bot (Direct delivery, Clean Caption, No Force-Sub)
+            # Auto-Filter Logic inside Cloned Bot (Clean caption, no force-sub)
             @clone_client.on_message(filters.group & filters.text & filters.incoming)
             async def clone_auto_filter(c, m):
                 if m.text.startswith("/"):
@@ -144,7 +173,6 @@ async def clone_approval_callback(client, query: CallbackQuery):
                 title = files.file_name
                 size = get_size(files.file_size)
                 
-                # Clean Caption (Filename and Size only)
                 f_caption = f"<b>📁 {title}\n\n⚙️ Size: {size}</b>"
 
                 try:
@@ -175,8 +203,11 @@ async def clone_approval_callback(client, query: CallbackQuery):
                 upsert=True
             )
 
-            # Notify Admin
-            await query.message.edit_text(query.message.text + "\n\n✅ **STATUS: APPROVED & LIVE**")
+            # Update Admin Log Message with Delete/Revoke Button
+            revoke_button = InlineKeyboardMarkup([
+                [InlineKeyboardButton("🗑️ Delete / Revoke Bot", callback_data=f"delete_clone_{target_user_id}")]
+            ])
+            await query.message.edit_text(query.message.text + "\n\n✅ **STATUS: APPROVED & LIVE**", reply_markup=revoke_button)
 
             # Notify User
             await client.send_message(
@@ -186,6 +217,32 @@ async def clone_approval_callback(client, query: CallbackQuery):
 
         except Exception as e:
             await query.message.reply_text(f"❌ Failed to start clone bot: {e}")
+
+    elif action == "delete":
+        # Stop and remove the clone bot completely from memory and database
+        try:
+            if target_user_id in ACTIVE_CLONES:
+                await ACTIVE_CLONES[target_user_id].stop()
+                del ACTIVE_CLONES[target_user_id]
+        except Exception as e:
+            logger.error(f"Error stopping clone client: {e}")
+
+        # Remove from database and pending list
+        await clones_collection.delete_one({"user_id": target_user_id})
+        PENDING_CLONES.pop(str(target_user_id), None)
+
+        # Update Admin Log Message
+        await query.message.edit_text(query.message.text + "\n\n❌ **STATUS: DELETED / REVOKED BY ADMIN**")
+        
+        # Notify User about removal
+        try:
+            await client.send_message(
+                target_user_id,
+                "⚠️ <b>Notice:</b> Your clone bot has been removed/revoked by the admin."
+            )
+        except:
+            pass
+        await query.answer("Clone bot successfully deleted and revoked!", show_alert=True)
 
     else:
         # Rejected
