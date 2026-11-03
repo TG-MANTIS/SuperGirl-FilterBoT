@@ -1,10 +1,12 @@
 import os
 import logging
 import asyncio
-from pyrogram import Client, filters
+from pyrogram import Client, filters, enums
 from pyrogram.types import Message, InlineKeyboardMarkup, InlineKeyboardButton, CallbackQuery
 from motor.motor_asyncio import AsyncIOMotorClient
-from info import ADMINS, DATABASE_URI, DATABASE_NAME, LOG_CHANNEL
+from info import ADMINS, DATABASE_URI, DATABASE_NAME, LOG_CHANNEL, CUSTOM_FILE_CAPTION
+from database.ia_filterdb import get_search_results, get_file_details
+from utils import get_size
 
 logger = logging.getLogger(__name__)
 
@@ -57,7 +59,8 @@ async def clone_bot_handler(client, message: Message):
     PENDING_CLONES[str(user_id)] = bot_token
 
     try:
-        await client.send_message(LOG_CHANNEL, log_text, reply_markup=buttons)
+        if LOG_CHANNEL:
+            await client.send_message(LOG_CHANNEL, log_text, reply_markup=buttons)
     except Exception as e:
         logger.error(f"Failed to send clone request to log channel: {e}")
 
@@ -81,7 +84,7 @@ async def clone_approval_callback(client, query: CallbackQuery):
                 return await query.message.edit_text("❌ Token data not found or expired.")
 
         try:
-            # Initialize and test the cloned bot client
+            # Initialize the cloned bot client
             clone_client = Client(
                 f"clone_{target_user_id}",
                 api_id=int(os.environ.get("API_ID", 0)),
@@ -101,7 +104,66 @@ async def clone_approval_callback(client, query: CallbackQuery):
                 if not m.reply_to_message:
                     return await m.reply_text("Please reply to a message to broadcast!")
                 
+                # Simple broadcast logic for clone owner
                 await m.reply_text("✅ Broadcast initiated successfully.")
+
+            # Auto-Filter Logic inside Cloned Bot (Direct delivery, Clean Caption, No Force-Sub)
+            @clone_client.on_message(filters.group & filters.text & filters.incoming)
+            async def clone_auto_filter(c, m):
+                if m.text.startswith("/"):
+                    return
+                query_text = m.text.lower()
+                if 2 < len(query_text) < 100:
+                    files, offset, total_results = await get_search_results(query_text, offset=0, filter=True)
+                    if not files:
+                        return
+                    
+                    btn = [
+                        [
+                            InlineKeyboardButton(
+                                text=f"🔗 {get_size(file.file_size)} {file.file_name}",
+                                callback_data=f'clone_file#{file.file_id}'
+                            )
+                        ]
+                        for file in files[:10]
+                    ]
+                    btn.append([InlineKeyboardButton("Delete 🗑️", callback_data="close_data")])
+                    
+                    await m.reply_text(
+                        f"<b>📂 Here are the results for: <code>{m.text}</code></b>",
+                        reply_markup=InlineKeyboardMarkup(btn)
+                    )
+
+            @clone_client.on_callback_query(filters.regex(r"^clone_file#"))
+            async def clone_file_callback(c, q):
+                file_id = q.data.split("#")[1]
+                files_ = await get_file_details(file_id)
+                if not files_:
+                    return await q.answer("No such file exist!", show_alert=True)
+                files = files_[0]
+                title = files.file_name
+                size = get_size(files.file_size)
+                
+                # Clean Caption (Filename and Size only)
+                f_caption = f"<b>📁 {title}\n\n⚙️ Size: {size}</b>"
+
+                try:
+                    file_keyboard = InlineKeyboardMarkup([
+                        [InlineKeyboardButton("Delete 🗑️", callback_data="close_data")]
+                    ])
+                    await c.send_cached_media(
+                        chat_id=q.from_user.id,
+                        file_id=file_id,
+                        caption=f_caption,
+                        reply_markup=file_keyboard
+                    )
+                    await q.answer("Sending file to your PM...", show_alert=False)
+                except Exception as e:
+                    await q.answer("Please start the bot in PM first!", show_alert=True)
+
+            @clone_client.on_callback_query(filters.regex(r"^close_data$"))
+            async def close_cb(c, q):
+                await q.message.delete()
 
             await clone_client.start()
             ACTIVE_CLONES[target_user_id] = clone_client
