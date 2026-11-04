@@ -15,6 +15,7 @@ logger = logging.getLogger(__name__)
 db_client = AsyncIOMotorClient(DATABASE_URI)
 db = db_client[DATABASE_NAME]
 clones_collection = db["cloned_bots"]
+clone_connections_collection = db["clone_connections"] # Collection to store group connections for cloned bots
 
 # Store active clone clients in memory
 ACTIVE_CLONES = {}
@@ -149,6 +150,35 @@ async def clone_approval_callback(client, query: CallbackQuery):
             async def clone_start(c, m):
                 await m.reply_text("👋 Hello! I am your custom clone filter bot. Send me any movie name to search.")
 
+            # Auto-Connect Command Handler for Group Admins (/connect)
+            @clone_client.on_message(filters.command("connect") & filters.group)
+            async def clone_connect_handler(c, m):
+                # Check if user is admin in this group
+                try:
+                    member = await c.get_chat_member(m.chat.id, m.from_user.id)
+                    if member.status not in [enums.ChatMemberStatus.ADMINISTRATOR, enums.ChatMemberStatus.OWNER] and m.from_user.id not in ADMINS:
+                        return await m.reply_text("❌ Only group admins can connect this bot!")
+                except Exception:
+                    pass
+
+                chat_id = m.chat.id
+                chat_title = m.chat.title
+
+                # Save connection to database for this specific clone bot
+                await clone_connections_collection.update_one(
+                    {"bot_id": target_user_id, "chat_id": chat_id},
+                    {"$set": {"chat_title": chat_title}},
+                    upsert=True
+                )
+
+                await m.reply_text(
+                    f"✅ <b>Successfully Connected!</b>\n\n"
+                    f"📍 <b>Group:</b> <code>{chat_title}</code>\n"
+                    f"🔗 <b>Chat ID:</b> <code>{chat_id}</code>\n\n"
+                    f"<i>This group is now successfully linked with your clone bot for manual filters and custom setups! 🎉</i>",
+                    parse_mode=enums.ParseMode.HTML
+                )
+
             # Welcome Message Handler with Auto-Delete & Italic Deleted Notice
             @clone_client.on_message(filters.new_chat_members)
             async def welcome_new_member(c, m):
@@ -203,7 +233,7 @@ async def clone_approval_callback(client, query: CallbackQuery):
                         pass
                     return
 
-                # Normal Bot Functionality if Admin
+                # Normal Global Auto-Filter Functionality if Admin
                 query_text = m.text.lower().strip()
                 if 2 < len(query_text) < 100:
                     files, offset, total_results = await get_search_results(query_text, offset=0, filter=True)
@@ -394,7 +424,7 @@ async def clone_approval_callback(client, query: CallbackQuery):
         except Exception as e:
             logger.error(f"Error stopping clone client: {e}")
 
-        await clones_collection.delete_one({"user_id": target_user_id})
+        await clones_collection.delete_one({"user_id": target_user_id))
         PENDING_CLONES.pop(str(target_user_id), None)
 
         await query.message.edit_text(query.message.text + "\n\n❌ **STATUS: DELETED / REVOKED BY ADMIN**")
