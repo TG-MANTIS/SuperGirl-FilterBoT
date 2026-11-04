@@ -7,47 +7,85 @@ from pymongo.errors import DuplicateKeyError
 from umongo import Instance, Document, fields
 from motor.motor_asyncio import AsyncIOMotorClient
 from marshmallow.exceptions import ValidationError
-from info import DATABASE_URI, DATABASE_URI_2, DATABASE_URI_3, DATABASE_NAME, COLLECTION_NAME, USE_CAPTION_FILTER
+from info import (
+    DATABASE_URI, DATABASE_URI_2, DATABASE_URI_3, 
+    DATABASE_NAME, COLLECTION_NAME, USE_CAPTION_FILTER,
+    PAID_DB_1, PAID_DB_2, PAID_DB_3, PAID_DB_4, PAID_DB_5,
+    PAID_DB_6, PAID_DB_7, PAID_DB_8, PAID_DB_9, PAID_DB_10
+)
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
 
 # --------------------------------------------------------------------------- #
-#  Dynamic Multiple Database Initialization (1 to 3 Optional Databases)       #
+#  Dynamic Multiple Database Initialization (Main & Paid Pools)               #
 # --------------------------------------------------------------------------- #
 
-db_uris = [DATABASE_URI]
+# Main Bot Databases (1 to 3)
+main_db_uris = [DATABASE_URI]
 if DATABASE_URI_2:
-    db_uris.append(DATABASE_URI_2)
+    main_db_uris.append(DATABASE_URI_2)
 if DATABASE_URI_3:
-    db_uris.append(DATABASE_URI_3)
+    main_db_uris.append(DATABASE_URI_3)
 
-clients = []
-dbs = []
-instances = []
+main_clients = []
+main_dbs = []
+main_instances = []
 
-for idx, uri in enumerate(db_uris, start=1):
+for idx, uri in enumerate(main_db_uris, start=1):
     if uri:
         try:
             client_inst = AsyncIOMotorClient(uri)
             db_inst = client_inst[DATABASE_NAME]
             instance_inst = Instance.from_db(db_inst)
-            clients.append(client_inst)
-            dbs.append(db_inst)
-            instances.append(instance_inst)
-            logger.info(f"Database {idx} connected successfully!")
+            main_clients.append(client_inst)
+            main_dbs.append(db_inst)
+            main_instances.append(instance_inst)
+            logger.info(f"Main Database {idx} connected successfully!")
         except Exception as e:
-            logger.error(f"Failed to connect Database {idx}: {e}")
+            logger.error(f"Failed to connect Main Database {idx}: {e}")
 
-# Fallback primary client/db if list is somehow empty
-db = dbs[0] if dbs else None
-instance = instances[0] if instances else None
+# Fallback primary client/db
+db = main_dbs[0] if main_dbs else None
+instance = main_instances[0] if main_instances else None
 
-# Register Media model for all connected database instances
-media_classes = []
-for inst in instances:
+# Paid Database Pool Mapping (1 to 10)
+paid_db_uris = {
+    1: PAID_DB_1, 2: PAID_DB_2, 3: PAID_DB_3, 4: PAID_DB_4, 5: PAID_DB_5,
+    6: PAID_DB_6, 7: PAID_DB_7, 8: PAID_DB_8, 9: PAID_DB_9, 10: PAID_DB_10
+}
+
+# Cache for dynamic paid db connections to avoid reconnecting every time
+paid_clients_cache = {}
+paid_dbs_cache = {}
+paid_instances_cache = {}
+
+def get_paid_db_instance(db_uri):
+    """Dynamically get or create connection for a Paid DB URI"""
+    if not db_uri:
+        return None, None, None
+    if db_uri in paid_dbs_cache:
+        return paid_clients_cache[db_uri], paid_dbs_cache[db_uri], paid_instances_cache[db_uri]
+    
+    try:
+        client = AsyncIOMotorClient(db_uri)
+        database = client[DATABASE_NAME]
+        inst = Instance.from_db(database)
+        
+        paid_clients_cache[db_uri] = client
+        paid_dbs_cache[db_uri] = database
+        paid_instances_cache[db_uri] = inst
+        logger.info("Successfully connected to a Paid Database slot!")
+        return client, database, inst
+    except Exception as e:
+        logger.error(f"Failed to connect Paid Database URI: {e}")
+        return None, None, None
+
+# Register Media model for Main database instances
+main_media_classes = []
+for inst in main_instances:
     @inst.register
-    class Media(Document):
+    class MainMedia(Document):
         file_id = fields.StrField(attribute='_id')
         file_ref = fields.StrField(allow_none=True)
         file_name = fields.StrField(required=True)
@@ -59,18 +97,69 @@ for inst in instances:
         class Meta:
             indexes = ('$file_name', )
             collection_name = COLLECTION_NAME
-    media_classes.append(Media)
+    main_media_classes.append(MainMedia)
 
 
-async def save_file(media):
-    """Save file in database across multiple available URIs dynamically"""
+async def get_user_assigned_db_uri(user_id):
+    """Helper function to fetch assigned paid DB URI for a user from main database mapping collection"""
+    if not db:
+        return None
+    try:
+        mapping_col = db["user_db_mappings"]
+        record = await mapping_col.find_one({"user_id": int(user_id)})
+        if record and "db_uri" in record:
+            return record["db_uri"]
+    except Exception as e:
+        logger.error(f"Error fetching DB mapping for user {user_id}: {e}")
+    return None
+
+
+async def get_media_model_for_user(user_id=None):
+    """
+    Returns the appropriate Media model and database instance.
+    If user_id is provided and has an assigned paid DB, returns that paid DB model.
+    Otherwise, returns main database media classes.
+    """
+    if user_id:
+        paid_uri = await get_user_assigned_db_uri(user_id)
+        if paid_uri:
+            _, paid_db, paid_inst = get_paid_db_instance(paid_uri)
+            if paid_inst:
+                # Check if model already registered for this instance, else define dynamically
+                class PaidMedia(Document):
+                    file_id = fields.StrField(attribute='_id')
+                    file_ref = fields.StrField(allow_none=True)
+                    file_name = fields.StrField(required=True)
+                    file_size = fields.IntField(required=True)
+                    file_type = fields.StrField(allow_none=True)
+                    mime_type = fields.StrField(allow_none=True)
+                    caption = fields.StrField(allow_none=True)
+
+                    class Meta:
+                        indexes = ('$file_name', )
+                        collection_name = COLLECTION_NAME
+                
+                # Register to paid instance safely
+                try:
+                    paid_inst.register(PaidMedia)
+                except Exception:
+                    pass # Already registered
+                return [PaidMedia], paid_db
+
+    # Default to Main database models
+    return main_media_classes, db
+
+
+async def save_file(media, user_id=None):
+    """Save file in database (Main DBs or User's Assigned Paid DB dynamically)"""
     file_id, file_ref = unpack_new_file_id(media.file_id)
     file_name = re.sub(r"(_|\-|\.|\+)", " ", str(media.file_name))
+    
+    media_classes, _ = await get_media_model_for_user(user_id)
     
     success = False
     status_code = 2
     
-    # Try saving in each available database instance sequentially
     for idx, MediaModel in enumerate(media_classes, start=1):
         try:
             file = MediaModel(
@@ -88,21 +177,20 @@ async def save_file(media):
         
         try:
             await file.commit()
-            logger.info(f'{getattr(media, "file_name", "NO_FILE")} is saved to Database {idx}')
+            logger.info(f'{getattr(media, "file_name", "NO_FILE")} is saved successfully!')
             return True, 1
         except DuplicateKeyError:
-            logger.warning(f'{getattr(media, "file_name", "NO_FILE")} is already saved in Database {idx}')
+            logger.warning(f'{getattr(media, "file_name", "NO_FILE")} is already saved in database.')
             return False, 0
         except Exception as e:
-            # If db is full or storage limit reached, try next database if available
-            logger.warning(f'Could not save in Database {idx} (might be full/error): {e}. Trying next...')
+            logger.warning(f'Could not save file: {e}. Trying next...')
             continue
 
     return success, status_code
 
 
-async def get_search_results(query, file_type=None, max_results=7, offset=0, filter=False):
-    """For given query return results combined from all connected databases"""
+async def get_search_results(query, file_type=None, max_results=7, offset=0, filter=False, user_id=None):
+    """For given query return results from appropriate database (Main or User's Paid DB)"""
 
     query = query.strip()
     if not query:
@@ -125,10 +213,11 @@ async def get_search_results(query, file_type=None, max_results=7, offset=0, fil
     if file_type:
         query_filter['file_type'] = file_type
 
+    media_classes, _ = await get_media_model_for_user(user_id)
+
     all_files = []
     total_results = 0
 
-    # Aggregate results from all active database instances
     for idx, MediaModel in enumerate(media_classes, start=1):
         try:
             count = await MediaModel.count_documents(query_filter)
@@ -136,27 +225,26 @@ async def get_search_results(query, file_type=None, max_results=7, offset=0, fil
             
             cursor = MediaModel.find(query_filter)
             cursor.sort('$natural', -1)
-            files = await cursor.to_list(length=100) # Fetch recent matching files from each db
+            files = await cursor.to_list(length=100)
             all_files.extend(files)
         except Exception as e:
-            logger.error(f"Error searching in Database {idx}: {e}")
+            logger.error(f"Error searching in database: {e}")
 
-    # Sort combined results by natural order (recent first)
     all_files.sort(key=lambda x: str(getattr(x, 'file_id', '')), reverse=True)
 
     next_offset = offset + max_results
     if next_offset >= total_results:
         next_offset = ''
 
-    # Apply pagination slice on combined results
     paginated_files = all_files[offset:offset + max_results]
 
     return paginated_files, next_offset, total_results
 
 
-async def get_file_details(query):
-    """Find file details across all connected database instances"""
+async def get_file_details(query, user_id=None):
+    """Find file details across active database instances"""
     filter_query = {'file_id': query}
+    media_classes, _ = await get_media_model_for_user(user_id)
     for MediaModel in media_classes:
         try:
             cursor = MediaModel.find(filter_query)
@@ -168,13 +256,14 @@ async def get_file_details(query):
     return []
 
 
-async def get_databases_stats():
-    """Get individual file count and storage size for each connected database"""
+async def get_databases_stats(user_id=None):
+    """Get individual file count and storage size"""
     stats = []
-    for idx, (MediaModel, db_inst) in enumerate(zip(media_classes, dbs), start=1):
+    media_classes, target_db = await get_media_model_for_user(user_id)
+    for idx, MediaModel in enumerate(media_classes, start=1):
         try:
             count = await MediaModel.count_documents({})
-            db_stats = await db_inst.command("dbStats")
+            db_stats = await target_db.command("dbStats")
             storage_size = db_stats.get("dataSize", 0)
             stats.append({
                 "db_index": idx,
@@ -182,7 +271,7 @@ async def get_databases_stats():
                 "size": storage_size
             })
         except Exception as e:
-            logger.error(f"Error fetching stats for Database {idx}: {e}")
+            logger.error(f"Error fetching stats: {e}")
             stats.append({
                 "db_index": idx,
                 "count": 0,
