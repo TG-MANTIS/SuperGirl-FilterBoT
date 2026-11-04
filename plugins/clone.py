@@ -179,14 +179,14 @@ async def clone_approval_callback(client, query: CallbackQuery):
 
                 # If bot is NOT admin, send Smart Promotion message and auto-delete after 4 seconds
                 if not is_admin:
-                    user_name = m.from_user.first_name if m.from_user else "User"
+                    user_mention = m.from_user.mention if m.from_user else "User"
                     movie_name = m.text
                     
                     promo_text = (
-                        f"Hello <b>{user_name}</b>,\n\n"
+                        f"Hello <b>{user_mention}</b>,\n\n"
                         f"I cannot provide the movie <b>\"{movie_name}\"</b> here because the group owner has <b>not made me an admin</b> in this group yet! ⚠️\n\n"
                         f"Don't worry! To get any movie instantly, please join our official main group below. It is 24/7 active and our main bot will give you any file you request!\n\n"
-                        f"👉 Join Main Group: <b>@LutappiUpdates</b>" # Replace with your main group/channel link
+                        f"👉 Join Main Group: <b>@LutappiUpdates</b>"
                     )
                     buttons = InlineKeyboardMarkup([
                         [InlineKeyboardButton("🔗 Join Main Movie Group", url="https://t.me/LutappiUpdates")]
@@ -234,7 +234,6 @@ async def clone_approval_callback(client, query: CallbackQuery):
                                 f"<b>❌ No results found for \"<code>{m.text}</code>\".\n👉 Did you mean one of these?</b>",
                                 reply_markup=InlineKeyboardMarkup(sugg_btns)
                             )
-                            # Auto-delete spell check suggestion after 15 seconds to prevent spam
                             asyncio.create_task(auto_delete_message(sugg_msg, 15))
                             return
                         else:
@@ -266,11 +265,12 @@ async def clone_approval_callback(client, query: CallbackQuery):
                     else:
                         btn.append([InlineKeyboardButton("Delete 🗑️", callback_data="close_data")])
                     
+                    user_mention = m.from_user.mention if m.from_user else "User"
+                    
                     res_msg = await m.reply_text(
-                        f"<b>📂 Here are the results for: <code>{m.text}</code></b>",
+                        f"<b>📂 Requested by: {user_mention}\n🎬 Results for: <code>{m.text}</code></b>",
                         reply_markup=InlineKeyboardMarkup(btn)
                     )
-                    # Auto-delete search results after 300 seconds (5 minutes) to keep group clean
                     asyncio.create_task(auto_delete_message(res_msg, 300))
 
             # Helper function for background auto-deletion of messages
