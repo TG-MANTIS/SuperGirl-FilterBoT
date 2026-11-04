@@ -203,14 +203,14 @@ async def start(client, message):
             )
         return
 
-    # Handle Direct Channel Deep Link Search (e.g. ?start=search_MovieName) -> Triggers Auto-Filter Buttons
+    # Handle Direct Channel Deep Link Search
     if data.startswith("search_"):
         search_query = data.split("search_", 1)[1].replace("_", " ")
         message.text = search_query
         await auto_filter(client, message)
         return
 
-    # Handle Deep Link Search (Query text passed via start link like ?start=Movie_Name) -> Triggers Auto-Filter Buttons
+    # Handle Deep Link Search
     if not "_" in data and not data.startswith("BATCH") and not data.startswith("DSTORE"):
         search_query = data.replace("_", " ")
         message.text = search_query
@@ -317,7 +317,7 @@ async def start(client, message):
             await asyncio.sleep(1) 
         return await sts.delete()
         
-    files_ = await get_file_details(file_id)           
+    files_ = await get_file_details(file_id, user_id=message.from_user.id)           
     if not files_:
         pre, file_id = ((base64.urlsafe_b64decode(data + "=" * (-len(b_string) % 4))).decode("ascii")).split("_", 1) if False else ((base64.urlsafe_b64decode(data + "=" * (-len(data) % 4))).decode("ascii")).split("_", 1)
         try:
@@ -374,6 +374,90 @@ async def start(client, message):
         reply_markup=file_keyboard,
         protect_content=True if pre == 'filep' else False,
     )
+
+
+# --------------------------------------------------------------------------- #
+#  /assign_db Command Handler (Admin Only - Assign Paid DB Slot)             #
+# --------------------------------------------------------------------------- #
+
+@Client.on_message(filters.command('assign_db') & filters.user(ADMINS))
+async def assign_database(client, message):
+    if len(message.command) < 2:
+        return await message.reply(
+            "<b>⚠️ Usage Error!</b>\n\n"
+            "Please provide the User ID to assign a database.\n"
+            "<b>Example:</b> <code>/assign_db 123456789</code>",
+            parse_mode=enums.ParseMode.HTML
+        )
+    
+    try:
+        target_user_id = int(message.command[1])
+    except ValueError:
+        return await message.reply("⚠️ Invalid User ID! Please provide a valid numeric Telegram User ID.")
+
+    from info import (
+        PAID_DB_1, PAID_DB_2, PAID_DB_3, PAID_DB_4, PAID_DB_5,
+        PAID_DB_6, PAID_DB_7, PAID_DB_8, PAID_DB_9, PAID_DB_10
+    )
+    
+    paid_pool = [
+        ("PAID_DB_1", PAID_DB_1), ("PAID_DB_2", PAID_DB_2), ("PAID_DB_3", PAID_DB_3),
+        ("PAID_DB_4", PAID_DB_4), ("PAID_DB_5", PAID_DB_5), ("PAID_DB_6", PAID_DB_6),
+        ("PAID_DB_7", PAID_DB_7), ("PAID_DB_8", PAID_DB_8), ("PAID_DB_9", PAID_DB_9),
+        ("PAID_DB_10", PAID_DB_10)
+    ]
+
+    from database.ia_filterdb import db as main_db
+
+    if not main_db:
+        return await message.reply("❌ Main database connection error! Cannot proceed with assignment.")
+
+    mapping_col = main_db["user_db_mappings"]
+
+    # Check if user already has an assigned DB
+    existing = await mapping_col.find_one({"user_id": target_user_id})
+    if existing:
+        return await message.reply(
+            f"<b>⚠️ User ID <code>{target_user_id}</code> already has an assigned database slot!</b>\n"
+            f"Slot Name: <code>{existing.get('slot_name')}</code>",
+            parse_mode=enums.ParseMode.HTML
+        )
+
+    # Find already assigned URIs to avoid duplication
+    assigned_uris = set()
+    async for doc in mapping_col.find({}):
+        if "db_uri" in doc:
+            assigned_uris.add(doc["db_uri"])
+
+    # Find the next available free slot from the pool
+    free_slot_name = None
+    free_slot_uri = None
+    for slot_name, uri in paid_pool:
+        if uri and uri not in assigned_uris:
+            free_slot_name = slot_name
+            free_slot_uri = uri
+            break
+
+    if not free_slot_uri:
+        return await message.reply("❌ All Paid Database slots are currently full! Please add more slots in configuration.")
+
+    # Save mapping to database
+    try:
+        await mapping_col.insert_one({
+            "user_id": target_user_id,
+            "slot_name": free_slot_name,
+            "db_uri": free_slot_uri
+        })
+        await message.reply(
+            f"<b>✅ Successfully Assigned Database!</b>\n\n"
+            f"👤 <b>User ID:</b> <code>{target_user_id}</code>\n"
+            f"📂 <b>Assigned Slot:</b> <code>{free_slot_name}</code>\n"
+            f"🔗 <b>Status:</b> Dedicated database active!",
+            parse_mode=enums.ParseMode.HTML
+        )
+    except Exception as e:
+        logger.error(f"Error saving DB mapping: {e}")
+        await message.reply(f"❌ Failed to assign database: {e}")
 
 
 # --------------------------------------------------------------------------- #
@@ -504,7 +588,6 @@ async def settings(client, message):
     
     chat_type = message.chat.type
 
-    # 1. Group / Supergroup Settings Handler
     if chat_type in [enums.ChatType.GROUP, enums.ChatType.SUPERGROUP]:
         chat_id = message.chat.id
         try:
@@ -551,7 +634,6 @@ async def settings(client, message):
         )
         return
 
-    # 2. Private Chat (PM) Settings Handler
     elif chat_type == enums.ChatType.PRIVATE:
         grpid = await active_connection(str(userid))
         title = "Group"
