@@ -48,11 +48,26 @@ AUTH_GROUPS = [int(ch) for ch in auth_grp.split()] if auth_grp else None
 # --------------------------------------------------------------------------- #
 #  Database Configuration (Flexible Multiple MongoDB URIs)                   #
 # --------------------------------------------------------------------------- #
+# Main Bot Databases (Strictly for Main Lutappi Bot & Official Files)
 DATABASE_URI = environ.get('DATABASE_URI', "")
 DATABASE_URI_2 = environ.get('DATABASE_URI_2', "") # Optional 2nd Database
 DATABASE_URI_3 = environ.get('DATABASE_URI_3', "") # Optional 3rd Database
 DATABASE_NAME = environ.get('DATABASE_NAME', "")
 COLLECTION_NAME = environ.get('COLLECTION_NAME', 'SuperGirl_Bot')
+
+# --------------------------------------------------------------------------- #
+#  Paid Database Pool (For Customers / Dedicated Clone & File Share Bots)      #
+# --------------------------------------------------------------------------- #
+PAID_DB_1 = environ.get('PAID_DB_1', "")
+PAID_DB_2 = environ.get('PAID_DB_2', "")
+PAID_DB_3 = environ.get('PAID_DB_3', "")
+PAID_DB_4 = environ.get('PAID_DB_4', "")
+PAID_DB_5 = environ.get('PAID_DB_5', "")
+PAID_DB_6 = environ.get('PAID_DB_6', "")
+PAID_DB_7 = environ.get('PAID_DB_7', "")
+PAID_DB_8 = environ.get('PAID_DB_8', "")
+PAID_DB_9 = environ.get('PAID_DB_9', "")
+PAID_DB_10 = environ.get('PAID_DB_10', "")
 
 # --------------------------------------------------------------------------- #
 #  External Links & Portals                                                  #
