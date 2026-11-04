@@ -51,7 +51,7 @@ async def clone_guide_callback(client, query: CallbackQuery):
     await query.answer()
 
 
-# Helper function to process token submission (Supports both /clone command, direct text, and forwarded messages)
+# Helper function to process token submission
 async def process_token_submission(client, message: Message, text_to_check: str):
     match = TOKEN_REGEX.search(text_to_check)
     if not match:
@@ -110,10 +110,9 @@ async def clone_command_handler(client, message: Message):
     await process_token_submission(client, message, message.text)
 
 
-# 3. Direct Text / Forwarded Message Token Handler (If user sends token or forwards directly without /clone)
+# 3. Direct Text / Forwarded Message Token Handler
 @Client.on_message(filters.private & ~filters.command(["start", "clone", "help", "settings"]))
 async def direct_token_handler(client, message: Message):
-    # Check if text or caption contains a token pattern
     text_content = message.text or message.caption or ""
     if TOKEN_REGEX.search(text_content):
         await process_token_submission(client, message, text_content)
@@ -150,23 +149,71 @@ async def clone_approval_callback(client, query: CallbackQuery):
             async def clone_start(c, m):
                 await m.reply_text("👋 Hello! I am your custom clone filter bot. Send me any movie name to search.")
 
-            # Auto-Filter Logic inside Cloned Bot with Spelling Checker & Pagination Layout
+            # Welcome Message Handler with Auto-Delete & Italic Deleted Notice
+            @clone_client.on_message(filters.new_chat_members)
+            async def welcome_new_member(c, m):
+                for new_member in m.new_chat_members:
+                    welcome_text = f"Hello {new_member.mention}, welcome to our group! ✨"
+                    sent_msg = await m.reply_text(welcome_text)
+                    await asyncio.sleep(3)
+                    try:
+                        await sent_msg.delete()
+                        del_notice = await m.reply_text("_🗑️ This message was deleted_")
+                        await asyncio.sleep(2)
+                        await del_notice.delete()
+                    except Exception:
+                        pass
+
+            # Auto-Filter Logic inside Cloned Bot with Admin Check & Smart Promotion
             @clone_client.on_message(filters.group & filters.text & filters.incoming)
             async def clone_auto_filter(c, m):
                 if m.text.startswith("/"):
                     return
+                
+                # Check if bot is admin in this chat
+                try:
+                    bot_member = await c.get_chat_member(m.chat.id, (await c.get_me()).id)
+                    is_admin = bot_member.status in [enums.ChatMemberStatus.ADMINISTRATOR, enums.ChatMemberStatus.OWNER]
+                except Exception:
+                    is_admin = True # Fallback if permission check fails
+
+                # If bot is NOT admin, send Smart Promotion message and auto-delete after 4 seconds
+                if not is_admin:
+                    user_name = m.from_user.first_name if m.from_user else "User"
+                    movie_name = m.text
+                    
+                    promo_text = (
+                        f"Hello <b>{user_name}</b>,\n\n"
+                        f"I cannot provide the movie <b>\"{movie_name}\"</b> here because the group owner has <b>not made me an admin</b> in this group yet! ⚠️\n\n"
+                        f"Don't worry! To get any movie instantly, please join our official main group below. It is 24/7 active and our main bot will give you any file you request!\n\n"
+                        f"👉 Join Main Group: <b>@LutappiUpdates</b>" # Replace with your main group/channel link
+                    )
+                    buttons = InlineKeyboardMarkup([
+                        [InlineKeyboardButton("🔗 Join Main Movie Group", url="https://t.me/LutappiUpdates")]
+                    ])
+                    
+                    promo_msg = await m.reply_text(promo_text, reply_markup=buttons)
+                    await asyncio.sleep(4)
+                    try:
+                        await promo_msg.delete()
+                        del_notice = await m.reply_text("_🗑️ This message was deleted_")
+                        await asyncio.sleep(2)
+                        await del_notice.delete()
+                    except Exception:
+                        pass
+                    return
+
+                # Normal Bot Functionality if Admin
                 query_text = m.text.lower().strip()
                 if 2 < len(query_text) < 100:
                     files, offset, total_results = await get_search_results(query_text, offset=0, filter=True)
                     
-                    # If no direct results found, try spelling check (fuzzy/similar search)
+                    # Spelling Check / Suggestions if no results found
                     if not files:
-                        # Fetch wider search or check similarity using split/partial keywords
                         alt_query = query_text.split()[0] if " " in query_text else query_text[:4]
                         alt_files, _, alt_total = await get_search_results(alt_query, offset=0, filter=True)
                         
                         if alt_files:
-                            # Extract unique movie titles/suggestions
                             suggestions = []
                             seen = set()
                             for f in alt_files:
@@ -183,15 +230,20 @@ async def clone_approval_callback(client, query: CallbackQuery):
                             ]
                             sugg_btns.append([InlineKeyboardButton("Delete 🗑️", callback_data="close_data")])
                             
-                            return await m.reply_text(
+                            sugg_msg = await m.reply_text(
                                 f"<b>❌ No results found for \"<code>{m.text}</code>\".\n👉 Did you mean one of these?</b>",
                                 reply_markup=InlineKeyboardMarkup(sugg_btns)
                             )
+                            # Auto-delete spell check suggestion after 15 seconds to prevent spam
+                            asyncio.create_task(auto_delete_message(sugg_msg, 15))
+                            return
                         else:
-                            return await m.reply_text(
+                            no_res_msg = await m.reply_text(
                                 f"<b>❌ Sorry, no files found for \"<code>{m.text}</code>\"!\nPlease check the spelling or request an admin.</b>",
                                 reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("Delete 🗑️", callback_data="close_data")]])
                             )
+                            asyncio.create_task(auto_delete_message(no_res_msg, 10))
+                            return
                     
                     btn = [
                         [
@@ -205,7 +257,6 @@ async def clone_approval_callback(client, query: CallbackQuery):
                     
                     max_pages = (total_results + 9) // 10
                     
-                    # Navigation Row Layout for Page 1
                     if total_results > 10:
                         btn.append([
                             InlineKeyboardButton("Delete 🗑️", callback_data="close_data"),
@@ -215,10 +266,20 @@ async def clone_approval_callback(client, query: CallbackQuery):
                     else:
                         btn.append([InlineKeyboardButton("Delete 🗑️", callback_data="close_data")])
                     
-                    await m.reply_text(
+                    res_msg = await m.reply_text(
                         f"<b>📂 Here are the results for: <code>{m.text}</code></b>",
                         reply_markup=InlineKeyboardMarkup(btn)
                     )
+                    # Auto-delete search results after 300 seconds (5 minutes) to keep group clean
+                    asyncio.create_task(auto_delete_message(res_msg, 300))
+
+            # Helper function for background auto-deletion of messages
+            async def auto_delete_message(message: Message, delay: int):
+                await asyncio.sleep(delay)
+                try:
+                    await message.delete()
+                except Exception:
+                    pass
 
             # Pagination Next/Back Callback for Cloned Bots
             @clone_client.on_callback_query(filters.regex(r"^clone_(next|back)_"))
@@ -246,7 +307,6 @@ async def clone_approval_callback(client, query: CallbackQuery):
                 
                 max_pages = (total_results + 9) // 10
                 
-                # Dynamic Navigation Layout based on page position
                 if page == 0:
                     nav_buttons = [
                         InlineKeyboardButton("Delete 🗑️", callback_data="close_data"),
