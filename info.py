@@ -1,3 +1,9 @@
+"""
+Configuration and Environment Management Module
+Loads, validates, and manages environment variables, database URIs, 
+bot settings, admin credentials, and feature flags.
+"""
+
 import re
 from os import environ
 from Script import script
@@ -6,9 +12,14 @@ from Script import script
 id_pattern = re.compile(r'^.\d+$')
 
 def is_enabled(value, default):
-    if value.lower() in ["true", "yes", "1", "enable", "y"]:
+    """
+    Helper function to parse environment boolean strings securely.
+    """
+    if isinstance(value, bool):
+        return value
+    if str(value).lower() in ["true", "yes", "1", "enable", "y"]:
         return True
-    elif value.lower() in ["false", "no", "0", "disable", "n"]:
+    elif str(value).lower() in ["false", "no", "0", "disable", "n"]:
         return False
     else:
         return default
@@ -25,12 +36,11 @@ BOT_TOKEN = environ['BOT_TOKEN']
 #  Bot General Settings                                                      #
 # --------------------------------------------------------------------------- #
 CACHE_TIME = int(environ.get('CACHE_TIME', 300))
-USE_CAPTION_FILTER = bool(environ.get('USE_CAPTION_FILTER', False))
+USE_CAPTION_FILTER = is_enabled(environ.get('USE_CAPTION_FILTER', False), False)
 PICS = (environ.get('PICS', 'https://envs.sh/te8.jpg https://envs.sh/te7.jpg')).split()
 FORCE_IMG = environ.get('FORCE_IMG', "https://graph.org/file/495474c424c774e2fa7b5-15e6a76e4bec7f6fc7.jpg")
 NOR_IMG = environ.get('NOR_IMG', "https://envs.sh/PvY.jpg")
 SET_IMG = environ.get('SET_IMG', "https://envs.sh/RCE.jpg") 
-
 
 # --------------------------------------------------------------------------- #
 #  Admins, Authorized Channels & Users                                       #
@@ -48,10 +58,9 @@ AUTH_GROUPS = [int(ch) for ch in auth_grp.split()] if auth_grp else None
 # --------------------------------------------------------------------------- #
 #  Database Configuration (Flexible Multiple MongoDB URIs)                   #
 # --------------------------------------------------------------------------- #
-# Main Bot Databases (Strictly for Main Lutappi Bot & Official Files)
 DATABASE_URI = environ.get('DATABASE_URI', "")
-DATABASE_URI_2 = environ.get('DATABASE_URI_2', "") # Optional 2nd Database
-DATABASE_URI_3 = environ.get('DATABASE_URI_3', "") # Optional 3rd Database
+DATABASE_URI_2 = environ.get('DATABASE_URI_2', "")
+DATABASE_URI_3 = environ.get('DATABASE_URI_3', "")
 DATABASE_NAME = environ.get('DATABASE_NAME', "")
 COLLECTION_NAME = environ.get('COLLECTION_NAME', 'SuperGirl_Bot')
 
@@ -80,25 +89,26 @@ FILMS_LINK = environ.get('FILMS_LINK', 'https://t.me/cinema_filx_updates')
 LOG_CHANNEL = int(environ.get('LOG_CHANNEL', 0))
 SUPPORT_CHAT = environ.get('SUPPORT_CHAT', 'cinema_filx_updates')
 
-# OMDb API Key for Advanced IMDb / OMDb Fallback Search
 OMDB_API_KEY = environ.get('OMDB_API_KEY', "")
 
-P_TTI_SHOW_OFF = is_enabled((environ.get('P_TTI_SHOW_OFF', "False")), False)
-IMDB = is_enabled((environ.get('IMDB', "True")), True)
-SINGLE_BUTTON = is_enabled((environ.get('SINGLE_BUTTON', "False")), False)
+P_TTI_SHOW_OFF = is_enabled(environ.get('P_TTI_SHOW_OFF', False), False)
+IMDB = is_enabled(environ.get('IMDB', True), True)
+SINGLE_BUTTON = is_enabled(environ.get('SINGLE_BUTTON', False), False)
 CUSTOM_FILE_CAPTION = environ.get("CUSTOM_FILE_CAPTION", f"{script.FILE_CAPTION}")
 BATCH_FILE_CAPTION = environ.get("BATCH_FILE_CAPTION", CUSTOM_FILE_CAPTION)
 
 IMDB_TEMPLATE = environ.get("IMDB_TEMPLATE", "<b><i>️🧿 𝘔𝘰𝘷𝘪𝘦 𝘕𝘢𝘮𝘦 : {search}\n\n🛡𝘙𝘦𝘲𝘶𝘦𝘴𝘵𝘦𝘥 𝘉𝘺 : {message.from_user.mention}\n🧩𝘎𝘳𝘰𝘶𝘱 : {message.chat.title}</i></b>")
-LONG_IMDB_DESCRIPTION = is_enabled(environ.get("LONG_IMDB_DESCRIPTION", "False"), False)
-SPELL_CHECK_REPLY = is_enabled(environ.get("SPELL_CHECK_REPLY", "True"), True)
+LONG_IMDB_DESCRIPTION = is_enabled(environ.get("LONG_IMDB_DESCRIPTION", False), False)
+SPELL_CHECK_REPLY = is_enabled(environ.get("SPELL_CHECK_REPLY", True), True)
 MAX_LIST_ELM = environ.get("MAX_LIST_ELM", None)
+if MAX_LIST_ELM:
+    MAX_LIST_ELM = int(MAX_LIST_ELM)
 
 INDEX_REQ_CHANNEL = int(environ.get('INDEX_REQ_CHANNEL', LOG_CHANNEL))
-FILE_STORE_CHANNEL = [int(ch) for ch in (environ.get('FILE_STORE_CHANNEL', '')).split()]
-MELCOW_NEW_USERS = is_enabled((environ.get('MELCOW_NEW_USERS', "True")), True)
-PROTECT_CONTENT = is_enabled((environ.get('PROTECT_CONTENT', "False")), False)
-PUBLIC_FILE_STORE = is_enabled((environ.get('PUBLIC_FILE_STORE', "True")), True)
+FILE_STORE_CHANNEL = [int(ch) for ch in (environ.get('FILE_STORE_CHANNEL', '')).split() if ch]
+MELCOW_NEW_USERS = is_enabled(environ.get('MELCOW_NEW_USERS', True), True)
+PROTECT_CONTENT = is_enabled(environ.get('PROTECT_CONTENT', False), False)
+PUBLIC_FILE_STORE = is_enabled(environ.get('PUBLIC_FILE_STORE', True), True)
 
 # --------------------------------------------------------------------------- #
 #  Startup Logger String Generation                                          #
