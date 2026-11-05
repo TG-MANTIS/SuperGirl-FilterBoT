@@ -48,8 +48,13 @@ ID - <code>{}</code>
 Name - {}
 """
 
+    # Updated Custom File Caption with Quality, Duration, Language, and Subtitles
     FILE_CAPTION = """<b><blockquote>📚 <code>{file_name}</code> </blockquote></b>
+
+🎬 <b>{quality}</b> | ⏳ <b>{duration}</b>
+🔊 <b>{language}</b>
+💬 <b>{subtitles}</b>
     
-    <b>[©️𝐓𝐞𝐚𝐦 𝐂𝐢𝐧𝐞𝐦𝐚 𝐅𝐢𝐥𝐱™️](https://t.me/+iEbhY7mM4oE1OTVl)</b>"""
+<b>[©️𝐓𝐞𝐚𝐦 𝐂𝐢𝐧𝐞𝐦𝐚 𝐅𝐢𝐥𝐱™️](https://t.me/+iEbhY7mM4oE1OTVl)</b>"""
 
     START_TXT_GROUP = """ഹലോ {}\n\n• എന്താണ് സഹോദരന് വേണ്ടത്? സ്റ്റാർട്ട്‌ ആയപ്പോ ഒരു സുഖം കിട്ടി അല്ലേ.. 🤭😜\n\n• എന്തായാലും വന്നതല്ലേ. ഇവിടെ കാണുന്ന ചാനൽ & ഗ്രൂപ്പ് ൽ ഒക്കെ Join ചെയ്തേക്ക് 😎"""
