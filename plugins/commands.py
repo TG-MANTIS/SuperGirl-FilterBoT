@@ -398,26 +398,32 @@ async def start_handler(client: Client, message):
 
 
 # --------------------------------------------------------------------------- #
-#  /assign_db Command Handler (Admin Only - Assign Paid DB Slot)             #
+#  /assign_db Command Handler (Admin Only - Auto Assign Paid DB with Dual Support) #
 # --------------------------------------------------------------------------- #
 
 @Client.on_message(filters.command('assign_db') & filters.user(ADMINS))
 async def assign_database_handler(client: Client, message):
     """
-    Assigns a dedicated paid database slot to a user's clone bot.
+    Automatically assigns a free dedicated paid database slot supporting both User ID and Bot Username.
     """
     if len(message.command) < 2:
         return await message.reply(
             "<b>⚠️ Usage Error!</b>\n\n"
-            "Please provide the User ID to assign a database.\n"
-            "<b>Example:</b> <code>/assign_db 123456789</code>",
+            "Please provide the User ID or Bot Username to assign a database.\n"
+            "<b>Example:</b> <code>/assign_db MyMovieBot</code> (or User ID <code>123456789</code>)",
             parse_mode=enums.ParseMode.HTML
         )
     
-    try:
-        target_user_id = int(message.command[1])
-    except ValueError:
-        return await message.reply("⚠️ Invalid User ID! Please provide a valid numeric Telegram User ID.")
+    identifier = message.command[1].strip()
+    
+    # Check whether identifier is User ID (numeric) or Username (string)
+    target_user_id = None
+    target_username = None
+    
+    if identifier.isdigit():
+        target_user_id = int(identifier)
+    else:
+        target_username = identifier.lstrip('@')
 
     from info import (
         PAID_DB_1, PAID_DB_2, PAID_DB_3, PAID_DB_4, PAID_DB_5,
@@ -436,19 +442,29 @@ async def assign_database_handler(client: Client, message):
         return await message.reply("❌ Main database connection error! Cannot proceed with assignment.")
 
     mapping_col = main_db["user_db_mappings"]
-    existing = await mapping_col.find_one({"user_id": target_user_id})
+    
+    # Check if this user_id or username already has an assigned slot
+    query_filter = {"$or": []}
+    if target_user_id:
+        query_filter["$or"].append({"user_id": target_user_id})
+    if target_username:
+        query_filter["$or"].append({"username": target_username})
+        
+    existing = await mapping_col.find_one(query_filter) if query_filter["$or"] else None
     if existing:
         return await message.reply(
-            f"<b>⚠️ User ID <code>{target_user_id}</code> already has an assigned database slot!</b>\n"
+            f"<b>⚠️ Target <code>{identifier}</code> already has an assigned database slot!</b>\n"
             f"Slot Name: <code>{existing.get('slot_name')}</code>",
             parse_mode=enums.ParseMode.HTML
         )
 
+    # Find already assigned URIs
     assigned_uris = set()
     async for doc in mapping_col.find({}):
         if "db_uri" in doc:
             assigned_uris.add(doc["db_uri"])
 
+    # Find the next available free slot automatically
     free_slot_name = None
     free_slot_uri = None
     for slot_name, uri in paid_pool:
@@ -463,22 +479,26 @@ async def assign_database_handler(client: Client, message):
     try:
         await mapping_col.insert_one({
             "user_id": target_user_id,
+            "username": target_username,
+            "identifier": identifier,
             "slot_name": free_slot_name,
             "db_uri": free_slot_uri
         })
         
         await message.reply(
             f"<b>✅ Successfully Assigned Database!</b>\n\n"
-            f"👤 <b>User ID:</b> <code>{target_user_id}</code>\n"
+            f"🎯 <b>Target:</b> <code>{identifier}</code>\n"
             f"📂 <b>Assigned Slot:</b> <code>{free_slot_name}</code>\n"
             f"🔗 <b>Status:</b> Dedicated database active!",
             parse_mode=enums.ParseMode.HTML
         )
 
+        # Notify the clone bot if active
         try:
             from plugins.clone import ACTIVE_CLONES
-            if target_user_id in ACTIVE_CLONES:
-                clone_bot_client = ACTIVE_CLONES[target_user_id]
+            target_key = target_user_id if target_user_id else identifier
+            if target_key in ACTIVE_CLONES:
+                clone_bot_client = ACTIVE_CLONES[target_key]
                 notification_text = (
                     f"<b>🎉 Congratulations! Your Dedicated Database is Now Active!</b>\n\n"
                     f"📂 <b>Assigned Slot:</b> <code>{free_slot_name}</code>\n"
@@ -487,21 +507,12 @@ async def assign_database_handler(client: Client, message):
                 )
                 
                 close_keyboard = InlineKeyboardMarkup([[InlineKeyboardButton("✘ Close", callback_data="close_data")]])
-                sent_notify_msg = await clone_bot_client.send_message(
-                    chat_id=target_user_id,
+                await clone_bot_client.send_message(
+                    chat_id=target_key,
                     text=notification_text,
                     reply_markup=close_keyboard,
                     parse_mode=enums.ParseMode.HTML
                 )
-                
-                async def delete_notification_after_delay(client_inst, chat_id, msg_id, delay):
-                    await asyncio.sleep(delay)
-                    try:
-                        await client_inst.delete_messages(chat_id=chat_id, message_ids=msg_id)
-                    except Exception as err:
-                        logger.error(f"Failed to auto-delete DB assignment notification: {err}")
-
-                asyncio.create_task(delete_notification_after_delay(clone_bot_client, target_user_id, sent_notify_msg.id, 86400))
         except Exception as err:
             logger.error(f"Failed to send clone bot notification: {err}")
 
