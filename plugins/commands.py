@@ -377,110 +377,6 @@ async def start(client, message):
 
 
 # --------------------------------------------------------------------------- #
-#  /status Command Handler (Dual Mode: Paid Users vs Free Users Stats)        #
-# --------------------------------------------------------------------------- #
-
-@Client.on_message(filters.command('status') & filters.private)
-async def bot_status_handler(client, message):
-    user_id = message.from_user.id
-    stats_msg = await message.reply("📊 Fetching statistics... Please wait.")
-    
-    try:
-        from database.ia_filterdb import db as main_db, get_databases_stats, main_media_classes
-        
-        if not main_db:
-            return await stats_msg.edit_text("❌ Database connection error!")
-        
-        mapping_col = main_db["user_db_mappings"]
-        user_mapping = await mapping_col.find_one({"user_id": user_id})
-        
-        # Helper function to format size
-        def readable_size(size_in_bytes):
-            if size_in_bytes == 0:
-                return "0 MB"
-            units = ["B", "KB", "MB", "GB", "TB"]
-            i = 0
-            while size_in_bytes >= 1024 and i < len(units) - 1:
-                size_in_bytes /= 1024.0
-                i += 1
-            return f"{size_in_bytes:.2f} {units[i]}"
-
-        # Close Button Markup
-        close_keyboard = InlineKeyboardMarkup(
-            [[InlineKeyboardButton("✘ Cʟᴏꜱᴇ", callback_data="close_data")]]
-        )
-
-        # ------------------------------------------------------------- #
-        # CASE 1: PAID USER (Dedicated DB Stats)                        #
-        # ------------------------------------------------------------- #
-        if user_mapping:
-            slot_name = user_mapping.get("slot_name", "Paid Slot")
-            stats_data = await get_databases_stats(user_id=user_id)
-            
-            total_files = 0
-            total_size_bytes = 0
-            
-            for st in stats_data:
-                total_files += st.get("count", 0)
-                total_size_bytes += st.get("size", 0)
-            
-            storage_used = readable_size(total_size_bytes)
-            
-            status_text = (
-                f"<b>💎 Dedicated Database Status (Paid Tier)</b>\n\n"
-                f"👤 <b>User ID:</b> <code>{user_id}</code>\n"
-                f"📂 <b>Assigned Slot:</b> <code>{slot_name}</code>\n"
-                f"📁 <b>Total Files in Your DB:</b> <code>{total_files:,}</code>\n"
-                f"💾 <b>Storage Used:</b> <code>{storage_used}</code>\n"
-                f"🟢 <b>Status:</b> Active & Running smoothly!"
-            )
-            await stats_msg.edit_text(status_text, parse_mode=enums.ParseMode.HTML, reply_markup=close_keyboard)
-            return
-
-        # ------------------------------------------------------------- #
-        # CASE 2: FREE / NORMAL USER (Main Global DB & Users Stats)     #
-        # ------------------------------------------------------------- #
-        else:
-            total_global_files = 0
-            for MediaModel in main_media_classes:
-                try:
-                    count = await MediaModel.count_documents({})
-                    total_global_files += count
-                except:
-                    pass
-            
-            total_users = 0
-            total_chats = 0
-            try:
-                total_users = await db.total_users_count()
-                total_chats = await db.total_chat_count()
-            except Exception as e:
-                logger.error(f"Error fetching user/chat counts: {e}")
-            
-            try:
-                db_stats = await main_db.command("dbStats")
-                main_size_bytes = db_stats.get("dataSize", 0)
-                main_storage = readable_size(main_size_bytes)
-            except:
-                main_storage = "N/A"
-
-            status_text = (
-                f"<b>📊 Bot Statistics (Free Tier)</b>\n\n"
-                f"🌐 <b>Global Files Available:</b> <code>{total_global_files:,}</code>\n"
-                f"👥 <b>Total Bot Users:</b> <code>{total_users:,}</code>\n"
-                f"💬 <b>Total Connected Chats:</b> <code>{total_chats:,}</code>\n"
-                f"💾 <b>Global DB Storage:</b> <code>{main_storage}</code>\n\n"
-                f"💡 <i>Want your own dedicated database? Contact the admin to upgrade!</i>"
-            )
-            await stats_msg.edit_text(status_text, parse_mode=enums.ParseMode.HTML, reply_markup=close_keyboard)
-            return
-
-    except Exception as e:
-        logger.error(f"Error in status command for user {user_id}: {e}")
-        await stats_msg.edit_text("❌ Failed to retrieve statistics. Please try again later.")
-
-
-# --------------------------------------------------------------------------- #
 #  /assign_db Command Handler (Admin Only - Assign Paid DB Slot)             #
 # --------------------------------------------------------------------------- #
 
@@ -543,11 +439,13 @@ async def assign_database(client, message):
         return await message.reply("❌ All Paid Database slots are currently full! Please add more slots in configuration.")
 
     try:
+        # Save mapping to database
         await mapping_col.insert_one({
             "user_id": target_user_id,
             "slot_name": free_slot_name,
             "db_uri": free_slot_uri
         })
+        
         await message.reply(
             f"<b>✅ Successfully Assigned Database!</b>\n\n"
             f"👤 <b>User ID:</b> <code>{target_user_id}</code>\n"
@@ -555,7 +453,50 @@ async def assign_database(client, message):
             f"🔗 <b>Status:</b> Dedicated database active!",
             parse_mode=enums.ParseMode.HTML
         )
+
+        # ------------------------------------------------------------- #
+        # AUTO NOTIFICATION TO USER'S CLONE BOT (With Close Button & 24hr Fallback) #
+        # ------------------------------------------------------------- #
+        try:
+            from plugins.clone import ACTIVE_CLONES
+            if target_user_id in ACTIVE_CLONES:
+                clone_bot_client = ACTIVE_CLONES[target_user_id]
+                notification_text = (
+                    f"<b>🎉 Congratulations! Your Dedicated Database is Now Active!</b>\n\n"
+                    f"📂 <b>Assigned Slot:</b> <code>{free_slot_name}</code>\n"
+                    f"🚀 Your bot has been successfully connected to your exclusive storage database.\n"
+                    f"📊 You can now use the /status command here to check your database storage and file counts!"
+                )
+                
+                # Close Button Markup for manual deletion
+                close_keyboard = InlineKeyboardMarkup(
+                    [[InlineKeyboardButton("✘ Cʟᴏꜱᴇ", callback_data="close_data")]]
+                )
+                
+                # Send notification message with Close button
+                sent_notify_msg = await clone_bot_client.send_message(
+                    chat_id=target_user_id,
+                    text=notification_text,
+                    reply_markup=close_keyboard,
+                    parse_mode=enums.ParseMode.HTML
+                )
+                
+                # Background task: Auto-delete after 24 hours if not manually closed by user
+                async def delete_notification_after_delay(client_inst, chat_id, msg_id, delay):
+                    await asyncio.sleep(delay)
+                    try:
+                        await client_inst.delete_messages(chat_id=chat_id, message_ids=msg_id)
+                    except Exception as e:
+                        logger.error(f"Failed to auto-delete db assignment notification: {e}")
+
+                # Run 24-hour backup timer
+                asyncio.create_task(delete_notification_after_delay(clone_bot_client, target_user_id, sent_notify_msg.id, 86400))
+
+        except Exception as e:
+            logger.error(f"Failed to send clone bot notification: {e}")
+
     except Exception as e:
+    
         logger.error(f"Error saving DB mapping: {e}")
         await message.reply(f"❌ Failed to assign database: {e}")
 
