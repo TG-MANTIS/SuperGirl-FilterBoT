@@ -1,28 +1,38 @@
+"""
+Main Bot Entry Point Module
+Initializes the Pyrogram Client, sets up logging, loads banned entities,
+ensures database indexes, starts the aiohttp web server, and manages bot lifecycle.
+"""
+
 import os
 import logging
 import logging.config
+from typing import Union, Optional, AsyncGenerator
 
-# Get logging configurations
+from aiohttp import web
+from pyrogram import Client, __version__, types
+from pyrogram.raw.all import layer
+
+from database.ia_filterdb import Media
+from database.users_chats_db import db
+from info import SESSION, API_ID, API_HASH, BOT_TOKEN, LOG_STR
+from utils import temp
+from plugins import web_server
+
+# Configure logging setup
 logging.config.fileConfig('logging.conf')
 logging.getLogger().setLevel(logging.INFO)
 logging.getLogger("pyrogram").setLevel(logging.ERROR)
 logging.getLogger("imdbpy").setLevel(logging.ERROR)
 
-from pyrogram import Client, __version__
-from pyrogram.raw.all import layer
-from database.ia_filterdb import Media
-from database.users_chats_db import db
-from info import SESSION, API_ID, API_HASH, BOT_TOKEN, LOG_STR
-from utils import temp
-from typing import Union, Optional, AsyncGenerator
-from pyrogram import types
-from aiohttp import web
-from plugins import web_server
-
 PORT = int(os.environ.get("PORT", 8080))
 
-class Bot(Client):
 
+class Bot(Client):
+    """
+    Custom Bot Client inheriting from Pyrogram Client to handle startup,
+    shutdown, web server binding, and helper iterators.
+    """
     def __init__(self):
         super().__init__(
             name=SESSION,
@@ -35,26 +45,38 @@ class Bot(Client):
         )
 
     async def start(self):
+        """
+        Executes startup routines: loads banned users/chats, starts client,
+        ensures media collection indexes, fetches bot info, and starts the web server.
+        """
         b_users, b_chats = await db.get_banned()
         temp.BANNED_USERS = b_users
         temp.BANNED_CHATS = b_chats
+        
         await super().start()
         await Media.ensure_indexes()
+        
         me = await self.get_me()
         temp.ME = me.id
         temp.U_NAME = me.username
         temp.B_NAME = me.first_name
         self.username = '@' + me.username
+        
+        # Start aiohttp web server
         app = web.AppRunner(await web_server())
         await app.setup()
         bind_address = "0.0.0.0"
         await web.TCPSite(app, bind_address, PORT).start()
-        logging.info(f"{me.first_name} with for Pyrogram v{__version__} (Layer {layer}) started on {me.username}.")
+        
+        logging.info(f"{me.first_name} with Pyrogram v{__version__} (Layer {layer}) started successfully on @{me.username}.")
         logging.info(LOG_STR)
 
     async def stop(self, *args):
+        """
+        Executes shutdown routines.
+        """
         await super().stop()
-        logging.info("Bot stopped. Bye.")
+        logging.info("Bot stopped successfully. Goodbye!")
     
     async def iter_messages(
         self,
@@ -62,39 +84,20 @@ class Bot(Client):
         limit: int,
         offset: int = 0,
     ) -> Optional[AsyncGenerator["types.Message", None]]:
-        """Iterate through a chat sequentially.
-        This convenience method does the same as repeatedly calling :meth:`~pyrogram.Client.get_messages` in a loop, thus saving
-        you from the hassle of setting up boilerplate code. It is useful for getting the whole chat messages with a
-        single call.
-        Parameters:
-            chat_id (``int`` | ``str``):
-                Unique identifier (int) or username (str) of the target chat.
-                For your personal cloud (Saved Messages) you can simply use "me" or "self".
-                For a contact that exists in your Telegram address book you can use his phone number (str).
-                
-            limit (``int``):
-                Identifier of the last message to be returned.
-                
-            offset (``int``, *optional*):
-                Identifier of the first message to be returned.
-                Defaults to 0.
-        Returns:
-            ``Generator``: A generator yielding :obj:`~pyrogram.types.Message` objects.
-        Example:
-            .. code-block:: python
-                for message in app.iter_messages("pyrogram", 1, 15000):
-                    print(message.text)
+        """
+        Iterate through chat messages sequentially.
         """
         current = offset
         while True:
             new_diff = min(200, limit - current)
             if new_diff <= 0:
                 return
-            messages = await self.get_messages(chat_id, list(range(current, current+new_diff+1)))
+            messages = await self.get_messages(chat_id, list(range(current, current + new_diff + 1)))
             for message in messages:
                 yield message
                 current += 1
 
 
+# Instantiate and run the bot
 app = Bot()
 app.run()
