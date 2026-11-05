@@ -48,15 +48,71 @@ NON_IMG = """<b>👋 Hello {user_mention},</b>
 💡 <b><u>Search Format:</u></b> <code>Movie Name Year</code> (Eg: <i>Lucifer 2019</i>)"""
 
 
+def get_readable_duration(seconds: int) -> str:
+    """Converts seconds into formatted Hours, Minutes, and Seconds (e.g., 2h 18m 7s)."""
+    if not seconds:
+        return "N/A"
+    seconds = int(seconds)
+    hours = seconds // 3600
+    minutes = (seconds % 3600) // 60
+    secs = seconds % 60
+    
+    parts = []
+    if hours > 0:
+        parts.append(f"{hours}h")
+    if minutes > 0 or hours > 0:
+        parts.append(f"{minutes}m")
+    parts.append(f"{secs}s")
+    return "".join(parts)
+
+
+def parse_file_attributes(file_name: str, duration_sec: int = 0) -> dict:
+    """Extracts Quality, Duration, Language, and Subtitles from file name and duration."""
+    fname_lower = file_name.lower()
+    
+    # Quality Detection
+    quality = "HQ"
+    for q in ["2160p", "4k", "1080p", "720p", "480p", "360p", "hq", "hdrip"]:
+        if q in fname_lower:
+            quality = q.upper()
+            break
+            
+    # Language Detection
+    languages = []
+    lang_map = {
+        "Malayalam": ["malayalam", "mal", "mlm"],
+        "Tamil": ["tamil", "tam"],
+        "Telugu": ["telugu", "tel"],
+        "Hindi": ["hindi", "hin"],
+        "English": ["english", "eng"],
+        "Kannada": ["kannada", "kan"],
+        "Dual Audio": ["dual", "multi"],
+    }
+    for lang, keys in lang_map.items():
+        if any(k in fname_lower for k in keys):
+            languages.append(lang)
+    lang_str = ", ".join(languages) if languages else "Multi / Unknown"
+    
+    # Subtitle Detection
+    subtitles = "English" if ("esub" in fname_lower or "sub" in fname_lower) else "None"
+    
+    # Formatted Duration
+    dur_str = get_readable_duration(duration_sec)
+    
+    return {
+        "quality": quality,
+        "duration": dur_str,
+        "language": lang_str,
+        "subtitles": subtitles
+    }
+
+
 # --------------------------------------------------------------------------- #
 #  Message Handlers (Group & Private Filters)                                 #
 # --------------------------------------------------------------------------- #
 
 @Client.on_message(filters.group & filters.text & filters.incoming)
 async def give_filter_handler(client: Client, message):
-    """
-    Processes incoming group messages to trigger manual filters or auto-filter search.
-    """
     is_manual = await manual_filters(client, message)
     if is_manual is False:
         await auto_filter(client, message)
@@ -64,9 +120,6 @@ async def give_filter_handler(client: Client, message):
 
 @Client.on_message(filters.private & filters.text & filters.incoming)
 async def pm_text_handler(client: Client, message):
-    """
-    Handles incoming private messages, logs them, and triggers auto-filter search.
-    """
     content = message.text
     user_name = message.from_user.first_name
     user_id = message.from_user.id
@@ -91,9 +144,6 @@ async def pm_text_handler(client: Client, message):
 
 @Client.on_callback_query(filters.regex(r"^next"))
 async def next_page_handler(client: Client, query: CallbackQuery):
-    """
-    Manages pagination for search results in inline or chat views.
-    """
     _, req_user_id, key, offset_str = query.data.split("_")
     
     if int(req_user_id) not in [query.from_user.id, 0]:
@@ -210,9 +260,6 @@ async def next_page_handler(client: Client, query: CallbackQuery):
 
 @Client.on_callback_query(filters.regex(r"^(lang_menu|qual_menu|filter_apply|back_main_search)#"))
 async def filter_menu_handler(client: Client, query: CallbackQuery):
-    """
-    Handles language and video quality filter options for search results.
-    """
     data = query.data.split("#")
     action, req_user_id, key = data[0], data[1], data[2]
     
@@ -370,9 +417,6 @@ async def filter_menu_handler(client: Client, query: CallbackQuery):
 
 @Client.on_callback_query()
 async def cb_handler(client: Client, query: CallbackQuery):
-    """
-    Handles general callback queries like connections, settings panels, file downloads, and stats.
-    """
     if query.data == "close_data":
         await query.message.delete()
         
@@ -698,7 +742,10 @@ async def cb_handler(client: Client, query: CallbackQuery):
         title = files.file_name
         size = get_size(files.file_size)
         f_caption = files.caption
+        duration_sec = getattr(files, 'duration', 0) or 0
         chat_id = query.message.chat.id
+        
+        attr = parse_file_attributes(title or "", duration_sec)
         
         if query.message.chat.type == enums.ChatType.PRIVATE:
             grpid = await active_connection(str(query.from_user.id))
@@ -711,12 +758,16 @@ async def cb_handler(client: Client, query: CallbackQuery):
                 f_caption = CUSTOM_FILE_CAPTION.format(
                     file_name='' if title is None else title,
                     file_size='' if size is None else size,
-                    file_caption='' if f_caption is None else f_caption
+                    file_caption='' if f_caption is None else f_caption,
+                    quality=attr['quality'],
+                    duration=attr['duration'],
+                    language=attr['language'],
+                    subtitles=attr['subtitles']
                 )
             except Exception as e:
                 logger.exception(e)
                 
-        if f_caption is None:
+        if f_caption is None or f_caption == "":
             f_caption = f"{title}"
 
         try:
@@ -742,7 +793,8 @@ async def cb_handler(client: Client, query: CallbackQuery):
                     file_id=file_id,
                     caption=f_caption,
                     protect_content=True if ident == "filep" else False,
-                    reply_markup=file_keyboard
+                    reply_markup=file_keyboard,
+                    parse_mode=enums.ParseMode.HTML
                 )
                 await query.answer('📤 Sending file...', show_alert=False)
         except UserIsBlocked:
@@ -772,18 +824,25 @@ async def cb_handler(client: Client, query: CallbackQuery):
         title = files.file_name
         size = get_size(files.file_size)
         f_caption = files.caption
+        duration_sec = getattr(files, 'duration', 0) or 0
+        
+        attr = parse_file_attributes(title or "", duration_sec)
         
         if CUSTOM_FILE_CAPTION:
             try:
                 f_caption = CUSTOM_FILE_CAPTION.format(
                     file_name='' if title is None else title,
                     file_size='' if size is None else size,
-                    file_caption='' if f_caption is None else f_caption
+                    file_caption='' if f_caption is None else f_caption,
+                    quality=attr['quality'],
+                    duration=attr['duration'],
+                    language=attr['language'],
+                    subtitles=attr['subtitles']
                 )
             except Exception as e:
                 logger.exception(e)
                 
-        if f_caption is None:
+        if f_caption is None or f_caption == "":
             f_caption = f"{title}"
             
         await query.answer('📤 Sending file...', show_alert=False)
@@ -803,7 +862,8 @@ async def cb_handler(client: Client, query: CallbackQuery):
             file_id=file_id,
             caption=f_caption,
             protect_content=True if ident == 'checksubp' else False,
-            reply_markup=file_keyboard
+            reply_markup=file_keyboard,
+            parse_mode=enums.ParseMode.HTML
         )
         
     elif query.data == "pages":
@@ -976,10 +1036,6 @@ async def cb_handler(client: Client, query: CallbackQuery):
 # --------------------------------------------------------------------------- #
 
 async def auto_filter(client: Client, msg, spoll=False):
-    """
-    Core auto-filter engine that searches media files, formats buttons,
-    fetches IMDb posters, and handles spell-check responses.
-    """
     if not spoll:
         message = msg
         chat_id = message.chat.id
@@ -1113,9 +1169,6 @@ async def auto_filter(client: Client, msg, spoll=False):
 # --------------------------------------------------------------------------- #
 
 async def advantage_spell_chok(msg):
-    """
-    Sends spell check / no results notification card with search buttons in group chats.
-    """
     mv_rqst = msg.text
     search = msg.text.replace(" ", "+")
     btn = [[
@@ -1135,9 +1188,6 @@ async def advantage_spell_chok(msg):
 
 
 async def manual_filters(client: Client, message, text=False):
-    """
-    Checks and processes manual group filters matching keywords.
-    """
     group_id = message.chat.id
     name = text or message.text
     reply_id = message.reply_to_message.id if message.reply_to_message else message.id
