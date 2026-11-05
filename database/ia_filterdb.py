@@ -1,3 +1,9 @@
+"""
+Interactive Filter Database Module
+Manages multi-database asynchronous connections (Main and Paid pools),
+umongo document models, file indexing, saving, searching, and file details retrieval.
+"""
+
 import logging
 from struct import pack
 import re
@@ -21,7 +27,6 @@ logger.setLevel(logging.INFO)
 #  Dynamic Multiple Database Initialization (Main & Paid Pools)               #
 # --------------------------------------------------------------------------- #
 
-# Main Bot Databases (1 to 3)
 main_db_uris = [DATABASE_URI]
 if DATABASE_URI_2:
     main_db_uris.append(DATABASE_URI_2)
@@ -42,8 +47,8 @@ for idx, uri in enumerate(main_db_uris, start=1):
             main_dbs.append(db_inst)
             main_instances.append(instance_inst)
             logger.info(f"Main Database {idx} connected successfully!")
-        except Exception as e:
-            logger.error(f"Failed to connect Main Database {idx}: {e}")
+        except Exception as err:
+            logger.error(f"Failed to connect Main Database {idx}: {err}")
 
 # Fallback primary client/db
 db = main_dbs[0] if main_dbs else None
@@ -55,13 +60,14 @@ paid_db_uris = {
     6: PAID_DB_6, 7: PAID_DB_7, 8: PAID_DB_8, 9: PAID_DB_9, 10: PAID_DB_10
 }
 
-# Cache for dynamic paid db connections to avoid reconnecting every time
 paid_clients_cache = {}
 paid_dbs_cache = {}
 paid_instances_cache = {}
 
 def get_paid_db_instance(db_uri):
-    """Dynamically get or create connection for a Paid DB URI"""
+    """
+    Dynamically retrieves or creates a connection for a Paid DB URI.
+    """
     if not db_uri:
         return None, None, None
     if db_uri in paid_dbs_cache:
@@ -77,8 +83,8 @@ def get_paid_db_instance(db_uri):
         paid_instances_cache[db_uri] = inst
         logger.info("Successfully connected to a Paid Database slot!")
         return client, database, inst
-    except Exception as e:
-        logger.error(f"Failed to connect Paid Database URI: {e}")
+    except Exception as err:
+        logger.error(f"Failed to connect Paid Database URI: {err}")
         return None, None, None
 
 # Register Media model for Main database instances
@@ -101,7 +107,9 @@ for inst in main_instances:
 
 
 async def get_user_assigned_db_uri(user_id):
-    """Helper function to fetch assigned paid DB URI for a user from main database mapping collection"""
+    """
+    Fetches the assigned paid database URI for a specific user from the mapping collection.
+    """
     if not db:
         return None
     try:
@@ -109,23 +117,20 @@ async def get_user_assigned_db_uri(user_id):
         record = await mapping_col.find_one({"user_id": int(user_id)})
         if record and "db_uri" in record:
             return record["db_uri"]
-    except Exception as e:
-        logger.error(f"Error fetching DB mapping for user {user_id}: {e}")
+    except Exception as err:
+        logger.error(f"Error fetching DB mapping for user {user_id}: {err}")
     return None
 
 
 async def get_media_model_for_user(user_id=None):
     """
-    Returns the appropriate Media model and database instance.
-    If user_id is provided and has an assigned paid DB, returns that paid DB model.
-    Otherwise, returns main database media classes.
+    Returns the appropriate Media model and database instance based on user assignment.
     """
     if user_id:
         paid_uri = await get_user_assigned_db_uri(user_id)
         if paid_uri:
             _, paid_db, paid_inst = get_paid_db_instance(paid_uri)
             if paid_inst:
-                # Check if model already registered for this instance, else define dynamically
                 class PaidMedia(Document):
                     file_id = fields.StrField(attribute='_id')
                     file_ref = fields.StrField(allow_none=True)
@@ -139,24 +144,23 @@ async def get_media_model_for_user(user_id=None):
                         indexes = ('$file_name', )
                         collection_name = COLLECTION_NAME
                 
-                # Register to paid instance safely
                 try:
                     paid_inst.register(PaidMedia)
                 except Exception:
-                    pass # Already registered
+                    pass
                 return [PaidMedia], paid_db
 
-    # Default to Main database models
     return main_media_classes, db
 
 
 async def save_file(media, user_id=None):
-    """Save file in database (Main DBs or User's Assigned Paid DB dynamically)"""
+    """
+    Saves a media file into the appropriate database (Main DBs or User's Assigned Paid DB).
+    """
     file_id, file_ref = unpack_new_file_id(media.file_id)
     file_name = re.sub(r"(_|\-|\.|\+)", " ", str(media.file_name))
     
     media_classes, _ = await get_media_model_for_user(user_id)
-    
     success = False
     status_code = 2
     
@@ -182,16 +186,17 @@ async def save_file(media, user_id=None):
         except DuplicateKeyError:
             logger.warning(f'{getattr(media, "file_name", "NO_FILE")} is already saved in database.')
             return False, 0
-        except Exception as e:
-            logger.warning(f'Could not save file: {e}. Trying next...')
+        except Exception as err:
+            logger.warning(f'Could not save file: {err}. Trying next...')
             continue
 
     return success, status_code
 
 
 async def get_search_results(query, file_type=None, max_results=7, offset=0, filter=False, user_id=None):
-    """For given query return results from appropriate database (Main or User's Paid DB)"""
-
+    """
+    Searches for media files matching the query across the appropriate database.
+    """
     query = query.strip()
     if not query:
         raw_pattern = '.'
@@ -202,7 +207,7 @@ async def get_search_results(query, file_type=None, max_results=7, offset=0, fil
     
     try:
         regex = re.compile(raw_pattern, flags=re.IGNORECASE)
-    except:
+    except Exception:
         return [], '', 0
 
     if USE_CAPTION_FILTER:
@@ -214,7 +219,6 @@ async def get_search_results(query, file_type=None, max_results=7, offset=0, fil
         query_filter['file_type'] = file_type
 
     media_classes, _ = await get_media_model_for_user(user_id)
-
     all_files = []
     total_results = 0
 
@@ -227,8 +231,8 @@ async def get_search_results(query, file_type=None, max_results=7, offset=0, fil
             cursor.sort('$natural', -1)
             files = await cursor.to_list(length=100)
             all_files.extend(files)
-        except Exception as e:
-            logger.error(f"Error searching in database: {e}")
+        except Exception as err:
+            logger.error(f"Error searching in database {idx}: {err}")
 
     all_files.sort(key=lambda x: str(getattr(x, 'file_id', '')), reverse=True)
 
@@ -237,12 +241,13 @@ async def get_search_results(query, file_type=None, max_results=7, offset=0, fil
         next_offset = ''
 
     paginated_files = all_files[offset:offset + max_results]
-
     return paginated_files, next_offset, total_results
 
 
 async def get_file_details(query, user_id=None):
-    """Find file details across active database instances"""
+    """
+    Retrieves file details using file ID across active database instances.
+    """
     filter_query = {'file_id': query}
     media_classes, _ = await get_media_model_for_user(user_id)
     for MediaModel in media_classes:
@@ -257,7 +262,9 @@ async def get_file_details(query, user_id=None):
 
 
 async def get_databases_stats(user_id=None):
-    """Get individual file count and storage size"""
+    """
+    Retrieves individual file counts and storage size statistics.
+    """
     stats = []
     media_classes, target_db = await get_media_model_for_user(user_id)
     for idx, MediaModel in enumerate(media_classes, start=1):
@@ -270,8 +277,8 @@ async def get_databases_stats(user_id=None):
                 "count": count,
                 "size": storage_size
             })
-        except Exception as e:
-            logger.error(f"Error fetching stats: {e}")
+        except Exception as err:
+            logger.error(f"Error fetching stats for DB {idx}: {err}")
             stats.append({
                 "db_index": idx,
                 "count": 0,
@@ -283,7 +290,6 @@ async def get_databases_stats(user_id=None):
 def encode_file_id(s: bytes) -> str:
     r = b""
     n = 0
-
     for i in s + bytes([22]) + bytes([4]):
         if i == 0:
             n += 1
@@ -291,9 +297,7 @@ def encode_file_id(s: bytes) -> str:
             if n:
                 r += b"\x00" + bytes([n])
                 n = 0
-
             r += bytes([i])
-
     return base64.urlsafe_b64encode(r).decode().rstrip("=")
 
 
@@ -302,7 +306,9 @@ def encode_file_ref(file_ref: bytes) -> str:
 
 
 def unpack_new_file_id(new_file_id):
-    """Return file_id, file_ref"""
+    """
+    Unpacks and decodes a Telegram file ID into file_id and file_ref strings.
+    """
     decoded = FileId.decode(new_file_id)
     file_id = encode_file_id(
         pack(
