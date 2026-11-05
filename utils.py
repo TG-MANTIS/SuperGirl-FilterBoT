@@ -1,24 +1,28 @@
-import logging
-from pyrogram.errors import InputUserDeactivated, UserNotParticipant, FloodWait, UserIsBlocked, PeerIdInvalid
-from info import AUTH_CHANNEL, LONG_IMDB_DESCRIPTION, MAX_LIST_ELM, OMDB_API_KEY
-import asyncio
-from imdbinfo import search_title as imdbinfo_search_title, get_movie as imdbinfo_get_movie, TitleType
-from pyrogram.types import Message, InlineKeyboardButton
-from pyrogram import enums
-from typing import Union
-import re
+"""
+Core Utility Functions and Helper Modules
+Handles IMDb and OMDb lookups, user subscription checks, message broadcasting,
+button parsing, and general utility formatting.
+"""
+
 import os
+import re
+import asyncio
+import logging
 from datetime import datetime
-from typing import List
-from database.users_chats_db import db
-from bs4 import BeautifulSoup
+from typing import Union, Optional, AsyncGenerator, List
+
 import aiohttp
 import httpx
+from bs4 import BeautifulSoup
+from pyrogram import Client, enums
+from pyrogram.types import Message, InlineKeyboardButton
+from pyrogram.errors import InputUserDeactivated, UserNotParticipant, FloodWait, UserIsBlocked, PeerIdInvalid
+from imdbinfo import search_title as imdbinfo_search_title, get_movie as imdbinfo_get_movie, TitleType
 
-# --------------------------------------------------------------------------- #
-#  Mantis Bots™ - Core Utility Functions & Helpers                             #
-# --------------------------------------------------------------------------- #
+from info import AUTH_CHANNEL, LONG_IMDB_DESCRIPTION, MAX_LIST_ELM, OMDB_API_KEY
+from database.users_chats_db import db
 
+# Configure logging setup
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
 
@@ -31,8 +35,11 @@ SMART_OPEN = '“'
 SMART_CLOSE = '”'
 START_CHAR = ('\'', '"', SMART_OPEN)
 
-# Temporary Storage for Bot Status and Settings
+
 class temp(object):
+    """
+    Temporary global storage for bot status, runtime states, and settings cache.
+    """
     BANNED_USERS = []
     BANNED_CHATS = []
     ME = None
@@ -43,8 +50,11 @@ class temp(object):
     B_NAME = None
     SETTINGS = {}
 
-# Channel Subscription Verification Helper
-async def is_subscribed(bot, query):
+
+async def is_subscribed(bot, query) -> bool:
+    """
+    Checks if a user is subscribed to the mandatory Auth Channel.
+    """
     try:
         await bot.get_chat(int(AUTH_CHANNEL))
         user = await bot.get_chat_member(int(AUTH_CHANNEL), query.from_user.id)
@@ -58,14 +68,19 @@ async def is_subscribed(bot, query):
             return True
     return False
 
+
 class _ImdbioFakeMovie:
-    """IMDb Search Result Wrapper to maintain compatibility."""
+    """
+    IMDb Search Result Wrapper to maintain compatibility.
+    """
     def __init__(self, m):
         self._m = m
         self.movieID = f"imdbio_{m.imdb_id}"
+
     def get(self, k, default=None):
         _map = {'title': 'title', 'year': 'year', 'kind': 'kind'}
         return getattr(self._m, _map.get(k, k), default)
+
 
 def _first_attr(obj, *names, default=None):
     for n in names:
@@ -74,13 +89,17 @@ def _first_attr(obj, *names, default=None):
             return v
     return default
 
+
 def _cat_names(movie, key):
     categories = getattr(movie, "categories", None) or {}
     people = categories.get(key, [])
     return list_to_str([getattr(p, "name", str(p)) for p in people]) if people else "N/A"
 
+
 async def _imdbio_search(title, year=None, bulk=False, _retry=True):
-    """Internal search handler via IMDbInfo API with automatic fallback."""
+    """
+    Internal search handler via IMDbInfo API with automatic OMDb fallback.
+    """
     try:
         year_int = int(year) if year else None
         result = await asyncio.to_thread(
@@ -106,8 +125,11 @@ async def _imdbio_search(title, year=None, bulk=False, _retry=True):
     imdb_id = result.titles[0].imdb_id
     return await _imdbio_get_details(imdb_id) if imdb_id else await _omdb_search(title, year, bulk)
 
+
 async def _imdbio_get_details(imdb_id):
-    """Fetch complete movie/series metadata securely."""
+    """
+    Fetch complete movie/series metadata securely via IMDbInfo.
+    """
     try:
         movie = await asyncio.to_thread(imdbinfo_get_movie, imdb_id)
     except Exception as e:
@@ -168,18 +190,22 @@ async def _imdbio_get_details(imdb_id):
         '_source': 'imdbinfo',
     }
 
+
 class _OmdbFakeMovie:
     def __init__(self, m):
         self._m = m
         self.movieID = f"omdb_{m.get('imdbID')}"
+
     def get(self, k, default=None):
         _map = {'title': 'Title', 'year': 'Year', 'kind': 'Type'}
         return self._m.get(_map.get(k, k), default)
+
 
 def _hq_poster(url):
     if not url or url == "N/A":
         return None
     return re.sub(r'\._V1_[^/]*?(?=\.\w+$)', '', url)
+
 
 async def _omdb_search(title, year=None, bulk=False):
     if not OMDB_API_KEY:
@@ -204,6 +230,7 @@ async def _omdb_search(title, year=None, bulk=False):
     if bulk:
         return [_OmdbFakeMovie(r) for r in results[:10]]
     return await _omdb_get_details(results[0]["imdbID"])
+
 
 async def _omdb_get_details(imdb_id):
     if not OMDB_API_KEY:
@@ -263,8 +290,11 @@ async def _omdb_get_details(imdb_id):
         '_source': 'omdb',
     }
 
-# Main Poster Fetcher Handler
+
 async def get_poster(query, bulk=False, id=False, file=None):
+    """
+    Main Poster Fetcher Handler for IMDb and OMDb queries.
+    """
     if id:
         if isinstance(query, str) and query.startswith("omdb_"):
             return await _omdb_get_details(query[len("omdb_"):])
@@ -288,8 +318,11 @@ async def get_poster(query, bulk=False, id=False, file=None):
 
     return await _imdbio_search(title, year=year, bulk=bulk)
 
-# Broadcast Handler with Exception Management
+
 async def broadcast_messages(user_id, message):
+    """
+    Broadcast Handler with robust exception and status management.
+    """
     try:
         await message.copy(chat_id=user_id)
         return True, "Success"
@@ -310,8 +343,11 @@ async def broadcast_messages(user_id, message):
     except Exception as e:
         return False, "Error"
 
-# Google Web Search Scraper
+
 async def search_gagala(text):
+    """
+    Google Web Search Scraper helper.
+    """
     usr_agent = {
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/115.0.0.0 Safari/537.36'
     }
@@ -325,23 +361,32 @@ async def search_gagala(text):
     titles = soup.find_all('h3')
     return [title.getText() for title in titles]
 
-# Group Settings Fetcher & Cacher
+
 async def get_settings(group_id):
+    """
+    Fetches and caches group settings.
+    """
     settings = temp.SETTINGS.get(group_id)
     if not settings:
         settings = await db.get_settings(group_id)
         temp.SETTINGS[group_id] = settings
     return settings
     
-# Group Settings Saver & Updater
+
 async def save_group_settings(group_id, key, value):
+    """
+    Saves and updates group settings.
+    """
     current = await get_settings(group_id)
     current[key] = value
     temp.SETTINGS[group_id] = current
     await db.update_settings(group_id, current)
 
-# Human Readable File Size Formatter
+
 def get_size(size):
+    """
+    Converts bytes into human-readable file size strings.
+    """
     units = ["Bytes", "KB", "MB", "GB", "TB", "PB", "EB"]
     size = float(size)
     i = 0
@@ -350,9 +395,11 @@ def get_size(size):
         size /= 1024.0
     return "%.2f %s" % (size, units[i])
 
+
 def split_list(l, n):
     for i in range(0, len(l), n):
         yield l[i:i + n]  
+
 
 def get_file_id(msg: Message):
     if msg.media:
@@ -363,6 +410,7 @@ def get_file_id(msg: Message):
             if obj:
                 setattr(obj, "message_type", message_type)
                 return obj
+
 
 def extract_user(message: Message) -> Union[int, str]:
     user_id = None
@@ -390,6 +438,7 @@ def extract_user(message: Message) -> Union[int, str]:
         user_first_name = message.from_user.first_name
     return (user_id, user_first_name)
 
+
 def list_to_str(k):
     if not k:
         return "N/A"
@@ -400,6 +449,7 @@ def list_to_str(k):
         return ' '.join(f'{elem}, ' for elem in k)
     else:
         return ' '.join(f'{elem}, ' for elem in k)
+
 
 def last_online(from_user):
     time = ""
@@ -418,6 +468,7 @@ def last_online(from_user):
     elif from_user.status == enums.UserStatus.OFFLINE:
         time += from_user.last_online_date.strftime("%a, %d %b %Y, %H:%M:%S")
     return time
+
 
 def split_quotes(text: str) -> List:
     if not any(text.startswith(char) for char in START_CHAR):
@@ -438,7 +489,11 @@ def split_quotes(text: str) -> List:
         key = text[0] + text[0]
     return list(filter(None, [key, rest]))
 
+
 def parser(text, keyword):
+    """
+    Parses inline buttons and alerts from message texts.
+    """
     if "buttonalert" in text:
         text = (text.replace("\n", "\\n").replace("\t", "\\t"))
     buttons = []
@@ -490,6 +545,7 @@ def parser(text, keyword):
     except:
         return note_data, buttons, None
 
+
 def remove_escapes(text: str) -> str:
     res = ""
     is_escaped = False
@@ -502,6 +558,7 @@ def remove_escapes(text: str) -> str:
         else:
             res += text[counter]
     return res
+
 
 def humanbytes(size):
     if not size:
