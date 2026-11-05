@@ -1,20 +1,32 @@
+# --------------------------------------------------------------------------- #
+#  Mantis Bots™ - Python Dependencies Requirements File                       #
+# --------------------------------------------------------------------------- #
+
+# Telegram Client & Cryptography
 Pyrogram>=2.0.0
 tgcrypto
+
+# Database Drivers & ODMs (MongoDB Async & Umongo)
 motor==2.5.1
 pymongo[srv]==3.12.3
 marshmallow==3.14.1
 umongo==3.0.1
-imdbinfo
-httpx>=0.24.0
-beautifulsoup4
+
+# Web Framework, Networking & Scraping
 aiohttp
 Aiofiles
-psutil==5.9.4
-Pillow
+httpx>=0.24.0
+beautifulsoup4
 requests
 yt-dlp
+
+# IMDb & Data Parsing
+imdbinfo
+jinja2
+telegraph
+
+# System Utilities & Helpers
+psutil==5.9.4
 pytz
 python-dotenv
 git+https://github.com/agronholm/anyio
-jinja2
-telegraph
