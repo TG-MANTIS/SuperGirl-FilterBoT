@@ -17,7 +17,7 @@ from database.users_chats_db import db
 from info import CHANNELS, ADMINS, AUTH_CHANNEL, LOG_CHANNEL, PICS, SET_IMG, BATCH_FILE_CAPTION, CUSTOM_FILE_CAPTION, PROTECT_CONTENT, FORCE_IMG
 from utils import get_settings, get_size, is_subscribed, save_group_settings, temp
 from database.connections_mdb import active_connection
-from plugins.pm_filter import auto_filter
+from plugins.pm_filter import auto_filter, parse_file_attributes
 import re
 import json
 import base64
@@ -74,16 +74,21 @@ async def start_handler(client: Client, message):
         except Exception as err:
             logger.error(f"User Log Error: {err}")
 
-    # Standard Private Start / No File Payload
+    # Standard Private Start / No File Payload (Added 'Create Clone Bot' Button)
     if len(message.command) != 2:
         grpid = await active_connection(str(message.from_user.id))
         settings = await get_settings(int(grpid)) if grpid else None
         start_pic_enabled = settings.get("start_pic", True) if settings else True
 
-        buttons = [[
-            InlineKeyboardButton('✘ Close', callback_data='close_data'),
-            InlineKeyboardButton('About 〄', callback_data='about')
-        ]]
+        buttons = [
+            [
+                InlineKeyboardButton('🤖 Create Clone Bot', callback_data='clone_bot_start')
+            ],
+            [
+                InlineKeyboardButton('✘ Close', callback_data='close_data'),
+                InlineKeyboardButton('About 〄', callback_data='about')
+            ]
+        ]
         reply_markup = InlineKeyboardMarkup(buttons)
         
         if start_pic_enabled:
@@ -133,10 +138,15 @@ async def start_handler(client: Client, message):
         settings = await get_settings(int(grpid)) if grpid else None
         start_pic_enabled = settings.get("start_pic", True) if settings else True
 
-        buttons = [[
-            InlineKeyboardButton('✘ Close', callback_data='close_data'),
-            InlineKeyboardButton('About 〄', callback_data='about')
-        ]]
+        buttons = [
+            [
+                InlineKeyboardButton('🤖 Create Clone Bot', callback_data='clone_bot_start')
+            ],
+            [
+                InlineKeyboardButton('✘ Close', callback_data='close_data'),
+                InlineKeyboardButton('About 〄', callback_data='about')
+            ]
+        ]
         reply_markup = InlineKeyboardMarkup(buttons)
         
         if start_pic_enabled:
@@ -251,16 +261,23 @@ async def start_handler(client: Client, message):
             title = msg.get("title")
             size = get_size(int(msg.get("size", 0)))
             f_caption = msg.get("caption", "")
-            if BATCH_FILE_CAPTION:
+            duration_sec = msg.get("duration", 0) or 0
+            attr = parse_file_attributes(title or "", duration_sec)
+            
+            if CUSTOM_FILE_CAPTION:
                 try:
-                    f_caption = BATCH_FILE_CAPTION.format(
+                    f_caption = CUSTOM_FILE_CAPTION.format(
                         file_name='' if title is None else title, 
                         file_size='' if size is None else size, 
-                        file_caption='' if f_caption is None else f_caption
+                        file_caption='' if f_caption is None else f_caption,
+                        quality=attr['quality'],
+                        duration=attr['duration'],
+                        language=attr['language'],
+                        subtitles=attr['subtitles']
                     )
                 except Exception as err:
                     logger.exception(err)
-            if f_caption is None:
+            if f_caption is None or f_caption == "":
                 f_caption = f"{title}"
             try:
                 await client.send_cached_media(
@@ -268,6 +285,7 @@ async def start_handler(client: Client, message):
                     file_id=msg.get("file_id"),
                     caption=f_caption,
                     protect_content=msg.get('protect', False),
+                    parse_mode=enums.ParseMode.HTML
                 )
             except FloodWait as e:
                 await asyncio.sleep(e.x)
@@ -276,6 +294,7 @@ async def start_handler(client: Client, message):
                     file_id=msg.get("file_id"),
                     caption=f_caption,
                     protect_content=msg.get('protect', False),
+                    parse_mode=enums.ParseMode.HTML
                 )
             except Exception as err:
                 logger.warning(err, exc_info=True)
@@ -297,24 +316,33 @@ async def start_handler(client: Client, message):
         async for msg in client.iter_messages(int(f_chat_id), int(l_msg_id), int(f_msg_id)):
             if msg.media:
                 media = getattr(msg, msg.media.value)
-                if BATCH_FILE_CAPTION:
+                title = getattr(media, 'file_name', '')
+                size = get_size(getattr(media, 'file_size', 0))
+                orig_caption = getattr(msg, 'caption', '') or ''
+                duration_sec = getattr(media, 'duration', 0) or 0
+                attr = parse_file_attributes(title or "", duration_sec)
+                
+                if CUSTOM_FILE_CAPTION:
                     try:
-                        f_caption = BATCH_FILE_CAPTION.format(
-                            file_name=getattr(media, 'file_name', ''), 
-                            file_size=getattr(media, 'file_size', ''), 
-                            file_caption=getattr(msg, 'caption', '')
+                        f_caption = CUSTOM_FILE_CAPTION.format(
+                            file_name=title, 
+                            file_size=size, 
+                            file_caption=orig_caption,
+                            quality=attr['quality'],
+                            duration=attr['duration'],
+                            language=attr['language'],
+                            subtitles=attr['subtitles']
                         )
                     except Exception as err:
                         logger.exception(err)
-                        f_caption = getattr(msg, 'caption', '')
+                        f_caption = orig_caption
                 else:
-                    file_name = getattr(media, 'file_name', '')
-                    f_caption = getattr(msg, 'caption', file_name)
+                    f_caption = orig_caption or title
                 try:
-                    await msg.copy(message.chat.id, caption=f_caption, protect_content=True if protect == "/pbatch" else False)
+                    await msg.copy(message.chat.id, caption=f_caption, protect_content=True if protect == "/pbatch" else False, parse_mode=enums.ParseMode.HTML)
                 except FloodWait as e:
                     await asyncio.sleep(e.x)
-                    await msg.copy(message.chat.id, caption=f_caption, protect_content=True if protect == "/pbatch" else False)
+                    await msg.copy(message.chat.id, caption=f_caption, protect_content=True if protect == "/pbatch" else False, parse_mode=enums.ParseMode.HTML)
                 except Exception as err:
                     logger.exception(err)
                     continue
@@ -346,17 +374,24 @@ async def start_handler(client: Client, message):
             file = getattr(msg, filetype.value)
             title = file.file_name
             size = get_size(file.file_size)
+            duration_sec = getattr(file, 'duration', 0) or 0
+            attr = parse_file_attributes(title or "", duration_sec)
+            
             f_caption = f"<code>{title}</code>"
             if CUSTOM_FILE_CAPTION:
                 try:
                     f_caption = CUSTOM_FILE_CAPTION.format(
                         file_name='' if title is None else title, 
                         file_size='' if size is None else size, 
-                        file_caption=''
+                        file_caption='',
+                        quality=attr['quality'],
+                        duration=attr['duration'],
+                        language=attr['language'],
+                        subtitles=attr['subtitles']
                     )
                 except Exception:
                     pass
-            await msg.edit_caption(f_caption)
+            await msg.edit_caption(f_caption, parse_mode=enums.ParseMode.HTML)
             return
         except Exception:
             pass
@@ -366,16 +401,23 @@ async def start_handler(client: Client, message):
     title = files.file_name
     size = get_size(files.file_size)
     f_caption = files.caption
+    duration_sec = getattr(files, 'duration', 0) or 0
+    attr = parse_file_attributes(title or "", duration_sec)
+    
     if CUSTOM_FILE_CAPTION:
         try:
             f_caption = CUSTOM_FILE_CAPTION.format(
                 file_name='' if title is None else title, 
                 file_size='' if size is None else size, 
-                file_caption='' if f_caption is None else f_caption
+                file_caption='' if f_caption is None else f_caption,
+                quality=attr['quality'],
+                duration=attr['duration'],
+                language=attr['language'],
+                subtitles=attr['subtitles']
             )
         except Exception as err:
             logger.exception(err)
-    if f_caption is None:
+    if f_caption is None or f_caption == "":
         f_caption = f"{files.file_name}"
         
     file_keyboard = InlineKeyboardMarkup([
@@ -394,7 +436,45 @@ async def start_handler(client: Client, message):
         caption=f_caption,
         reply_markup=file_keyboard,
         protect_content=True if pre == 'filep' else False,
+        parse_mode=enums.ParseMode.HTML
     )
+
+
+# --------------------------------------------------------------------------- #
+#  Clone Bot Callback Handler (Triggers clone.py guide from /start menu)       #
+# --------------------------------------------------------------------------- #
+
+@Client.on_callback_query(filters.regex(r"^clone_bot_start$"))
+async def clone_bot_start_callback(client: Client, query):
+    """
+    Triggers the clone bot creation guide when the user clicks 'Create Clone Bot' in PM start menu.
+    """
+    from plugins.clone import clone_intro_handler
+    await clone_bot_start_callback_impl(client, query)
+
+
+async def clone_bot_start_callback_impl(client, query):
+    text = (
+        "<b>🤖 Create Your Own Custom Clone Bot!</b>\n\n"
+        "With your own clone bot, you can host your movies and files under your own bot username, "
+        "manage groups, and customize settings easily!\n\n"
+        "<b>📌 How to Create:</b>\n"
+        "1. Go to @BotFather on Telegram.\n"
+        "2. Send /newbot and follow the steps to create a new bot.\n"
+        "3. Copy the <b>HTTP API Token</b> provided by BotFather.\n"
+        "4. Send the token here using the command:\n"
+        "   <code>/clone [YOUR_BOT_TOKEN]</code>\n\n"
+        "<i>Example:</i> <code>/clone 123456789:ABCdefGhIJKlmNoPQRsTUVwxyZ</code>"
+    )
+    buttons = InlineKeyboardMarkup([
+        [InlineKeyboardButton("🔙 Back to Start", callback_data="start")],
+        [InlineKeyboardButton("Close ✘", callback_data="close_data")]
+    ])
+    try:
+        await query.message.edit_text(text, reply_markup=buttons, parse_mode=enums.ParseMode.HTML)
+    except Exception:
+        await query.message.reply(text, reply_markup=buttons, parse_mode=enums.ParseMode.HTML)
+    await query.answer()
 
 
 # --------------------------------------------------------------------------- #
@@ -424,7 +504,6 @@ async def assign_database_handler(client: Client, message):
 
     identifier = message.command[2].strip()
     
-    # Check whether identifier is User ID (numeric) or Username (string)
     target_user_id = None
     target_username = None
     
@@ -456,7 +535,6 @@ async def assign_database_handler(client: Client, message):
 
     mapping_col = main_db["user_db_mappings"]
     
-    # Check if this specific slot is already occupied
     slot_existing = await mapping_col.find_one({"slot_name": slot_name})
     if slot_existing:
         return await message.reply(
@@ -465,7 +543,6 @@ async def assign_database_handler(client: Client, message):
             parse_mode=enums.ParseMode.HTML
         )
 
-    # Check if this user already has another slot assigned
     query_filter = {"$or": []}
     if target_user_id:
         query_filter["$or"].append({"user_id": target_user_id})
@@ -501,7 +578,6 @@ async def assign_database_handler(client: Client, message):
             parse_mode=enums.ParseMode.HTML
         )
 
-        # Notify the clone bot if active
         try:
             from plugins.clone import ACTIVE_CLONES
             target_key = target_user_id if target_user_id else identifier
