@@ -398,23 +398,31 @@ async def start_handler(client: Client, message):
 
 
 # --------------------------------------------------------------------------- #
-#  /assign_db Command Handler (Admin Only - Auto Assign Paid DB with Dual Support) #
+#  /assign_db Command Handler (Admin Only - Manual Paid DB Assignment with Dual Support) #
 # --------------------------------------------------------------------------- #
 
 @Client.on_message(filters.command('assign_db') & filters.user(ADMINS))
 async def assign_database_handler(client: Client, message):
     """
-    Automatically assigns a free dedicated paid database slot supporting both User ID and Bot Username.
+    Manually assigns a specific paid database slot (1-10) to a user's clone bot 
+    using User ID or Bot Username.
     """
-    if len(message.command) < 2:
+    if len(message.command) < 3:
         return await message.reply(
             "<b>⚠️ Usage Error!</b>\n\n"
-            "Please provide the User ID or Bot Username to assign a database.\n"
-            "<b>Example:</b> <code>/assign_db MyMovieBot</code> (or User ID <code>123456789</code>)",
+            "Please provide both the DB Number (1-10) and the User ID or Bot Username.\n"
+            "<b>Example:</b> <code>/assign_db 1 MyMovieBot</code> (or User ID <code>123456789</code>)",
             parse_mode=enums.ParseMode.HTML
         )
     
-    identifier = message.command[1].strip()
+    try:
+        db_slot_num = int(message.command[1])
+        if not (1 <= db_slot_num <= 10):
+            return await message.reply("⚠️ Invalid DB Number! Please provide a number between 1 and 10.")
+    except ValueError:
+        return await message.reply("⚠️ Invalid DB Number! Please provide a valid number (1-10).")
+
+    identifier = message.command[2].strip()
     
     # Check whether identifier is User ID (numeric) or Username (string)
     target_user_id = None
@@ -430,12 +438,17 @@ async def assign_database_handler(client: Client, message):
         PAID_DB_6, PAID_DB_7, PAID_DB_8, PAID_DB_9, PAID_DB_10
     )
     
-    paid_pool = [
-        ("PAID_DB_1", PAID_DB_1), ("PAID_DB_2", PAID_DB_2), ("PAID_DB_3", PAID_DB_3),
-        ("PAID_DB_4", PAID_DB_4), ("PAID_DB_5", PAID_DB_5), ("PAID_DB_6", PAID_DB_6),
-        ("PAID_DB_7", PAID_DB_7), ("PAID_DB_8", PAID_DB_8), ("PAID_DB_9", PAID_DB_9),
-        ("PAID_DB_10", PAID_DB_10)
-    ]
+    paid_pool = {
+        1: ("PAID_DB_1", PAID_DB_1), 2: ("PAID_DB_2", PAID_DB_2), 
+        3: ("PAID_DB_3", PAID_DB_3), 4: ("PAID_DB_4", PAID_DB_4), 
+        5: ("PAID_DB_5", PAID_DB_5), 6: ("PAID_DB_6", PAID_DB_6), 
+        7: ("PAID_DB_7", PAID_DB_7), 8: ("PAID_DB_8", PAID_DB_8), 
+        9: ("PAID_DB_9", PAID_DB_9), 10: ("PAID_DB_10", PAID_DB_10)
+    }
+
+    slot_name, target_uri = paid_pool.get(db_slot_num, (None, None))
+    if not target_uri:
+        return await message.reply(f"❌ Paid Database {db_slot_num} URI is not configured in environment variables!")
 
     from database.ia_filterdb import db as main_db
     if not main_db:
@@ -443,52 +456,47 @@ async def assign_database_handler(client: Client, message):
 
     mapping_col = main_db["user_db_mappings"]
     
-    # Check if this user_id or username already has an assigned slot
+    # Check if this specific slot is already occupied
+    slot_existing = await mapping_col.find_one({"slot_name": slot_name})
+    if slot_existing:
+        return await message.reply(
+            f"<b>⚠️ Slot <code>{slot_name}</code> is already occupied!</b>\n"
+            f"Currently assigned to: <code>{slot_existing.get('identifier')}</code>",
+            parse_mode=enums.ParseMode.HTML
+        )
+
+    # Check if this user already has another slot assigned
     query_filter = {"$or": []}
     if target_user_id:
         query_filter["$or"].append({"user_id": target_user_id})
     if target_username:
         query_filter["$or"].append({"username": target_username})
         
-    existing = await mapping_col.find_one(query_filter) if query_filter["$or"] else None
-    if existing:
+    user_existing = await mapping_col.find_one(query_filter) if query_filter["$or"] else None
+    if user_existing:
         return await message.reply(
-            f"<b>⚠️ Target <code>{identifier}</code> already has an assigned database slot!</b>\n"
-            f"Slot Name: <code>{existing.get('slot_name')}</code>",
+            f"<b>⚠️ Target <code>{identifier}</code> already has an assigned slot!</b>\n"
+            f"Existing Slot: <code>{user_existing.get('slot_name')}</code>",
             parse_mode=enums.ParseMode.HTML
         )
 
-    # Find already assigned URIs
-    assigned_uris = set()
-    async for doc in mapping_col.find({}):
-        if "db_uri" in doc:
-            assigned_uris.add(doc["db_uri"])
-
-    # Find the next available free slot automatically
-    free_slot_name = None
-    free_slot_uri = None
-    for slot_name, uri in paid_pool:
-        if uri and uri not in assigned_uris:
-            free_slot_name = slot_name
-            free_slot_uri = uri
-            break
-
-    if not free_slot_uri:
-        return await message.reply("❌ All Paid Database slots are currently full! Please add more slots in configuration.")
-
     try:
-        await mapping_col.insert_one({
-            "user_id": target_user_id,
-            "username": target_username,
-            "identifier": identifier,
-            "slot_name": free_slot_name,
-            "db_uri": free_slot_uri
-        })
+        await mapping_col.update_one(
+            {"slot_name": slot_name},
+            {"$set": {
+                "slot_name": slot_name,
+                "db_uri": target_uri,
+                "user_id": target_user_id,
+                "username": target_username,
+                "identifier": identifier
+            }},
+            upsert=True
+        )
         
         await message.reply(
             f"<b>✅ Successfully Assigned Database!</b>\n\n"
             f"🎯 <b>Target:</b> <code>{identifier}</code>\n"
-            f"📂 <b>Assigned Slot:</b> <code>{free_slot_name}</code>\n"
+            f"📂 <b>Assigned Slot:</b> <code>{slot_name} (Paid DB {db_slot_num})</code>\n"
             f"🔗 <b>Status:</b> Dedicated database active!",
             parse_mode=enums.ParseMode.HTML
         )
@@ -501,7 +509,7 @@ async def assign_database_handler(client: Client, message):
                 clone_bot_client = ACTIVE_CLONES[target_key]
                 notification_text = (
                     f"<b>🎉 Congratulations! Your Dedicated Database is Now Active!</b>\n\n"
-                    f"📂 <b>Assigned Slot:</b> <code>{free_slot_name}</code>\n"
+                    f"📂 <b>Assigned Slot:</b> <code>{slot_name}</code>\n"
                     f"🚀 Your bot has been successfully connected to your exclusive storage database.\n"
                     f"📊 You can now use the /status command here to check your database storage and file counts!"
                 )
