@@ -238,6 +238,20 @@ async def clone_approval_callback(client, query: CallbackQuery):
                 bot_token=bot_token
             )
             
+            # Fetch clone bot info to get username dynamically
+            await clone_client.start()
+            me = await clone_client.get_me()
+            clone_username = me.username
+            await clone_client.stop()
+
+            # Restart client for actual use
+            clone_client = Client(
+                f"clone_{target_user_id}",
+                api_id=int(os.environ.get("API_ID", 0)),
+                api_hash=os.environ.get("API_HASH", ""),
+                bot_token=bot_token
+            )
+            
             @clone_client.on_message(filters.command("start") & filters.private)
             async def clone_start(c, m):
                 try:
@@ -252,7 +266,13 @@ async def clone_approval_callback(client, query: CallbackQuery):
             async def clone_status_handler(c, m):
                 stats_msg = await m.reply("📊 Fetching database statistics... Please wait.")
                 try:
-                    user_mapping = await mapping_col.find_one({"user_id": target_user_id})
+                    # Check mapping using user_id or username
+                    user_mapping = await mapping_col.find_one({
+                        "$or": [
+                            {"user_id": target_user_id},
+                            {"username": clone_username}
+                        ]
+                    })
                     
                     def readable_size(size_in_bytes):
                         if size_in_bytes == 0:
@@ -566,18 +586,25 @@ async def clone_approval_callback(client, query: CallbackQuery):
         except Exception as e:
             logger.error(f"Error stopping clone client: {e}")
 
-        paid_mapping = await mapping_col.find_one({"user_id": target_user_id})
+        # Find mapping by user_id or username
+        paid_mapping = await mapping_col.find_one({
+            "$or": [
+                {"user_id": target_user_id},
+                {"user_id": str(target_user_id)}
+            ]
+        })
+        
         if paid_mapping and "db_uri" in paid_mapping:
             paid_uri = paid_mapping["db_uri"]
             try:
                 paid_client_temp = AsyncIOMotorClient(paid_uri)
                 paid_db_name = paid_uri.split("/")[-1].split("?")[0] or "cluster0"
                 await paid_client_temp.drop_database(paid_db_name)
-                logger.info(f"Successfully dropped/refreshed Paid DB for user {target_user_id}")
+                logger.info(f"Successfully dropped/refreshed Paid DB for target {target_user_id}")
             except Exception as e:
-                logger.error(f"Failed to refresh paid database for user {target_user_id}: {e}")
+                logger.error(f"Failed to refresh paid database for target {target_user_id}: {e}")
             
-            await mapping_col.delete_one({"user_id": target_user_id})
+            await mapping_col.delete_one({"_id": paid_mapping["_id"]})
 
         await clones_collection.delete_one({"user_id": target_user_id})
 
