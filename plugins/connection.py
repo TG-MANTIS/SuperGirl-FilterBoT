@@ -1,148 +1,203 @@
+"""
+Core Group Connection Management Module
+Handles secure linking/unlinking between users and Telegram groups/channels,
+allowing administrators to manage group settings directly from private messages.
+"""
+
+import logging
 from pyrogram import filters, Client, enums
 from pyrogram.types import InlineKeyboardButton, InlineKeyboardMarkup
 from database.connections_mdb import add_connection, all_connections, if_active, delete_connection
 from info import ADMINS
-import logging
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.ERROR)
 
 
 @Client.on_message((filters.private | filters.group) & filters.command('connect'))
-async def addconnection(client, message):
-    userid = message.from_user.id if message.from_user else None
-    if not userid:
-        return await message.reply(f"You are anonymous admin. Use /connect {message.chat.id} in PM")
+async def connect_group_handler(client: Client, message):
+    """
+    Links a user to a target group/channel for private management and auto-filtering.
+    Supports both direct group command usage and private PM with group ID.
+    """
+    user_id = message.from_user.id if message.from_user else None
+    if not user_id:
+        return await message.reply(
+            f"⚠️ <b>Anonymous admin detected!</b>\n"
+            f"Please use: <code>/connect {message.chat.id}</code> in my private messages.",
+            parse_mode=enums.ParseMode.HTML
+        )
+        
     chat_type = message.chat.type
 
+    # If invoked in private chat, extract group ID from command arguments
     if chat_type == enums.ChatType.PRIVATE:
         try:
-            cmd, group_id = message.text.split(" ", 1)
-        except:
+            _, group_id = message.text.split(" ", 1)
+        except ValueError:
             await message.reply_text(
-                "<b>Enter in correct format!</b>\n\n"
-                "<code>/connect groupid</code>\n\n"
-                "<i>Get your Group id by adding this bot to your group and use  <code>/id</code></i>",
-                quote=True
+                "<b>❌ Invalid Command Format!</b>\n\n"
+                "📌 <b>Usage:</b> <code>/connect &lt;group_id&gt;</code>\n\n"
+                "💡 <i>Tip: Add me to your group and type <code>/id</code> to get your Group ID.</i>",
+                quote=True,
+                parse_mode=enums.ParseMode.HTML
             )
             return
 
     elif chat_type in [enums.ChatType.GROUP, enums.ChatType.SUPERGROUP]:
         group_id = message.chat.id
 
+    # Verify if the executing user has administrative privileges in the target group
     try:
-        st = await client.get_chat_member(group_id, userid)
+        member_status = await client.get_chat_member(group_id, user_id)
         if (
-                st.status != enums.ChatMemberStatus.ADMINISTRATOR
-                and st.status != enums.ChatMemberStatus.OWNER
-                and userid not in ADMINS
+            member_status.status not in [enums.ChatMemberStatus.ADMINISTRATOR, enums.ChatMemberStatus.OWNER]
+            and user_id not in ADMINS
+            and str(user_id) not in [str(admin) for admin in ADMINS]
         ):
-            await message.reply_text("You should be an admin in Given group!", quote=True)
+            await message.reply_text("❌ <b>You must be an administrator in the specified group to connect!</b>", quote=True, parse_mode=enums.ParseMode.HTML)
             return
-    except Exception as e:
-        logger.exception(e)
+    except Exception as err:
+        logger.exception(err)
         await message.reply_text(
-            "Invalid Group ID!\n\nIf correct, Make sure I'm present in your group!!",
+            "❌ <b>Invalid Group ID or Connection Failed!</b>\n\n"
+            "💡 <i>Make sure I am added to your target group and have proper permissions.</i>",
             quote=True,
+            parse_mode=enums.ParseMode.HTML
         )
-
         return
-    try:
-        st = await client.get_chat_member(group_id, "me")
-        if st.status == enums.ChatMemberStatus.ADMINISTRATOR:
-            ttl = await client.get_chat(group_id)
-            title = ttl.title
 
-            addcon = await add_connection(str(group_id), str(userid))
-            if addcon:
+    # Verify if the bot itself is an administrator in the target group
+    try:
+        bot_member = await client.get_chat_member(group_id, "me")
+        if bot_member.status == enums.ChatMemberStatus.ADMINISTRATOR:
+            chat_info = await client.get_chat(group_id)
+            group_title = chat_info.title
+
+            is_connected = await add_connection(str(group_id), str(user_id))
+            if is_connected:
                 await message.reply_text(
-                    f"Successfully connected to **{title}**\nNow manage your group from my pm !",
+                    f"✅ <b>Successfully connected to:</b> <b>{group_title}</b>\n\n"
+                    f"<i>You can now manage your group directly from my PM! 🚀</i>",
                     quote=True,
-                    parse_mode=enums.ParseMode.MARKDOWN
+                    parse_mode=enums.ParseMode.HTML
                 )
                 if chat_type in [enums.ChatType.GROUP, enums.ChatType.SUPERGROUP]:
-                    await client.send_message(
-                        userid,
-                        f"Connected to **{title}** !",
-                        parse_mode=enums.ParseMode.MARKDOWN
-                    )
+                    try:
+                        await client.send_message(
+                            user_id,
+                            f"🔗 <b>Successfully linked with group:</b> <b>{group_title}</b> !",
+                            parse_mode=enums.ParseMode.HTML
+                        )
+                    except Exception:
+                        pass
             else:
                 await message.reply_text(
-                    "You're already connected to this chat!",
-                    quote=True
+                    "⚠️ <b>You are already connected to this chat!</b>",
+                    quote=True,
+                    parse_mode=enums.ParseMode.HTML
                 )
         else:
-            await message.reply_text("Add me as an admin in group", quote=True)
-    except Exception as e:
-        logger.exception(e)
-        await message.reply_text('Some error occurred! Try again later.', quote=True)
+            await message.reply_text("⚠️ <b>Please promote me as an administrator in your group first!</b>", quote=True, parse_mode=enums.ParseMode.HTML)
+            
+    except Exception as err:
+        logger.exception(err)
+        await message.reply_text("❌ <b>An unexpected error occurred! Please try again later.</b>", quote=True, parse_mode=enums.ParseMode.HTML)
         return
 
 
 @Client.on_message((filters.private | filters.group) & filters.command('disconnect'))
-async def deleteconnection(client, message):
-    userid = message.from_user.id if message.from_user else None
-    if not userid:
-        return await message.reply(f"You are anonymous admin. Use /connect {message.chat.id} in PM")
+async def disconnect_group_handler(client: Client, message):
+    """
+    Unlinks an active group connection from the user's management panel.
+    """
+    user_id = message.from_user.id if message.from_user else None
+    if not user_id:
+        return await message.reply(
+            f"⚠️ <b>Anonymous admin detected!</b>\n"
+            f"Please use <code>/disconnect</code> directly inside the connected group.",
+            parse_mode=enums.ParseMode.HTML
+        )
+        
     chat_type = message.chat.type
 
     if chat_type == enums.ChatType.PRIVATE:
-        await message.reply_text("Run /connections to view or disconnect from groups!", quote=True)
+        await message.reply_text(
+            "📌 <b>Please use the /connections command in PM to view and manage your connected groups!</b>",
+            quote=True,
+            parse_mode=enums.ParseMode.HTML
+        )
 
     elif chat_type in [enums.ChatType.GROUP, enums.ChatType.SUPERGROUP]:
         group_id = message.chat.id
 
-        st = await client.get_chat_member(group_id, userid)
-        if (
-                st.status != enums.ChatMemberStatus.ADMINISTRATOR
-                and st.status != enums.ChatMemberStatus.OWNER
-                and userid not in ADMINS
-                and str(userid) not in ADMINS
-        ):
+        try:
+            member_status = await client.get_chat_member(group_id, user_id)
+            if (
+                member_status.status not in [enums.ChatMemberStatus.ADMINISTRATOR, enums.ChatMemberStatus.OWNER]
+                and user_id not in ADMINS
+                and str(user_id) not in [str(admin) for admin in ADMINS]
+            ):
+                return
+        except Exception:
             return
 
-        delcon = await delete_connection(str(userid), str(group_id))
-        if delcon:
-            await message.reply_text("Successfully disconnected from this chat", quote=True)
+        is_disconnected = await delete_connection(str(user_id), str(group_id))
+        if is_disconnected:
+            await message.reply_text("✅ <b>Successfully disconnected from this chat!</b>", quote=True, parse_mode=enums.ParseMode.HTML)
         else:
-            await message.reply_text("This chat isn't connected to me!\nDo /connect to connect.", quote=True)
+            await message.reply_text("❌ <b>This chat is not connected to me!</b>\nUse <code>/connect</code> to link it.", quote=True, parse_mode=enums.ParseMode.HTML)
 
 
 @Client.on_message(filters.private & filters.command(["connections"]))
-async def connections(client, message):
-    userid = message.from_user.id
+async def list_connections_handler(client: Client, message):
+    """
+    Displays an interactive list of all active group connections linked to the user.
+    """
+    user_id = message.from_user.id
 
-    groupids = await all_connections(str(userid))
-    if groupids is None:
+    group_ids = await all_connections(str(user_id))
+    if not group_ids:
         await message.reply_text(
-            "There are no active connections!! Connect to some groups first.",
-            quote=True
+            "📂 <b>No active connections found!</b>\n"
+            "<i>Connect to some groups first using <code>/connect</code>.</i>",
+            quote=True,
+            parse_mode=enums.ParseMode.HTML
         )
         return
-    buttons = []
-    for groupid in groupids:
+
+    group_buttons = []
+    for group_id in group_ids:
         try:
-            ttl = await client.get_chat(int(groupid))
-            title = ttl.title
-            active = await if_active(str(userid), str(groupid))
-            act = " - ACTIVE" if active else ""
-            buttons.append(
+            chat_info = await client.get_chat(int(group_id))
+            group_title = chat_info.title
+            
+            is_active_session = await if_active(str(user_id), str(group_id))
+            active_badge = " [ACTIVE]" if is_active_session else ""
+            
+            group_buttons.append(
                 [
                     InlineKeyboardButton(
-                        text=f"{title}{act}", callback_data=f"groupcb:{groupid}:{act}"
+                        text=f"📌 {group_title}{active_badge}",
+                        callback_data=f"groupcb:{group_id}:{active_badge}"
                     )
                 ]
             )
-        except:
+        except Exception:
             pass
-    if buttons:
+
+    if group_buttons:
         await message.reply_text(
-            "Your connected group details ;\n\n",
-            reply_markup=InlineKeyboardMarkup(buttons),
-            quote=True
+            "📋 <b>Your Connected Group Dashboard:</b>\n\n"
+            "<i>Select a group below to configure or manage:</i>",
+            reply_markup=InlineKeyboardMarkup(group_buttons),
+            quote=True,
+            parse_mode=enums.ParseMode.HTML
         )
     else:
         await message.reply_text(
-            "There are no active connections!! Connect to some groups first.",
-            quote=True
-                                         )
+            "📂 <b>No active connections found!</b>\n"
+            "<i>Connect to some groups first using <code>/connect</code>.</i>",
+            quote=True,
+            parse_mode=enums.ParseMode.HTML
+        )
