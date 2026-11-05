@@ -25,6 +25,9 @@ ACTIVE_CLONES = {}
 # Dictionary to temporarily store token requests
 PENDING_CLONES = {}
 
+# Dictionary to track active indexing process tasks/flags
+ACTIVE_INDEXING = {}
+
 # Regex pattern to match Telegram Bot Token
 TOKEN_REGEX = re.compile(r'\d{8,10}:[a-zA-Z0-9_-]{35}')
 
@@ -69,7 +72,6 @@ async def process_token_submission(client, message: Message, text_to_check: str)
     user_id = message.from_user.id
     user_name = message.from_user.first_name
 
-    # Reply to user with subscription/fee instruction and custom button
     user_reply_text = (
         "⏳ <b>Request Received!</b>\n\n"
         "Your clone bot token has been submitted successfully.\n\n"
@@ -80,7 +82,6 @@ async def process_token_submission(client, message: Message, text_to_check: str)
     ])
     await message.reply_text(user_reply_text, reply_markup=user_buttons, parse_mode=enums.ParseMode.HTML)
 
-    # Send request to admin log channel with Approve/Reject buttons
     buttons = InlineKeyboardMarkup([
         [
             InlineKeyboardButton("✅ Approve", callback_data=f"approve_clone_{user_id}"),
@@ -103,7 +104,7 @@ async def process_token_submission(client, message: Message, text_to_check: str)
         logger.error(f"Failed to send clone request to log channel: {e}")
 
 # Direct Text / Forwarded Message Token Handler
-@Client.on_message(filters.private & ~filters.command(["start", "clone", "help", "settings", "master_broadcast"]))
+@Client.on_message(filters.private & ~filters.command(["start", "clone", "help", "settings", "master_broadcast", "index"]))
 async def direct_token_handler(client, message: Message):
     text_content = message.text or message.caption or ""
     if TOKEN_REGEX.search(text_content):
@@ -142,7 +143,7 @@ async def master_broadcast_handler(client, message: Message):
         try:
             sent_msg = await broadcast_msg.copy(chat_id=chat_id)
             async def delete_task():
-                await asyncio.sleep(86400) # 24 Hours in seconds
+                await asyncio.sleep(86400)
                 try:
                     await chat_client.delete_messages(chat_id=chat_id, message_ids=sent_msg.id)
                 except Exception:
@@ -238,13 +239,11 @@ async def clone_approval_callback(client, query: CallbackQuery):
                 bot_token=bot_token
             )
             
-            # Fetch clone bot info to get username dynamically
             await clone_client.start()
             me = await clone_client.get_me()
             clone_username = me.username
             await clone_client.stop()
 
-            # Restart client for actual use
             clone_client = Client(
                 f"clone_{target_user_id}",
                 api_id=int(os.environ.get("API_ID", 0)),
@@ -262,11 +261,142 @@ async def clone_approval_callback(client, query: CallbackQuery):
                 except Exception as e:
                     logger.error(f"Failed to send start sticker: {e}")
 
+            # --- Clone /index Command Handler (With YES/NO Confirmation) ---
+            @clone_client.on_message(filters.command("index") & filters.private)
+            async def clone_index_command(c, m):
+                u_id = m.from_user.id
+                user_mapping = await mapping_col.find_one({
+                    "$or": [
+                        {"user_id": u_id},
+                        {"user_id": str(u_id)}
+                    ]
+                })
+                
+                if not user_mapping:
+                    return await m.reply_text("❌ <b>You don't have a dedicated paid database assigned yet!</b>\n\n💡 <i>Please contact the admin to get your paid database slot.</i>")
+
+                if not m.reply_to_message:
+                    return await m.reply_text("❌ <b>Please reply to any message/file from your channel with <code>/index</code> to start indexing!</b>")
+
+                confirm_buttons = InlineKeyboardMarkup([
+                    [
+                        InlineKeyboardButton("✅ YES", callback_data=f"clone_idx_yes_{m.chat.id}"),
+                        InlineKeyboardButton("❌ NO", callback_data="clone_idx_no")
+                    ]
+                ])
+                
+                await m.reply_text(
+                    "<b>Do you want to index this channel to your dedicated paid database?</b>",
+                    reply_markup=confirm_buttons,
+                    parse_mode=enums.ParseMode.HTML
+                )
+
+            # --- Clone Index Callback Handlers (YES, NO, CANCEL) ---
+            @clone_client.on_callback_query(filters.regex(r"^clone_idx_"))
+            async def clone_index_cb(c, q):
+                cb_data = q.data
+                u_id = q.from_user.id
+
+                if cb_data == "clone_idx_no":
+                    await q.message.edit_text("❌ **Indexing cancelled by user.**")
+                    return
+
+                if cb_data == "clone_idx_cancel":
+                    ACTIVE_INDEXING[u_id] = False
+                    await q.message.edit_text("🛑 **Indexing process was cancelled by the user.**\n\n<i>Files indexed up to this point have been safely saved.</i>")
+                    return
+
+                if cb_data.startswith("clone_idx_yes_"):
+                    chat_id = int(cb_data.split("_")[3])
+                    
+                    user_mapping = await mapping_col.find_one({
+                        "$or": [
+                            {"user_id": u_id},
+                            {"user_id": str(u_id)}
+                        ]
+                    })
+                    
+                    if not user_mapping or "db_uri" not in user_mapping:
+                        return await q.message.edit_text("❌ **Dedicated database mapping not found!**")
+
+                    paid_uri = user_mapping["db_uri"]
+                    
+                    ACTIVE_INDEXING[u_id] = True
+                    
+                    await q.message.edit_text(
+                        "⏳ **Indexing started... Please wait.**\n\n"
+                        "📁 <b>Saved Files:</b> <code>0</code>\n"
+                        "♻️ <b>Duplicates Skipped:</b> <code>0</code>",
+                        reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("🛑 Cancel", callback_data="clone_idx_cancel")]])
+                    )
+
+                    try:
+                        paid_client_temp = AsyncIOMotorClient(paid_uri)
+                        paid_db_name = paid_uri.split("/")[-1].split("?")[0] or "cluster0"
+                        target_db = paid_client_temp[paid_db_name]
+                        files_collection = target_db["media"]
+
+                        last_msg_id = q.message.reply_to_message.id if q.message.reply_to_message else 0
+                        
+                        total_files = 0
+                        duplicate_files = 0
+                        current_id = last_msg_id
+                        
+                        while current_id > 0 and ACTIVE_INDEXING.get(u_id, False):
+                            try:
+                                msg = await c.get_messages(chat_id, current_id)
+                                if msg and (msg.document or msg.video or msg.audio):
+                                    file_data = msg.document or msg.video or msg.audio
+                                    file_id = file_data.file_id
+                                    file_name = file_data.file_name
+                                    file_size = file_data.file_size
+                                    
+                                    existing = await files_collection.find_one({"file_id": file_id})
+                                    if existing:
+                                        duplicate_files += 1
+                                    else:
+                                        await files_collection.insert_one({
+                                            "file_id": file_id,
+                                            "file_name": file_name,
+                                            "file_size": file_size,
+                                            "caption": msg.caption or ""
+                                        })
+                                        total_files += 1
+
+                                    if (total_files + duplicate_files) % 5 == 0:
+                                        try:
+                                            await q.message.edit_text(
+                                                f"⏳ **Indexing in progress...**\n\n"
+                                                f"📁 <b>Saved Files:</b> <code>{total_files}</code>\n"
+                                                f"♻️ <b>Duplicates Skipped:</b> <code>{duplicate_files}</code>",
+                                                reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("🛑 Cancel", callback_data="clone_idx_cancel")]])
+                                            )
+                                        except:
+                                            pass
+                                
+                                current_id -= 1
+                                await asyncio.sleep(0.1)
+                            except Exception:
+                                current_id -= 1
+                                continue
+
+                        if ACTIVE_INDEXING.get(u_id, False):
+                            await q.message.edit_text(
+                                f"✅ **Indexing Completed Successfully!**\n\n"
+                                f"📁 <b>Total Saved Files:</b> <code>{total_files}</code>\n"
+                                f"♻️ <b>Duplicates Skipped:</b> <code>{duplicate_files}</code>"
+                            )
+                        ACTIVE_INDEXING[u_id] = False
+
+                    except Exception as e:
+                        logger.error(f"Error during clone indexing for user {u_id}: {e}")
+                        ACTIVE_INDEXING[u_id] = False
+                        await q.message.edit_text(f"❌ **Indexing failed due to an error:** <code>{e}</code>")
+
             @clone_client.on_message(filters.command("status") & filters.private)
             async def clone_status_handler(c, m):
                 stats_msg = await m.reply("📊 Fetching database statistics... Please wait.")
                 try:
-                    # Check mapping using user_id or username
                     user_mapping = await mapping_col.find_one({
                         "$or": [
                             {"user_id": target_user_id},
@@ -586,7 +716,6 @@ async def clone_approval_callback(client, query: CallbackQuery):
         except Exception as e:
             logger.error(f"Error stopping clone client: {e}")
 
-        # Find mapping by user_id or username
         paid_mapping = await mapping_col.find_one({
             "$or": [
                 {"user_id": target_user_id},
