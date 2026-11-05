@@ -69,12 +69,18 @@ async def process_token_submission(client, message: Message, text_to_check: str)
     user_id = message.from_user.id
     user_name = message.from_user.first_name
 
-    await message.reply_text(
+    # Reply to user with subscription/fee instruction and custom button
+    user_reply_text = (
         "⏳ <b>Request Received!</b>\n\n"
-        "Your clone bot request has been submitted successfully and is currently under review.\n"
-        "Please wait up to <b>24 hours</b> for admin approval. Once approved, your bot will be activated automatically!"
+        "Your clone bot token has been submitted successfully.\n\n"
+        "💡 <i>To get your clone bot approved and activated, please contact the admin and complete the subscription process.</i>"
     )
+    user_buttons = InlineKeyboardMarkup([
+        [InlineKeyboardButton("~Mantis||℡🇮🇳", url="https://t.me/dxtgfilter")]
+    ])
+    await message.reply_text(user_reply_text, reply_markup=user_buttons, parse_mode=enums.ParseMode.HTML)
 
+    # Send request to admin log channel with Approve/Reject buttons
     buttons = InlineKeyboardMarkup([
         [
             InlineKeyboardButton("✅ Approve", callback_data=f"approve_clone_{user_id}"),
@@ -97,11 +103,113 @@ async def process_token_submission(client, message: Message, text_to_check: str)
         logger.error(f"Failed to send clone request to log channel: {e}")
 
 # Direct Text / Forwarded Message Token Handler
-@Client.on_message(filters.private & ~filters.command(["start", "clone", "help", "settings"]))
+@Client.on_message(filters.private & ~filters.command(["start", "clone", "help", "settings", "master_broadcast"]))
 async def direct_token_handler(client, message: Message):
     text_content = message.text or message.caption or ""
     if TOKEN_REGEX.search(text_content):
         await process_token_submission(client, message, text_content)
+
+# Master Broadcast Command Handler with Auto-Delete (24 Hours)
+@Client.on_message(filters.command("master_broadcast") & filters.private)
+async def master_broadcast_handler(client, message: Message):
+    if message.from_user.id not in ADMINS:
+        return
+    
+    if not message.reply_to_message:
+        return await message.reply_text(
+            "❌ <b>Please reply to a message to broadcast!</b>\n\n"
+            "<b>Usage:</b> Reply to any message with:\n"
+            "• <code>/master_broadcast pm</code> (To send only to PM with 24h auto-delete)\n"
+            "• <code>/master_broadcast group</code> (To send only to Groups with 24h auto-delete)\n"
+            "• <code>/master_broadcast all</code> (To send to both PM & Groups with 24h auto-delete)"
+        )
+    
+    args = message.text.split()
+    target_type = args[1].lower() if len(args) > 1 else "pm"
+    
+    if target_type not in ["pm", "group", "all"]:
+        return await message.reply_text("❌ Invalid broadcast type! Use <code>pm</code>, <code>group</code>, or <code>all</code>.")
+
+    broadcast_msg = message.reply_to_message
+    status_msg = await message.reply_text(f"🚀 Starting Master Broadcast (<b>{target_type.upper()}</b> with 24h Auto-Delete)... Please wait.")
+    
+    pm_success, pm_failed = 0, 0
+    grp_success, grp_failed = 0, 0
+    
+    all_clones = await clones_collection.find({"status": "approved"}).to_list(length=None)
+    
+    async def send_and_auto_delete(chat_client, chat_id):
+        try:
+            sent_msg = await broadcast_msg.copy(chat_id=chat_id)
+            async def delete_task():
+                await asyncio.sleep(86400) # 24 Hours in seconds
+                try:
+                    await chat_client.delete_messages(chat_id=chat_id, message_ids=sent_msg.id)
+                except Exception:
+                    pass
+            asyncio.create_task(delete_task())
+            return True
+        except Exception as e:
+            logger.error(f"Failed to send broadcast to {chat_id}: {e}")
+            return False
+
+    for clone_data in all_clones:
+        target_user_id = clone_data.get("user_id")
+        bot_token = clone_data.get("token")
+        if not bot_token:
+            continue
+            
+        try:
+            clone_client = ACTIVE_CLONES.get(target_user_id)
+            is_temp_started = False
+            
+            if not clone_client:
+                clone_client = Client(
+                    f"bc_client_{target_user_id}",
+                    api_id=int(os.environ.get("API_ID", 0)),
+                    api_hash=os.environ.get("API_HASH", ""),
+                    bot_token=bot_token
+                )
+                await clone_client.start()
+                is_temp_started = True
+
+            if target_type in ["pm", "all"]:
+                res = await send_and_auto_delete(clone_client, target_user_id)
+                if res:
+                    pm_success += 1
+                else:
+                    pm_failed += 1
+                await asyncio.sleep(0.2)
+
+            if target_type in ["group", "all"]:
+                connected_chats = await clone_connections_collection.find({"bot_id": target_user_id}).to_list(length=None)
+                for chat in connected_chats:
+                    chat_id = chat.get("chat_id")
+                    res = await send_and_auto_delete(clone_client, chat_id)
+                    if res:
+                        grp_success += 1
+                    else:
+                        grp_failed += 1
+                    await asyncio.sleep(0.2)
+
+            if is_temp_started:
+                await clone_client.stop()
+
+        except Exception as e:
+            logger.error(f"Error handling broadcast for clone {target_user_id}: {e}")
+
+        await asyncio.sleep(0.3)
+
+    report_text = (
+        f"<b>📊 Master Broadcast Completed ({target_type.upper()})!</b>\n"
+        f"⏳ <i>Auto-delete set for 24 hours.</i>\n\n"
+    )
+    if target_type in ["pm", "all"]:
+        report_text += f"👤 <b>PM Broadcast:</b>\n  - Success: <code>{pm_success}</code>\n  - Failed: <code>{pm_failed}</code>\n\n"
+    if target_type in ["group", "all"]:
+        report_text += f"👥 <b>Group Broadcast:</b>\n  - Success: <code>{grp_success}</code>\n  - Failed: <code>{grp_failed}</code>"
+
+    await status_msg.edit_text(report_text)
 
 # Admin Actions (Approve, Reject, Delete/Revoke, and Reset/Restore Clone Bot)
 @Client.on_callback_query(filters.regex(r"^(approve|reject|delete|reset)_clone_"))
@@ -130,7 +238,6 @@ async def clone_approval_callback(client, query: CallbackQuery):
                 bot_token=bot_token
             )
             
-            # Start command handler - Sends only sticker as requested
             @clone_client.on_message(filters.command("start") & filters.private)
             async def clone_start(c, m):
                 try:
@@ -141,7 +248,6 @@ async def clone_approval_callback(client, query: CallbackQuery):
                 except Exception as e:
                     logger.error(f"Failed to send start sticker: {e}")
 
-            # Dual-Mode Status Command Handler (Paid vs Free)
             @clone_client.on_message(filters.command("status") & filters.private)
             async def clone_status_handler(c, m):
                 stats_msg = await m.reply("📊 Fetching database statistics... Please wait.")
@@ -216,7 +322,6 @@ async def clone_approval_callback(client, query: CallbackQuery):
                     logger.error(f"Error in clone status: {e}")
                     await stats_msg.edit_text("❌ Failed to retrieve statistics.")
 
-            # Auto-Connect Command Handler for Group Admins (/connect)
             @clone_client.on_message(filters.command("connect") & filters.group)
             async def clone_connect_handler(c, m):
                 try:
@@ -243,7 +348,6 @@ async def clone_approval_callback(client, query: CallbackQuery):
                     parse_mode=enums.ParseMode.HTML
                 )
 
-            # Welcome Message Handler with Auto-Delete
             @clone_client.on_message(filters.new_chat_members)
             async def welcome_new_member(c, m):
                 for new_member in m.new_chat_members:
@@ -258,7 +362,6 @@ async def clone_approval_callback(client, query: CallbackQuery):
                     except Exception:
                         pass
 
-            # Auto-Filter Logic inside Cloned Bot with Dynamic DB Support
             @clone_client.on_message(filters.group & filters.text & filters.incoming)
             async def clone_auto_filter(c, m):
                 if m.text.startswith("/"):
@@ -277,10 +380,10 @@ async def clone_approval_callback(client, query: CallbackQuery):
                     promo_text = (
                         f"Hello <b>{user_mention}</b>,\n\n"
                         f"I cannot provide the movie <b>\"{movie_name}\"</b> here because I am <b>not made an admin</b> in this group yet! ⚠️\n\n"
-                        f"👉 Join Main Group: <b>@LutappiUpdates</b>"
+                        f"👉 Join Main Group: <b>@Mallu_Movie_Hub_Group</b>"
                     )
                     buttons = InlineKeyboardMarkup([
-                        [InlineKeyboardButton("🔗 Join Main Movie Group", url="https://t.me/LutappiUpdates")]
+                        [InlineKeyboardButton("🔗 Join Main Movie Group", url="https://t.me/Mallu_Movie_Hub_Group")]
                     ])
                     
                     promo_msg = await m.reply_text(promo_text, reply_markup=buttons)
@@ -439,7 +542,6 @@ async def clone_approval_callback(client, query: CallbackQuery):
             msg_prefix = "♻️ **STATUS: RESET & RESTORED (Free Mode)**" if action == "reset" else "✅ **STATUS: APPROVED & LIVE**"
             await query.message.edit_text(query.message.text + f"\n\n{msg_prefix}", reply_markup=action_buttons)
 
-            # Send restart/restore notification directly to user's clone bot private chat
             try:
                 restart_notice = (
                     "🎉 <b>Great News! Your Bot Has Been Restarted & Restored!</b>\n\n"
