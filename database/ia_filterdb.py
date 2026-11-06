@@ -321,3 +321,6 @@ def unpack_new_file_id(new_file_id):
     )
     file_ref = encode_file_ref(decoded.file_reference)
     return file_id, file_ref
+
+# --- Compatibility alias for other plugins expecting 'Media' ---
+Media = main_media_classes[0] if main_media_classes else None
