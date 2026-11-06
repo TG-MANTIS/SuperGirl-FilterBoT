@@ -68,9 +68,9 @@ class Bot(Client):
         temp.B_NAME = me.first_name
         self.username = '@' + me.username
         
-        # Start aiohttp web server
+        # Start aiohttp web server securely with await
         app = web.AppRunner(await web_server())
-        app.setup()
+        await app.setup()
         bind_address = "0.0.0.0"
         await web.TCPSite(app, bind_address, PORT).start()
         
