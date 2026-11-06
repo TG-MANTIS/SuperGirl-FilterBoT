@@ -84,44 +84,67 @@ async def terabox_private_handler(client: Client, message):
             parse_mode=enums.ParseMode.HTML
         )
         
-        # NOTE: Integrate your Terabox API or scraping logic here to get the direct media URL.
-        # direct_media_url = "YOUR_EXTRACTED_DIRECT_MEDIA_URL"
+        # =========================================================================
+        # 🛠️ TERABOX LINK EXTRACTION LOGIC
+        # ഇവിടെ താങ്കൾ ടെറാബോക്സ് ലിങ്ക് അയക്കുമ്പോൾ അതിനുള്ളിലെ ഡയറക്ട് ഫയൽ URL 
+        # (Direct Download Link) എടുത്തു തരുന്ന API അല്ലെങ്കിൽ കോഡ് നൽകേണ്ടതുണ്ട്.
+        # =========================================================================
         
-        # Example download and send logic template:
-        # start_time = time.time()
-        # async with aiohttp.ClientSession() as session:
-        #     async with session.get(direct_media_url) as resp:
-        #         if resp.status == 200:
-        #             file_path = os.path.join(DOWNLOAD_DIRECTORY, f"terabox_{message.from_user.id}.mp4")
-        #             total_size = int(resp.headers.get("Content-Length", 0))
-        #             downloaded = 0
-        #             
-        #             with open(file_path, "wb") as f:
-        #                 async for chunk in resp.content.iter_chunked(1024 * 1024):
-        #                     f.write(chunk)
-        #                     downloaded += len(chunk)
-        #                     await progress_bar(downloaded, total_size, status_msg, start_time, "Downloading")
+        # ഉദാഹരണത്തിന്:
+        # direct_media_url = await get_direct_terabox_link(user_text)
+        direct_media_url = None  # നിലവിൽ ഇത് പ്ലേസ്‌ഹോൾഡർ ആണ്
+        
+        if not direct_media_url:
+            # താങ്കൾ API അല്ലെങ്കിൽ സ്ക്രാപ്പിംഗ് മെത്തേഡ് സെറ്റ് ചെയ്യുന്നതുവരെ 
+            # യൂസർക്ക് മനസ്സിലാകാൻ ഒരു ചെറിയ നോട്ടീസ് നൽകാം:
+            await status_msg.edit_text(
+                "<b>⚠️ Terabox Direct Link API is not configured yet.</b>\n\n"
+                "<i>Please add your Terabox extraction API or scraping logic into the plugin code!</i>",
+                parse_mode=enums.ParseMode.HTML
+            )
+            return
 
-        # Send media back to the user with the requested notice message
-        # if file_path and os.path.exists(file_path):
-        #     await status_msg.edit_text("<b>📤 Uploading file to Telegram...</b>", parse_mode=enums.ParseMode.HTML)
-        #     upload_start_time = time.time()
-        #     
-        #     # Sending the media file (video/audio/document)
-        #     sent_msg = await client.send_video(
-        #         chat_id=message.chat.id,
-        #         video=file_path,
-        #         caption=(
-        #             f"<b>📚 Terabox Downloaded Content</b>\n\n"
-        #             f"<i>💡 Note: Please do not try to watch or download this file directly here. "
-        #             f"Instead, forward this file to your Saved Messages, and then you can safely watch or download it from there!</i>\n\n"
-        #             f"<b>[©️𝐓𝐞𝐚𝐦 𝐂𝐢𝐧𝐞𝐦𝐚 𝐅𝐢𝐥𝐱™️](https://t.me/+iEbhY7mM4oE1OTVl)</b>"
-        #         ),
-        #         parse_mode=enums.ParseMode.HTML,
-        #         progress=progress_bar,
-        #         progress_args=(status_msg, upload_start_time, "Uploading")
-        #     )
-        #     await status_msg.delete()
+        # 📥 Downloading the file using aiohttp
+        start_time = time.time()
+        async with aiohttp.ClientSession() as session:
+            async with session.get(direct_media_url) as resp:
+                if resp.status == 200:
+                    file_path = os.path.join(DOWNLOAD_DIRECTORY, f"terabox_{message.from_user.id}.mp4")
+                    total_size = int(resp.headers.get("Content-Length", 0))
+                    
+                    if total_size > MAX_FILE_SIZE:
+                        await status_msg.edit_text(
+                            "<b>❌ File size exceeds the 200MB limit for free-tier hosting!</b>",
+                            parse_mode=enums.ParseMode.HTML
+                        )
+                        return
+
+                    downloaded = 0
+                    with open(file_path, "wb") as f:
+                        async for chunk in resp.content.iter_chunked(1024 * 1024):
+                            f.write(chunk)
+                            downloaded += len(chunk)
+                            await progress_bar(downloaded, total_size, status_msg, start_time, "Downloading")
+
+        # 📤 Uploading media back to the user
+        if file_path and os.path.exists(file_path):
+            await status_msg.edit_text("<b>📤 Uploading file to Telegram...</b>", parse_mode=enums.ParseMode.HTML)
+            upload_start_time = time.time()
+            
+            await client.send_video(
+                chat_id=message.chat.id,
+                video=file_path,
+                caption=(
+                    f"<b>📚 Terabox Downloaded Content</b>\n\n"
+                    f"<i>💡 Note: Please do not try to watch or download this file directly here. "
+                    f"Instead, please forward this file to your Saved Messages, and then you can safely watch or download it from there!</i>\n\n"
+                    f"<b>[©️𝐓𝐞𝐚𝐦 𝐂𝐢𝐧𝐞𝐦𝐚 𝐅𝐢𝐥𝐱™️](https://t.me/+iEbhY7mM4oE1OTVl)</b>"
+                ),
+                parse_mode=enums.ParseMode.HTML,
+                progress=progress_bar,
+                progress_args=(status_msg, upload_start_time, "Uploading")
+            )
+            await status_msg.delete()
 
     except Exception as err:
         await status_msg.edit_text(
