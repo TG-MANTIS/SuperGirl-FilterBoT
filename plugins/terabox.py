@@ -56,7 +56,8 @@ async def progress_bar(current, total, message, start_time):
         except Exception:
             pass
 
-@Client.on_message(filters.private & filters.text & ~filters.command(["start", "help", "font"]))
+# 'group=-1' ചേർത്തിട്ടുള്ളതുകൊണ്ട് മറ്റെല്ലാ ഫിൽട്ടറുകൾക്കും മുമ്പ് ഇത് ലിങ്ക് ക്യാച്ച് ചെയ്യും
+@Client.on_message(filters.private & filters.text & ~filters.command(["start", "help", "font"]), group=-1)
 async def terabox_private_handler(client: Client, message):
     """Intercepts private messages, detects Terabox links, and processes them entirely."""
     user_text = message.text.strip()
