@@ -13,7 +13,7 @@ from aiohttp import web
 from pyrogram import Client, __version__, types
 from pyrogram.raw.all import layer
 
-from database.ia_filterdb import Media
+from database.ia_filterdb import main_media_classes
 from database.users_chats_db import db
 from info import SESSION, API_ID, API_HASH, BOT_TOKEN, LOG_STR
 from utils import temp
@@ -54,7 +54,13 @@ class Bot(Client):
         temp.BANNED_CHATS = b_chats
         
         await super().start()
-        await Media.ensure_indexes()
+        
+        # Ensure indexes for main media classes safely
+        for MediaModel in main_media_classes:
+            try:
+                await MediaModel.ensure_indexes()
+            except Exception:
+                pass
         
         me = await self.get_me()
         temp.ME = me.id
@@ -64,7 +70,7 @@ class Bot(Client):
         
         # Start aiohttp web server
         app = web.AppRunner(await web_server())
-        await app.setup()
+        app.setup()
         bind_address = "0.0.0.0"
         await web.TCPSite(app, bind_address, PORT).start()
         
