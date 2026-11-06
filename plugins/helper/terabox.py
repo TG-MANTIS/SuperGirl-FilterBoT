@@ -72,20 +72,8 @@ async def terabox_private_handler(client: Client, message):
     )
 
     try:
-        # NOTE: Implement your Terabox API resolution/scraping logic here to get the direct video download URL.
-        # For demonstration and safety structure, we handle the workflow stages.
-        
         # Simulated check or placeholder for direct link fetching
         await asyncio.sleep(2)
-        
-        # Example validation for file size and downloading logic
-        # If direct download link is acquired:
-        # direct_url = "..."
-        # file_name = "video.mp4"
-        
-        # If file exceeds limit:
-        # await status_msg.edit_text("<b>❌ Error: File size exceeds the 200MB free tier limit!</b>", parse_mode=enums.ParseMode.HTML)
-        # return
 
         # Dummy placeholder indicating successful workflow integration
         await status_msg.edit_text(
@@ -95,12 +83,7 @@ async def terabox_private_handler(client: Client, message):
         
         # Simulate download & upload process
         start_time = time.time()
-        # (Aiohttp download and pyrogram send_video code goes here securely)
         
-        # After sending video, apply 2-minute auto-deletion safety protocol
-        # sent_msg = await client.send_video(...)
-        # asyncio.create_task(delete_after_delay(sent_msg, 120))
-
     except Exception as err:
         await status_msg.edit_text(
             f"<b>❌ Failed to process Terabox link.</b>\n\n<i>Error: {str(err)}</i>",
