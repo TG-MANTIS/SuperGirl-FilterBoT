@@ -1,9 +1,12 @@
 class script(object):
-    START_TXT = """<b><i>🥀Hello {}, Nice to meet you👀</i></b>
-    
-<b><i>I can provide movies and Web-Series for you just make to admin your group and Ues me..💫</i></b>
-<b>〰〰〰〰〰〰〰〰〰〰〰〰〰〰〰〰</b>
-<b><a href=https://t.me/+iEbhY7mM4oE1OTVl>©️𝐓𝐞𝐚𝐦 𝐂𝐢𝐧𝐞𝐦𝐚 𝐅𝐢𝐥𝐱™️</b></a>"""
+    START_TXT = """<b>👋 Hey 🇮🇳 {},</b>
+
+<b>I'm Sung Jin-woo 🕶️, an awesome Autofilter bot with powerful features.</b>
+├── <b>— — — — — — — — — — —</b>
+├── <b>⚡ I provide kind of content to users,</b>
+├── <b>✨ and it's completely #free.</b>
+└── <b>— — — — — — — — — — —</b>
+🎬 <b>By Jean Home Network</b>"""
     
     ABOUT_TXT = """<b>━━━❰ {} ❱━━━➣</b>
     
@@ -21,7 +24,7 @@ class script(object):
 
 <b>〰〰〰〰〰〰〰〰〰〰〰〰〰〰〰〰</b>"""
     
-    STATUS_TXT = """<b>📊 𝙂𝙇𝙊𝘽𝘼𝙇 𝙎𝙏𝘼𝙏𝙐𝙎 𝘽𝙊𝘼𝙍𝘿 📊</b>
+    STATUS_TXT = """<b>📊 𝙂𝙇O𝘽𝘼𝙇 𝙎𝙏𝘼𝙏𝙐𝙎 𝘽𝙊𝘼𝙍𝘿 📊</b>
 
 <b>📂 Database 1:</b>
    • Total Files: <code>{db1_count}</code>
