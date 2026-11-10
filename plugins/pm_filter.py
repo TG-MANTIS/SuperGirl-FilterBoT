@@ -230,21 +230,21 @@ async def next_page_handler(client: Client, query: CallbackQuery):
         
     if n_offset == 0:
         btn.append(
-            [InlineKeyboardButton("⭅ Back", callback_data=f"next_{req_user_id}_{key}_{off_set}"),
-             InlineKeyboardButton(f" {math.ceil(int(offset) / 10) + 1} / {math.ceil(total / 10)}", callback_data="pages"),
-             InlineKeyboardButton("Delete 🗑️", callback_data="close_data")]
+            [InlineKeyboardButton("⏮️ ᗷΔCK", callback_data=f"next_{req_user_id}_{key}_{off_set}"),
+             InlineKeyboardButton(f"📕 {math.ceil(int(offset) / 10) + 1} / {math.ceil(total / 10)} 📕", callback_data="pages"),
+             InlineKeyboardButton("DΣLΣTΣD 🗑️", callback_data="close_data")]
         )
     elif off_set is None:
         btn.append(
-            [InlineKeyboardButton("❖ Pages", callback_data="pages"),
-             InlineKeyboardButton(f" {math.ceil(int(offset) / 10) + 1} / {math.ceil(total / 10)}", callback_data="pages"),
-             InlineKeyboardButton("Next ⇛", callback_data=f"next_{req_user_id}_{key}_{n_offset}")])
+            [InlineKeyboardButton("🗑️ DΣLΣTΣD", callback_data="close_data"),
+             InlineKeyboardButton(f"📕 {math.ceil(int(offset) / 10) + 1} / {math.ceil(total / 10)} 📕", callback_data="pages"),
+             InlineKeyboardButton("ΠΣXT ⏭️", callback_data=f"next_{req_user_id}_{key}_{n_offset}")])
     else:
         btn.append(
             [
-                InlineKeyboardButton("⭅ Back", callback_data=f"next_{req_user_id}_{key}_{off_set}"),
-                InlineKeyboardButton(f" {math.ceil(int(offset) / 10) + 1} / {math.ceil(total / 10)}", callback_data="pages"),
-                InlineKeyboardButton("Next ⇛", callback_data=f"next_{req_user_id}_{key}_{n_offset}")
+                InlineKeyboardButton("⏮️ ᗷΔCK", callback_data=f"next_{req_user_id}_{key}_{off_set}"),
+                InlineKeyboardButton(f"📕 {math.ceil(int(offset) / 10) + 1} / {math.ceil(total / 10)} 📕", callback_data="pages"),
+                InlineKeyboardButton("ΠΣXT ⏭️", callback_data=f"next_{req_user_id}_{key}_{n_offset}")
             ],
         )
     try:
@@ -301,8 +301,8 @@ async def filter_menu_handler(client: Client, query: CallbackQuery):
                 InlineKeyboardButton("Other", callback_data=f"filter_apply#{req_user_id}#{key}#Other")
             ],
             [
-                InlineKeyboardButton("« Back", callback_data=f"back_main_search#{req_user_id}#{key}"),
-                InlineKeyboardButton("Close ✘", callback_data="close_data")
+                InlineKeyboardButton("⏮️ ᗷΔCK", callback_data=f"back_main_search#{req_user_id}#{key}"),
+                InlineKeyboardButton("DΣLΣTΣD 🗑️", callback_data="close_data")
             ]
         ]
         await query.message.edit_reply_markup(reply_markup=InlineKeyboardMarkup(buttons))
@@ -319,8 +319,8 @@ async def filter_menu_handler(client: Client, query: CallbackQuery):
                 InlineKeyboardButton("2160p (4K)", callback_data=f"filter_apply#{req_user_id}#{key}#2160p")
             ],
             [
-                InlineKeyboardButton("« Back", callback_data=f"back_main_search#{req_user_id}#{key}"),
-                InlineKeyboardButton("Close ✘", callback_data="close_data")
+                InlineKeyboardButton("⏮️ ᗷΔCK", callback_data=f"back_main_search#{req_user_id}#{key}"),
+                InlineKeyboardButton("DΣLΣTΣD 🗑️", callback_data="close_data")
             ]
         ]
         await query.message.edit_reply_markup(reply_markup=InlineKeyboardMarkup(buttons))
@@ -331,7 +331,7 @@ async def filter_menu_handler(client: Client, query: CallbackQuery):
         btn = []
         for file in files[:10]:
             f_size = get_size(file.file_size)
-            btn.append([InlineKeyboardButton(text=f"🔗 {f_size} {file.file_name}", callback_data=f'files#{file.file_id}')])
+            btn.append([InlineKeyboardButton(text=f"⚡ {f_size} ◾ {file.file_name}", callback_data=f'files#{file.file_id}')])
             
         btn.insert(0, [
             InlineKeyboardButton('🔊 Language', callback_data=f'lang_menu#{req_user_id}#{key}'),
@@ -340,12 +340,12 @@ async def filter_menu_handler(client: Client, query: CallbackQuery):
         
         if total_results > 10:
             btn.append([
-                InlineKeyboardButton("❖ Pages", callback_data="pages"),
-                InlineKeyboardButton(text=f"1/{math.ceil(total_results / 10)}", callback_data="pages"),
-                InlineKeyboardButton(text="Next ⇛", callback_data=f"next_{req_user_id}_{key}_10")
+                InlineKeyboardButton("🗑️ DΣLΣTΣD", callback_data="pages"),
+                InlineKeyboardButton(text=f" 📕1/{math.ceil(total_results / 10)}📕", callback_data="pages"),
+                InlineKeyboardButton(text="ΠΣXT ⏭️", callback_data=f"next_{req_user_id}_{key}_10")
             ])
         else:
-            btn.append([InlineKeyboardButton(text="Delete 🗑️", callback_data="close_data")])
+            btn.append([InlineKeyboardButton(text="DΣLΣTΣD 🗑️", callback_data="close_data")])
             
         await query.message.edit_reply_markup(reply_markup=InlineKeyboardMarkup(btn))
         await query.answer()
@@ -397,14 +397,14 @@ async def filter_menu_handler(client: Client, query: CallbackQuery):
         btn = []
         for file in filtered_files[:10]:
             f_size = get_size(file.file_size)
-            btn.append([InlineKeyboardButton(text=f"🔗 {f_size} {file.file_name}", callback_data=f'files#{file.file_id}')])
+            btn.append([InlineKeyboardButton(text=f"⚡ {f_size} ◾ {file.file_name}", callback_data=f'files#{file.file_id}')])
             
         btn.insert(0, [
             InlineKeyboardButton(f"📁 Filtered: {target}", callback_data="pages")
         ])
         btn.append([
-            InlineKeyboardButton("« Back to All", callback_data=f"back_main_search#{req_user_id}#{key}"),
-            InlineKeyboardButton("Close ✘", callback_data="close_data")
+            InlineKeyboardButton("⏮️ ᗷΔCK", callback_data=f"back_main_search#{req_user_id}#{key}"),
+            InlineKeyboardButton("DΣLΣTΣD 🗑️", callback_data="close_data")
         ])
         
         await query.message.edit_reply_markup(reply_markup=InlineKeyboardMarkup(btn))
@@ -1121,9 +1121,9 @@ async def auto_filter(client: Client, msg, spoll=False):
 
     if offset != "":
         btn.append([
-            InlineKeyboardButton("❖ Pages", callback_data="pages"),
+            InlineKeyboardButton("🗑️ ", callback_data="close_data"),
             InlineKeyboardButton(text=f" 1/{math.ceil(int(total_results) / 10)}", callback_data="pages"),
-            InlineKeyboardButton(text="Next ⇛", callback_data=f"next_{req}_{key}_{offset}")
+            InlineKeyboardButton(text="ΠΣXT ⏭️", callback_data=f"next_{req}_{key}_{offset}")
         ])
     else:
         btn.append([InlineKeyboardButton(text="Delete 🗑️", callback_data="close_data")])
