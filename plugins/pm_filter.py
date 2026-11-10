@@ -187,7 +187,7 @@ async def next_page_handler(client: Client, query: CallbackQuery):
             
             btn.append([
                 InlineKeyboardButton(
-                    text=f"🔗 {f_size} {se_tag}{f_name}", callback_data=f'files#{file.file_id}'
+                    text=f"⚡ {f_size} ◾ {se_tag}{f_name}", callback_data=f'files#{file.file_id}'
                 )
             ])
     else:
@@ -195,7 +195,7 @@ async def next_page_handler(client: Client, query: CallbackQuery):
             btn = [
                 [
                     InlineKeyboardButton(
-                        text=f"🔗 {get_size(file.file_size)} {file.file_name}", callback_data=f'files#{file.file_id}'
+                        text=f"⚡ {get_size(file.file_size)} ◾ {file.file_name}", callback_data=f'files#{file.file_id}'
                     ),
                 ]
                 for file in files
@@ -204,11 +204,11 @@ async def next_page_handler(client: Client, query: CallbackQuery):
             btn = [
                 [
                     InlineKeyboardButton(
-                        text=f"🔗 {get_size(file.file_size)}",
+                        text=f"⚡ {get_size(file.file_size)}",
                         callback_data=f'files_#{file.file_id}',
                     ),
                     InlineKeyboardButton(
-                        text=f"{file.file_name}", callback_data=f'files#{file.file_id}'
+                        text=f"◾ {file.file_name}", callback_data=f'files#{file.file_id}'
                     ),
                 ]
                for file in files
@@ -1100,14 +1100,14 @@ async def auto_filter(client: Client, msg, spoll=False):
             f_size = get_size(file.file_size)
             se_match = re.search(r'(s\d+\s*e\d+|season\s*\d+|ep\s*\d+)', f_name, re.IGNORECASE)
             se_tag = f"[{se_match.group(0).upper()}] " if se_match else ""
-            btn.append([InlineKeyboardButton(text=f"🔗 {f_size} {se_tag}{f_name}", callback_data=f'{pre}#{file.file_id}')])
+            btn.append([InlineKeyboardButton(text=f"⚡ {f_size} ◾ {se_tag}{f_name}", callback_data=f'{pre}#{file.file_id}')])
     else:
         if settings.get('button', True):
-            btn = [[InlineKeyboardButton(text=f"🔗 {get_size(file.file_size)} {file.file_name}", callback_data=f'{pre}#{file.file_id}')] for file in files]
+            btn = [[InlineKeyboardButton(text=f"⚡ {get_size(file.file_size)} ◾ {file.file_name}", callback_data=f'{pre}#{file.file_id}')] for file in files]
         else:
             btn = [[
-                InlineKeyboardButton(text=f"🔗 {get_size(file.file_size)}", callback_data=f'{pre}#{file.file_id}'),
-                InlineKeyboardButton(text=f"{file.file_name}", callback_data=f'{pre}#{file.file_id}')
+                InlineKeyboardButton(text=f"⚡ {get_size(file.file_size)}", callback_data=f'{pre}#{file.file_id}'),
+                InlineKeyboardButton(text=f"◾ {file.file_name}", callback_data=f'{pre}#{file.file_id}')
             ] for file in files]   
 
     req = message.from_user.id if message.from_user else 0
