@@ -1146,7 +1146,7 @@ async def auto_filter(client: Client, msg, spoll=False):
             logger.exception(e)
             cap = f"<b>🎬 {imdb['title']} ({imdb['year']})</b>\n\n<b>⭐ Rating :</b> {imdb['rating']}\n<b>🎭 Genres :</b> {imdb['genres']}\n\n{imdb['plot']}"
     else:
-        cap = f"Here is what I found for your query: {search}"
+        cap = f"<b>╭⎋ • Hᴇʏ 👋{}💝,\n╰⎋ • Tɪᴛʟᴇ : {search}</b>"
 
     if imdb and imdb.get('poster'):
         try:
