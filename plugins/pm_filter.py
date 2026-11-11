@@ -29,7 +29,6 @@ logger.setLevel(logging.INFO)
 PM_BUTTONS = {}
 BUTTONS = {}
 
-# Notification Text for Spell Check / No File Found (Group View)
 NON_IMG = """<b>👋 Hello {user_mention},</b>
 
 <b>❌ <i>Could not find <code>{mv_rqst}</code> in our database!</i></b>
@@ -49,7 +48,6 @@ NON_IMG = """<b>👋 Hello {user_mention},</b>
 
 
 def get_readable_duration(seconds: int) -> str:
-    """Converts seconds into formatted Hours, Minutes, and Seconds (e.g., 2h 18m 7s)."""
     if not seconds:
         return "N/A"
     seconds = int(seconds)
@@ -67,17 +65,14 @@ def get_readable_duration(seconds: int) -> str:
 
 
 def parse_file_attributes(file_name: str, duration_sec: int = 0) -> dict:
-    """Extracts Quality, Duration, Language, and Subtitles from file name and duration."""
     fname_lower = file_name.lower()
     
-    # Quality Detection
     quality = "HQ"
     for q in ["2160p", "4k", "1080p", "720p", "480p", "360p", "hq", "hdrip"]:
         if q in fname_lower:
             quality = q.upper()
             break
             
-    # Language Detection
     languages = []
     lang_map = {
         "Malayalam": ["malayalam", "mal", "mlm"],
@@ -93,10 +88,7 @@ def parse_file_attributes(file_name: str, duration_sec: int = 0) -> dict:
             languages.append(lang)
     lang_str = ", ".join(languages) if languages else "Multi / Unknown"
     
-    # Subtitle Detection
     subtitles = "English" if ("esub" in fname_lower or "sub" in fname_lower) else "None"
-    
-    # Formatted Duration
     dur_str = get_readable_duration(duration_sec)
     
     return {
@@ -106,10 +98,6 @@ def parse_file_attributes(file_name: str, duration_sec: int = 0) -> dict:
         "subtitles": subtitles
     }
 
-
-# --------------------------------------------------------------------------- #
-#  Message Handlers (Group & Private Filters)                                 #
-# --------------------------------------------------------------------------- #
 
 @Client.on_message(filters.group & filters.text & filters.incoming)
 async def give_filter_handler(client: Client, message):
@@ -137,10 +125,6 @@ async def pm_text_handler(client: Client, message):
     
     await auto_filter(client, message)
 
-
-# --------------------------------------------------------------------------- #
-#  Pagination & Result Navigation Handler                                     #
-# --------------------------------------------------------------------------- #
 
 @Client.on_callback_query(filters.regex(r"^next"))
 async def next_page_handler(client: Client, query: CallbackQuery):
@@ -216,6 +200,11 @@ async def next_page_handler(client: Client, query: CallbackQuery):
 
     btn.insert(0, 
         [
+            InlineKeyboardButton('🎯 Main Action', callback_data=f'main_action#{req_user_id}#{key}')
+        ]
+    )
+    btn.insert(1, 
+        [
             InlineKeyboardButton('🔊 Language', callback_data=f'lang_menu#{req_user_id}#{key}'),
             InlineKeyboardButton('🎥 Quality', callback_data=f'qual_menu#{req_user_id}#{key}')
         ]
@@ -253,10 +242,6 @@ async def next_page_handler(client: Client, query: CallbackQuery):
         pass
     await query.answer()
 
-
-# --------------------------------------------------------------------------- #
-#  Language & Quality Selection Callback Handlers                             #
-# --------------------------------------------------------------------------- #
 
 @Client.on_callback_query(filters.regex(r"^(lang_menu|qual_menu|filter_apply|back_main_search)#"))
 async def filter_menu_handler(client: Client, query: CallbackQuery):
@@ -334,6 +319,9 @@ async def filter_menu_handler(client: Client, query: CallbackQuery):
             btn.append([InlineKeyboardButton(text=f"⚡ {f_size} ◾ {file.file_name}", callback_data=f'files#{file.file_id}')])
             
         btn.insert(0, [
+            InlineKeyboardButton('🎯 Main Action', callback_data=f'main_action#{req_user_id}#{key}')
+        ])
+        btn.insert(1, [
             InlineKeyboardButton('🔊 Language', callback_data=f'lang_menu#{req_user_id}#{key}'),
             InlineKeyboardButton('🎥 Quality', callback_data=f'qual_menu#{req_user_id}#{key}')
         ])
@@ -410,10 +398,6 @@ async def filter_menu_handler(client: Client, query: CallbackQuery):
         await query.message.edit_reply_markup(reply_markup=InlineKeyboardMarkup(btn))
         await query.answer(f"Filtered by {target}!", show_alert=False)
 
-
-# --------------------------------------------------------------------------- #
-#  General Callback & Interactive Buttons Handler                             #
-# --------------------------------------------------------------------------- #
 
 @Client.on_callback_query()
 async def cb_handler(client: Client, query: CallbackQuery):
@@ -1031,10 +1015,6 @@ async def cb_handler(client: Client, query: CallbackQuery):
             await query.answer("⚠️ This feature is only for administrators!", show_alert=True)
 
 
-# --------------------------------------------------------------------------- #
-#  Auto Filter Core Logic & IMDb Poster Integration                           #
-# --------------------------------------------------------------------------- #
-
 async def auto_filter(client: Client, msg, spoll=False):
     if not spoll:
         message = msg
@@ -1115,6 +1095,9 @@ async def auto_filter(client: Client, msg, spoll=False):
     BUTTONS[key] = search
     
     btn.insert(0, [
+        InlineKeyboardButton('🎯 Main Action', callback_data=f'main_action#{req}#{key}')
+    ])
+    btn.insert(1, [
         InlineKeyboardButton('🔊 Language', callback_data=f'lang_menu#{req}#{key}'),
         InlineKeyboardButton('🎥 Quality', callback_data=f'qual_menu#{req}#{key}')
     ])
@@ -1163,10 +1146,6 @@ async def auto_filter(client: Client, msg, spoll=False):
     if spoll:
         await msg.message.delete()
 
-
-# --------------------------------------------------------------------------- #
-#  Spell Check Handler (Group View)                                           #
-# --------------------------------------------------------------------------- #
 
 async def advantage_spell_chok(msg):
     mv_rqst = msg.text
