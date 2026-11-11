@@ -200,13 +200,13 @@ async def next_page_handler(client: Client, query: CallbackQuery):
 
     btn.insert(0, 
         [
-            InlineKeyboardButton('🎯 Main Action', callback_data=f'main_action#{req_user_id}#{key}')
+            InlineKeyboardButton(f'☂️ {search} ', 'dupe')
         ]
     )
     btn.insert(1, 
         [
-            InlineKeyboardButton('🔊 Language', callback_data=f'lang_menu#{req_user_id}#{key}'),
-            InlineKeyboardButton('🎥 Quality', callback_data=f'qual_menu#{req_user_id}#{key}')
+            InlineKeyboardButton('Language', callback_data=f'lang_menu#{req_user_id}#{key}'),
+            InlineKeyboardButton('Quality', callback_data=f'qual_menu#{req_user_id}#{key}')
         ]
     )
     
@@ -319,11 +319,11 @@ async def filter_menu_handler(client: Client, query: CallbackQuery):
             btn.append([InlineKeyboardButton(text=f"⚡ {f_size} ◾ {file.file_name}", callback_data=f'files#{file.file_id}')])
             
         btn.insert(0, [
-            InlineKeyboardButton('🎯 Main Action', callback_data=f'main_action#{req_user_id}#{key}')
+            InlineKeyboardButton(f'☂️ {search} ', 'dupe')
         ])
         btn.insert(1, [
-            InlineKeyboardButton('🔊 Language', callback_data=f'lang_menu#{req_user_id}#{key}'),
-            InlineKeyboardButton('🎥 Quality', callback_data=f'qual_menu#{req_user_id}#{key}')
+            InlineKeyboardButton('Language', callback_data=f'lang_menu#{req_user_id}#{key}'),
+            InlineKeyboardButton('Quality', callback_data=f'qual_menu#{req_user_id}#{key}')
         ])
         
         if total_results > 10:
@@ -388,7 +388,7 @@ async def filter_menu_handler(client: Client, query: CallbackQuery):
             btn.append([InlineKeyboardButton(text=f"⚡ {f_size} ◾ {file.file_name}", callback_data=f'files#{file.file_id}')])
             
         btn.insert(0, [
-            InlineKeyboardButton(f"📁 Filtered: {target}", callback_data="pages")
+            InlineKeyboardButton(f"🔮 Filtered: {target}", callback_data="pages")
         ])
         btn.append([
             InlineKeyboardButton("⏮️ ᗷΔCK", callback_data=f"back_main_search#{req_user_id}#{key}"),
@@ -1095,11 +1095,11 @@ async def auto_filter(client: Client, msg, spoll=False):
     BUTTONS[key] = search
     
     btn.insert(0, [
-        InlineKeyboardButton('🎯 Main Action', callback_data=f'main_action#{req}#{key}')
+        InlineKeyboardButton(f'☂️ {search} ', 'dupe')
     ])
     btn.insert(1, [
-        InlineKeyboardButton('🔊 Language', callback_data=f'lang_menu#{req}#{key}'),
-        InlineKeyboardButton('🎥 Quality', callback_data=f'qual_menu#{req}#{key}')
+        InlineKeyboardButton('Language', callback_data=f'lang_menu#{req}#{key}'),
+        InlineKeyboardButton('Quality', callback_data=f'qual_menu#{req}#{key}')
     ])
 
     if offset != "":
