@@ -9,6 +9,7 @@ import re
 import ast
 import math
 import random
+from datetime import datetime
 from pyrogram.errors.exceptions.bad_request_400 import MediaEmpty, PhotoInvalidDimensions, WebpageMediaEmpty
 from Script import script
 import pyrogram
@@ -1120,8 +1121,8 @@ async def auto_filter(client: Client, msg, spoll=False):
                 seasons=imdb["seasons"], box_office=imdb['box_office'], localized_title=imdb['localized_title'],
                 kind=imdb['kind'], imdb_id=imdb["imdb_id"], cast=imdb["cast"], runtime=imdb['runtime'],
                 countries=imdb["countries"], certificates=imdb["certificates"], languages=imdb["languages"],
-                director=imdb["director"], writer=imdb["writer"], producer=imdb["producer"], composer=imdb["composer"],
-                cinematographer=imdb["cinematographer"], music_team=imdb["music_team"], distributors=imdb["distributors"],
+                director=imdb['director'], writer=imdb['writer'], producer=imdb['producer'], composer=imdb['composer'],
+                cinematographer=imdb['cinematographer'], music_team=imdb['music_team'], distributors=imdb['distributors'],
                 release_date=imdb['release_date'], year=imdb['year'], genres=imdb['genres'], poster=imdb['poster'],
                 plot=imdb['plot'], rating=imdb['rating'], url=imdb['url'], **locals()
             )
@@ -1129,7 +1130,22 @@ async def auto_filter(client: Client, msg, spoll=False):
             logger.exception(e)
             cap = f"<b>🎬 {imdb['title']} ({imdb['year']})</b>\n\n<b>⭐ Rating :</b> {imdb['rating']}\n<b>🎭 Genres :</b> {imdb['genres']}\n\n{imdb['plot']}"
     else:
-        cap = f"<b>╭⎋ • Hᴇʏ 👋{message.from_user.mention}💝,\n╰⎋ • Tɪᴛʟᴇ : {search}\n\n{message.chat.title}</b>"
+        now = datetime.now()
+        current_time = now.strftime("%I:%M:%S %p")
+        current_day = now.strftime("%A")
+        current_date = now.strftime("%d-%m-%Y")
+        
+        user_mention = message.from_user.mention if message.from_user else "Friend"
+        cap = (
+            f"<b>╭⎋ • Hᴇʏ 👋 {user_mention}💝,\n"
+            f"╰⎋ • Tɪᴛʟᴇ : {search}</b>"
+            f"\n\n\n"
+            f"⌚ **Tɪᴍᴇ :** {current_time}\n"
+            f"☁️ **Dᴀʏ :** {current_day}\n"
+            f"📅 **Dᴀᴛᴇ :** {current_date}"
+            f"\n\n\n"
+            f"<b>{message.chat.title}</b>"
+        )
 
     if imdb and imdb.get('poster'):
         try:
