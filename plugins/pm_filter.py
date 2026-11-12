@@ -1214,7 +1214,22 @@ async def auto_filter(client: Client, msg, spoll=False):
             logger.exception(e)
             sent_message = await message.reply_text(cap, reply_markup=InlineKeyboardMarkup(btn))
     else:
-        sent_message = await message.reply_text(cap, reply_markup=InlineKeyboardMarkup(btn))
+        # NOR_IMG സപ്പോർട്ട് ചെയ്യുന്ന പുതിയ ഭാഗം (Single & List Compatibility)
+        chosen_photo = NOR_IMG
+        if isinstance(chosen_photo, list):
+            photo_to_send = random.choice(chosen_photo)
+        else:
+            photo_to_send = chosen_photo
+
+        try:
+            sent_message = await message.reply_photo(
+                photo=photo_to_send,
+                caption=cap[:1024],
+                reply_markup=InlineKeyboardMarkup(btn),
+                parse_mode=enums.ParseMode.HTML
+            )
+        except Exception:
+            sent_message = await message.reply_text(cap, reply_markup=InlineKeyboardMarkup(btn), parse_mode=enums.ParseMode.HTML)
         
     if spoll:
         await msg.message.delete()
