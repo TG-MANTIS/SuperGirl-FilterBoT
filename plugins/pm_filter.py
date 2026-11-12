@@ -211,7 +211,7 @@ async def next_page_handler(client: Client, query: CallbackQuery):
 
     btn.insert(0, 
         [
-            InlineKeyboardButton(f'☂️ {search} ', 'dupe')
+            InlineKeyboardButton(f'☂️ {search_query} ', 'dupe')
         ]
     )
     btn.insert(1, 
@@ -255,7 +255,7 @@ async def next_page_handler(client: Client, query: CallbackQuery):
 
 
 # =====================================================================
-# CALLBACK QUERY HANDLER: Language & Quality Filters Menu
+# CALLBACK QUERY HANDLER: Language & Quality Filters Menu & Back Button
 # =====================================================================
 @Client.on_callback_query(filters.regex(r"^(lang_menu|qual_menu|filter_apply|back_main_search)#"))
 async def filter_menu_handler(client: Client, query: CallbackQuery):
@@ -327,13 +327,36 @@ async def filter_menu_handler(client: Client, query: CallbackQuery):
 
     elif action == "back_main_search":
         files, _, total_results = await get_search_results(search_query, offset=0, filter=True)
-        btn = []
-        for file in files[:10]:
-            f_size = get_size(file.file_size)
-            btn.append([InlineKeyboardButton(text=f"⚡ {f_size} ◾ {file.file_name}", callback_data=f'files#{file.file_id}')])
-            
+        
+        chat_id = query.message.chat.id
+        if query.message.chat.type == enums.ChatType.PRIVATE:
+            grpid = await active_connection(str(query.from_user.id))
+            settings = await get_settings(int(grpid)) if grpid else await get_settings(chat_id)
+        else:
+            settings = await get_settings(chat_id)
+
+        pre = 'filep' if settings.get('file_secure', False) else 'file'
+        is_series = bool(re.search(r's\d+e\d+|season|episode|ep\d+|bbhin|bigg boss', search_query, re.IGNORECASE)) or any(re.search(r's\d+e\d+|season|episode|ep\d+', f.file_name, re.IGNORECASE) for f in files)
+        
+        if is_series:
+            btn = []
+            for file in files[:10]:
+                f_name = file.file_name
+                f_size = get_size(file.file_size)
+                se_match = re.search(r'(s\d+\s*e\d+|season\s*\d+|ep\s*\d+)', f_name, re.IGNORECASE)
+                se_tag = f"[{se_match.group(0).upper()}] " if se_match else ""
+                btn.append([InlineKeyboardButton(text=f"⚡ {f_size} ◾ {se_tag}{f_name}", callback_data=f'{pre}#{file.file_id}')])
+        else:
+            if settings.get('button', True):
+                btn = [[InlineKeyboardButton(text=f"⚡ {get_size(file.file_size)} ◾ {file.file_name}", callback_data=f'{pre}#{file.file_id}')] for file in files[:10]]
+            else:
+                btn = [[
+                    InlineKeyboardButton(text=f"⚡ {get_size(file.file_size)}", callback_data=f'{pre}#{file.file_id}'),
+                    InlineKeyboardButton(text=f"◾ {file.file_name}", callback_data=f'{pre}#{file.file_id}')
+                ] for file in files[:10]]
+
         btn.insert(0, [
-            InlineKeyboardButton(f'☂️ {search} ', 'dupe')
+            InlineKeyboardButton(f'☂️ {search_query} ', 'dupe')
         ])
         btn.insert(1, [
             InlineKeyboardButton('LΔΠGUΔGΣ', callback_data=f'lang_menu#{req_user_id}#{key}'),
@@ -342,14 +365,15 @@ async def filter_menu_handler(client: Client, query: CallbackQuery):
         
         if total_results > 10:
             btn.append([
-                InlineKeyboardButton("🗑️ DΣLΣTΣD", callback_data="pages"),
+                InlineKeyboardButton("🗑️ DΣLΣTΣD", callback_data="close_data"),
                 InlineKeyboardButton(text=f"📕PΔGΣS: 1/{math.ceil(total_results / 10)}", callback_data="pages"),
                 InlineKeyboardButton(text="ΠΣXT ⏭️", callback_data=f"next_{req_user_id}_{key}_10")
             ])
         else:
             btn.append([
                 InlineKeyboardButton(text="📕PΔGΣS: 1/1", callback_data="pages"),
-                InlineKeyboardButton(text="DΣLΣTΣD 🗑️", callback_data="close_data")])
+                InlineKeyboardButton(text="DΣLΣTΣD 🗑️", callback_data="close_data")
+            ])
             
         await query.message.edit_reply_markup(reply_markup=InlineKeyboardMarkup(btn))
         await query.answer()
@@ -398,10 +422,18 @@ async def filter_menu_handler(client: Client, query: CallbackQuery):
         if not filtered_files:
             return await query.answer("❌ No files found matching this filter!", show_alert=True)
             
+        chat_id = query.message.chat.id
+        if query.message.chat.type == enums.ChatType.PRIVATE:
+            grpid = await active_connection(str(query.from_user.id))
+            settings = await get_settings(int(grpid)) if grpid else await get_settings(chat_id)
+        else:
+            settings = await get_settings(chat_id)
+
+        pre = 'filep' if settings.get('file_secure', False) else 'file'
         btn = []
         for file in filtered_files[:10]:
             f_size = get_size(file.file_size)
-            btn.append([InlineKeyboardButton(text=f"⚡ {f_size} ◾ {file.file_name}", callback_data=f'files#{file.file_id}')])
+            btn.append([InlineKeyboardButton(text=f"⚡ {f_size} ◾ {file.file_name}", callback_data=f'{pre}#{file.file_id}')])
             
         btn.insert(0, [
             InlineKeyboardButton(f"🔮 ᖴILTΣRΣD: {target}", callback_data="pages")
@@ -1101,7 +1133,7 @@ async def auto_filter(client: Client, msg, spoll=False):
             f_name = file.file_name
             f_size = get_size(file.file_size)
             se_match = re.search(r'(s\d+\s*e\d+|season\s*\d+|ep\s*\d+)', f_name, re.IGNORECASE)
-            se_tag = f"[{se_match.group(0).upper()}] " if se_match else ""
+            se_tag = f"[{se_match.group(0().upper()}] " if se_match else ""
             btn.append([InlineKeyboardButton(text=f"⚡ {f_size} ◾ {se_tag}{f_name}", callback_data=f'{pre}#{file.file_id}')])
     else:
         if settings.get('button', True):
@@ -1187,7 +1219,7 @@ async def auto_filter(client: Client, msg, spoll=False):
     if spoll:
         await msg.message.delete()
 
-    # Background task for 5-minute auto-deletion & notification alert with sticker
+    # Background task for 5-minute auto-deletion & photo with notification text
     async def delete_after_delay():
         await asyncio.sleep(300)
         
@@ -1215,30 +1247,25 @@ async def auto_filter(client: Client, msg, spoll=False):
                 f"==============================</b>"
             )
             
-            sticker_msg = None
+            photo_url = "https://envs.sh/RCE.jpg"
+            photo_msg = None
             try:
-                sticker_msg = await client.send_sticker(
+                photo_msg = await client.send_photo(
                     chat_id=message.chat.id,
-                    sticker="CAACAgUAAxkBAALPAWr1f1VbEkzQktHIauvuDoLUt1LQAAJbEQACWEjAVCRtlaEPoxhpPQQ"
+                    photo=photo_url,
+                    caption=notify_text
                 )
             except Exception:
-                pass
-
-            notify_msg = await client.send_message(
-                chat_id=message.chat.id,
-                text=notify_text
-            )
+                photo_msg = await client.send_message(
+                    chat_id=message.chat.id,
+                    text=notify_text
+                )
             
             await asyncio.sleep(10)
             
-            try:
-                await notify_msg.delete()
-            except Exception:
-                pass
-                
-            if sticker_msg:
+            if photo_msg:
                 try:
-                    await sticker_msg.delete()
+                    await photo_msg.delete()
                 except Exception:
                     pass
             
