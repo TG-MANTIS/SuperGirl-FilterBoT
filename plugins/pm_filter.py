@@ -216,8 +216,8 @@ async def next_page_handler(client: Client, query: CallbackQuery):
     )
     btn.insert(1, 
         [
-            InlineKeyboardButton('Language', callback_data=f'lang_menu#{req_user_id}#{key}'),
-            InlineKeyboardButton('Quality', callback_data=f'qual_menu#{req_user_id}#{key}')
+            InlineKeyboardButton('LΔΠGUΔGΣ', callback_data=f'lang_menu#{req_user_id}#{key}'),
+            InlineKeyboardButton('QUΔLITY', callback_data=f'qual_menu#{req_user_id}#{key}')
         ]
     )
     
@@ -231,19 +231,19 @@ async def next_page_handler(client: Client, query: CallbackQuery):
     if n_offset == 0:
         btn.append(
             [InlineKeyboardButton("⏮️ ᗷΔCK", callback_data=f"next_{req_user_id}_{key}_{off_set}"),
-             InlineKeyboardButton(f"📕 {math.ceil(int(offset) / 10) + 1} / {math.ceil(total / 10)} 📕", callback_data="pages"),
+             InlineKeyboardButton(f"📕PΔGΣS: {math.ceil(int(offset) / 10) + 1} / {math.ceil(total / 10)}", callback_data="pages"),
              InlineKeyboardButton("DΣLΣTΣD 🗑️", callback_data="close_data")]
         )
     elif off_set is None:
         btn.append(
             [InlineKeyboardButton("🗑️ DΣLΣTΣD", callback_data="close_data"),
-             InlineKeyboardButton(f"📕 {math.ceil(int(offset) / 10) + 1} / {math.ceil(total / 10)} 📕", callback_data="pages"),
+             InlineKeyboardButton(f"📕PΔGΣS: {math.ceil(int(offset) / 10) + 1} / {math.ceil(total / 10)}", callback_data="pages"),
              InlineKeyboardButton("ΠΣXT ⏭️", callback_data=f"next_{req_user_id}_{key}_{n_offset}")])
     else:
         btn.append(
             [
                 InlineKeyboardButton("⏮️ ᗷΔCK", callback_data=f"next_{req_user_id}_{key}_{off_set}"),
-                InlineKeyboardButton(f"📕 {math.ceil(int(offset) / 10) + 1} / {math.ceil(total / 10)} 📕", callback_data="pages"),
+                InlineKeyboardButton(f"📕PΔGΣS: {math.ceil(int(offset) / 10) + 1} / {math.ceil(total / 10)}", callback_data="pages"),
                 InlineKeyboardButton("ΠΣXT ⏭️", callback_data=f"next_{req_user_id}_{key}_{n_offset}")
             ],
         )
@@ -336,18 +336,20 @@ async def filter_menu_handler(client: Client, query: CallbackQuery):
             InlineKeyboardButton(f'☂️ {search} ', 'dupe')
         ])
         btn.insert(1, [
-            InlineKeyboardButton('Language', callback_data=f'lang_menu#{req_user_id}#{key}'),
-            InlineKeyboardButton('Quality', callback_data=f'qual_menu#{req_user_id}#{key}')
+            InlineKeyboardButton('LΔΠGUΔGΣ', callback_data=f'lang_menu#{req_user_id}#{key}'),
+            InlineKeyboardButton('QUΔLITY', callback_data=f'qual_menu#{req_user_id}#{key}')
         ])
         
         if total_results > 10:
             btn.append([
                 InlineKeyboardButton("🗑️ DΣLΣTΣD", callback_data="pages"),
-                InlineKeyboardButton(text=f" 📕1/{math.ceil(total_results / 10)}📕", callback_data="pages"),
+                InlineKeyboardButton(text=f"📕PΔGΣS: 1/{math.ceil(total_results / 10)}", callback_data="pages"),
                 InlineKeyboardButton(text="ΠΣXT ⏭️", callback_data=f"next_{req_user_id}_{key}_10")
             ])
         else:
-            btn.append([InlineKeyboardButton(text="DΣLΣTΣD 🗑️", callback_data="close_data")])
+            btn.append([
+                InlineKeyboardButton(text="📕PΔGΣS: 1/1", callback_data="pages"),
+                InlineKeyboardButton(text="DΣLΣTΣD 🗑️", callback_data="close_data")])
             
         await query.message.edit_reply_markup(reply_markup=InlineKeyboardMarkup(btn))
         await query.answer()
@@ -402,7 +404,7 @@ async def filter_menu_handler(client: Client, query: CallbackQuery):
             btn.append([InlineKeyboardButton(text=f"⚡ {f_size} ◾ {file.file_name}", callback_data=f'files#{file.file_id}')])
             
         btn.insert(0, [
-            InlineKeyboardButton(f"🔮 Filtered: {target}", callback_data="pages")
+            InlineKeyboardButton(f"🔮 ᖴILTΣRΣD: {target}", callback_data="pages")
         ])
         btn.append([
             InlineKeyboardButton("⏮️ ᗷΔCK", callback_data=f"back_main_search#{req_user_id}#{key}"),
@@ -1065,8 +1067,8 @@ async def auto_filter(client: Client, msg, spoll=False):
                         )
                         search_query = message.text.replace(" ", "+")
                         btn = [[
-                            InlineKeyboardButton(text="🔎 Google", url=f"https://google.com/search?q={search_query}"),
-                            InlineKeyboardButton(text="🔮 IMDb", url=f"https://imdb.com/find?q={search_query}")
+                            InlineKeyboardButton(text="🔎 GOOGLΣ", url=f"https://google.com/search?q={search_query}"),
+                            InlineKeyboardButton(text="🔮 IMDᗷ", url=f"https://imdb.com/find?q={search_query}")
                         ]]
                         sent_msg = await message.reply_text(text=msg_text, reply_markup=InlineKeyboardMarkup(btn))
                         await asyncio.sleep(5)
@@ -1118,18 +1120,20 @@ async def auto_filter(client: Client, msg, spoll=False):
         InlineKeyboardButton(f'☂️ {search} ', 'dupe')
     ])
     btn.insert(1, [
-        InlineKeyboardButton('Language', callback_data=f'lang_menu#{req}#{key}'),
-        InlineKeyboardButton('Quality', callback_data=f'qual_menu#{req}#{key}')
+        InlineKeyboardButton('LΔΠGUΔGΣ', callback_data=f'lang_menu#{req}#{key}'),
+        InlineKeyboardButton('QUΔLITY', callback_data=f'qual_menu#{req}#{key}')
     ])
 
     if offset != "":
         btn.append([
-            InlineKeyboardButton("🗑️ ", callback_data="close_data"),
-            InlineKeyboardButton(text=f" 1/{math.ceil(int(total_results) / 10)}", callback_data="pages"),
+            InlineKeyboardButton("🗑️ DΣLΣTΣD", callback_data="close_data"),
+            InlineKeyboardButton(text=f"📕PΔGΣS: 1/{math.ceil(int(total_results) / 10)}", callback_data="pages"),
             InlineKeyboardButton(text="ΠΣXT ⏭️", callback_data=f"next_{req}_{key}_{offset}")
         ])
     else:
-        btn.append([InlineKeyboardButton(text="Delete 🗑️", callback_data="close_data")])
+        btn.append([
+            InlineKeyboardButton(text="📕PΔGΣS: 1/1", callback_data="pages"),
+            InlineKeyboardButton(text="DΣLΣTΣD 🗑️", callback_data="close_data")])
 
     imdb = await get_poster(search, file=(files[0]).file_name) if settings.get("imdb", True) else None
     if imdb:
@@ -1160,11 +1164,11 @@ async def auto_filter(client: Client, msg, spoll=False):
         cap = (
             f"<b>╭⎋ • Hᴇʏ 👋 {user_mention}💝,\n"
             f"╰⎋ • Tɪᴛʟᴇ : {search}</b>"
-            f"\n\n\n"
+            f"\n\n"
             f"⌚ **Tɪᴍᴇ :** {current_time}\n"
             f"☁️ **Dᴀʏ :** {current_day}\n"
             f"📅 **Dᴀᴛᴇ :** {current_date}"
-            f"\n\n\n"
+            f"\n\n"
             f"<b>{message.chat.title}</b>"
         )
 
@@ -1204,7 +1208,7 @@ async def auto_filter(client: Client, msg, spoll=False):
         try:
             notify_text = (
                 f"<b>========{{{user_mention}}}===========\n\n"
-                f"𝖸𝗈𝗎𝗋 𝖱𝖾𝗊𝗎𝖾𝗌𝗍 [{movie_title}] 𝖧𝖺𝗌 𝖡𝖾𝖾𝗇 𝖣𝖾𝗅𝖾𝗍𝖾𝖽 🗑 \n"
+                f"𝖸𝗈𝗎𝗋 𝖱𝖾𝗊𝗎𝖾𝗌𝗍 <u>[{movie_title}]</u> 𝖧𝖺𝗌 𝖡𝖾𝖾𝗇 𝖣𝖾𝗅𝖾𝗍𝖾𝖽 🗑 \n"
                 f"(𝖣𝗎𝖾 𝖳𝗈 𝖠𝗏𝗈𝗂𝖽 𝖢𝗈𝗉𝗒𝗋𝗂𝗀𝗁𝗍𝗌 𝖨𝗌𝗌𝗎𝖾😌)\n"
                 f"==============================\n"
                 f"𝖨𝖥 𝖸𝖮𝖴 𝖶𝖠𝖭𝖳 𝖳𝖧𝖠𝖳 𝖥𝖨𝖫𝖤, 𝖱𝖤𝖰𝖴𝖤𝖲𝖳 𝖠𝖦𝖠𝖨𝖭\n"
@@ -1215,7 +1219,7 @@ async def auto_filter(client: Client, msg, spoll=False):
             try:
                 sticker_msg = await client.send_sticker(
                     chat_id=message.chat.id,
-                    sticker="YOUR_STICKER_FILE_ID"
+                    sticker="CAACAgUAAxkBAALPAWr1f1VbEkzQktHIauvuDoLUt1LQAAJbEQACWEjAVCRtlaEPoxhpPQQ"
                 )
             except Exception:
                 pass
@@ -1251,8 +1255,8 @@ async def advantage_spell_chok(msg):
     mv_rqst = msg.text
     search = msg.text.replace(" ", "+")
     btn = [[
-        InlineKeyboardButton(text="🔎 Google", url=f"https://google.com/search?q={search}"),
-        InlineKeyboardButton(text="🔮 IMDb", url=f"https://imdb.com/find?q={search}")
+        InlineKeyboardButton(text="🔎 GOOGLΣ", url=f"https://google.com/search?q={search}"),
+        InlineKeyboardButton(text="🔮 IMDᗷ", url=f"https://imdb.com/find?q={search}")
     ]]
     
     user_mention = msg.from_user.mention if msg.from_user else "Friend"
