@@ -1197,9 +1197,9 @@ async def auto_filter(client: Client, msg, spoll=False):
             f"<b>╭⎋ • Hᴇʏ 👋 {user_mention}💝,\n"
             f"╰⎋ • Tɪᴛʟᴇ : {search}</b>"
             f"\n\n"
-            f"⌚ **Tɪᴍᴇ :** {current_time}\n"
-            f"☁️ **Dᴀʏ :** {current_day}\n"
-            f"📅 **Dᴀᴛᴇ :** {current_date}"
+            f"<b>⌚ Tɪᴍᴇ :</b> {current_time}\n"
+            f"<b>☁️ Dᴀʏ :</b> {current_day}\n"
+            f"<b>📅 Dᴀᴛᴇ :</b> {current_date}"
             f"\n\n"
             f"<b>{message.chat.title}</b>"
         )
