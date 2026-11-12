@@ -1133,7 +1133,7 @@ async def auto_filter(client: Client, msg, spoll=False):
             f_name = file.file_name
             f_size = get_size(file.file_size)
             se_match = re.search(r'(s\d+\s*e\d+|season\s*\d+|ep\s*\d+)', f_name, re.IGNORECASE)
-            se_tag = f"[{se_match.group(0().upper()}] " if se_match else ""
+            se_tag = f"[{se_match.group(0).upper()}] " if se_match else ""
             btn.append([InlineKeyboardButton(text=f"⚡ {f_size} ◾ {se_tag}{f_name}", callback_data=f'{pre}#{file.file_id}')])
     else:
         if settings.get('button', True):
