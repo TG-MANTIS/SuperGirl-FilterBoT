@@ -49,6 +49,9 @@ NON_IMG = """<b>👋 Hello {user_mention},</b>
 💡 <b><u>Search Format:</u></b> <code>Movie Name Year</code> (Eg: <i>Lucifer 2019</i>)"""
 
 
+# =====================================================================
+# UTILITY FUNCTIONS: Duration & File Attributes Parser
+# =====================================================================
 def get_readable_duration(seconds: int) -> str:
     if not seconds:
         return "N/A"
@@ -101,6 +104,9 @@ def parse_file_attributes(file_name: str, duration_sec: int = 0) -> dict:
     }
 
 
+# =====================================================================
+# MESSAGE HANDLERS: Group & Private Incoming Messages
+# =====================================================================
 @Client.on_message(filters.group & filters.text & filters.incoming)
 async def give_filter_handler(client: Client, message):
     is_manual = await manual_filters(client, message)
@@ -128,6 +134,9 @@ async def pm_text_handler(client: Client, message):
     await auto_filter(client, message)
 
 
+# =====================================================================
+# CALLBACK QUERY HANDLER: Pagination (Next/Back Pages)
+# =====================================================================
 @Client.on_callback_query(filters.regex(r"^next"))
 async def next_page_handler(client: Client, query: CallbackQuery):
     _, req_user_id, key, offset_str = query.data.split("_")
@@ -245,6 +254,9 @@ async def next_page_handler(client: Client, query: CallbackQuery):
     await query.answer()
 
 
+# =====================================================================
+# CALLBACK QUERY HANDLER: Language & Quality Filters Menu
+# =====================================================================
 @Client.on_callback_query(filters.regex(r"^(lang_menu|qual_menu|filter_apply|back_main_search)#"))
 async def filter_menu_handler(client: Client, query: CallbackQuery):
     data = query.data.split("#")
@@ -401,6 +413,9 @@ async def filter_menu_handler(client: Client, query: CallbackQuery):
         await query.answer(f"Filtered by {target}!", show_alert=False)
 
 
+# =====================================================================
+# CALLBACK QUERY HANDLER: General Buttons, Deletion & Connections
+# =====================================================================
 @Client.on_callback_query()
 async def cb_handler(client: Client, query: CallbackQuery):
     if query.data == "close_data":
@@ -1017,6 +1032,9 @@ async def cb_handler(client: Client, query: CallbackQuery):
             await query.answer("⚠️ This feature is only for administrators!", show_alert=True)
 
 
+# =====================================================================
+# CORE MODULE: Auto-Filter Search, IMDB/IST Time Captions & Auto-Delete
+# =====================================================================
 async def auto_filter(client: Client, msg, spoll=False):
     if not spoll:
         message = msg
@@ -1152,20 +1170,83 @@ async def auto_filter(client: Client, msg, spoll=False):
 
     if imdb and imdb.get('poster'):
         try:
-            await message.reply_photo(photo=imdb.get('poster'), caption=cap[:1024], reply_markup=InlineKeyboardMarkup(btn))
+            sent_message = await message.reply_photo(photo=imdb.get('poster'), caption=cap[:1024], reply_markup=InlineKeyboardMarkup(btn))
         except (MediaEmpty, PhotoInvalidDimensions, WebpageMediaEmpty):
             poster = imdb.get('poster').replace('.jpg', "._V1_UX360.jpg")
-            await message.reply_photo(photo=poster, caption=cap[:1024], reply_markup=InlineKeyboardMarkup(btn))
+            sent_message = await message.reply_photo(photo=poster, caption=cap[:1024], reply_markup=InlineKeyboardMarkup(btn))
         except Exception as e:
             logger.exception(e)
-            await message.reply_text(cap, reply_markup=InlineKeyboardMarkup(btn))
+            sent_message = await message.reply_text(cap, reply_markup=InlineKeyboardMarkup(btn))
     else:
-        await message.reply_text(cap, reply_markup=InlineKeyboardMarkup(btn))
+        sent_message = await message.reply_text(cap, reply_markup=InlineKeyboardMarkup(btn))
         
     if spoll:
         await msg.message.delete()
 
+    # Background task for 5-minute auto-deletion & notification alert with sticker
+    async def delete_after_delay():
+        await asyncio.sleep(300)
+        
+        user = message.from_user
+        user_mention = user.mention if user else "Friend"
+        movie_title = search
+        
+        try:
+            await sent_message.delete()
+        except Exception:
+            pass
 
+        try:
+            await message.delete()
+        except Exception:
+            pass
+
+        try:
+            notify_text = (
+                f"<b>========{{{user_mention}}}===========\n\n"
+                f"𝖸𝗈𝗎𝗋 𝖱𝖾𝗊𝗎𝖾𝗌𝗍 [{movie_title}] 𝖧𝖺𝗌 𝖡𝖾𝖾𝗇 𝖣𝖾𝗅𝖾𝗍𝖾𝖽 🗑 \n"
+                f"(𝖣𝗎𝖾 𝖳𝗈 𝖠𝗏𝗈𝗂𝖽 𝖢𝗈𝗉𝗒𝗋𝗂𝗀𝗁𝗍𝗌 𝖨𝗌𝗌𝗎𝖾😌)\n"
+                f"==============================\n"
+                f"𝖨𝖥 𝖸𝖮𝖴 𝖶𝖠𝖭𝖳 𝖳𝖧𝖠𝖳 𝖥𝖨𝖫𝖤, 𝖱𝖤𝖰𝖴𝖤𝖲𝖳 𝖠𝖦𝖠𝖨𝖭\n"
+                f"==============================</b>"
+            )
+            
+            sticker_msg = None
+            try:
+                sticker_msg = await client.send_sticker(
+                    chat_id=message.chat.id,
+                    sticker="YOUR_STICKER_FILE_ID"
+                )
+            except Exception:
+                pass
+
+            notify_msg = await client.send_message(
+                chat_id=message.chat.id,
+                text=notify_text
+            )
+            
+            await asyncio.sleep(10)
+            
+            try:
+                await notify_msg.delete()
+            except Exception:
+                pass
+                
+            if sticker_msg:
+                try:
+                    await sticker_msg.delete()
+                except Exception:
+                    pass
+            
+        except Exception:
+            pass
+
+    asyncio.create_task(delete_after_delay())
+
+
+# =====================================================================
+# SPELL CHECK & MANUAL FILTERS HANDLER
+# =====================================================================
 async def advantage_spell_chok(msg):
     mv_rqst = msg.text
     search = msg.text.replace(" ", "+")
