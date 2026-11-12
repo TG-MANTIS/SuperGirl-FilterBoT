@@ -10,6 +10,7 @@ import ast
 import math
 import random
 from datetime import datetime
+import pytz
 from pyrogram.errors.exceptions.bad_request_400 import MediaEmpty, PhotoInvalidDimensions, WebpageMediaEmpty
 from Script import script
 import pyrogram
@@ -1130,7 +1131,9 @@ async def auto_filter(client: Client, msg, spoll=False):
             logger.exception(e)
             cap = f"<b>🎬 {imdb['title']} ({imdb['year']})</b>\n\n<b>⭐ Rating :</b> {imdb['rating']}\n<b>🎭 Genres :</b> {imdb['genres']}\n\n{imdb['plot']}"
     else:
-        now = datetime.now()
+        IST = pytz.timezone('Asia/Kolkata')
+        now = datetime.now(IST)
+        
         current_time = now.strftime("%I:%M:%S %p")
         current_day = now.strftime("%A")
         current_date = now.strftime("%d-%m-%Y")
