@@ -55,14 +55,15 @@ Name - {}
     FILE_CAPTION = """<b>Hᴇʟʟᴏ 👋 {user_mention},!</b>
 
 <b>📚 <code>{file_name}</code></b>
+
 <b>⚙️ ꜰɪʟᴇ sɪᴢᴇ:</b> {file_size}
 
 <b>╭────── • ◆ • ──────╮
-📮 ᴊᴏɪɴ : [ᴄʜᴀɴɴᴇʟ](https://t.me/CFOTTUPDATE)
-🔖 ᴍᴏᴠɪᴇs : [ɢʀᴏᴜᴘ](https://t.me/Mallu_Movie_Hub_Group)
+📮 ᴊᴏɪɴ : <a href=https://t.me/CFOTTUPDATE>ᴄʜᴀɴɴᴇʟ</b></a>
+🔖 ᴍᴏᴠɪᴇs : <a href=https://t.me/Mallu_Movie_Hub_Group>ɢʀᴏᴜᴘ</b></a>
 ╰────── • ◆ • ──────╯
 🎗 ʝσιи • ѕнαяє • ѕυρρσят 🎗</b>
     
-<b>[©️𝐓𝐞𝐚𝐦 𝐂𝐢𝐧𝐞𝐦𝐚 𝐅𝐢𝐥𝐱™️](https://t.me/+iEbhY7mM4oE1OTVl)</b>"""
+<b><a href=https://t.me/+iEbhY7mM4oE1OTVl>©️𝐓𝐞𝐚𝐦 𝐂𝐢𝐧𝐞𝐦𝐚 𝐅𝐢𝐥𝐱™️</b></a>"""
 
     START_TXT_GROUP = """ഹലോ {}\n\n• എന്താണ് സഹോദരന് വേണ്ടത്? സ്റ്റാർട്ട്‌ ആയപ്പോ ഒരു സുഖം കിട്ടി അല്ലേ.. 🤭😜\n\n• എന്തായാലും വന്നതല്ലേ. ഇവിടെ കാണുന്ന ചാനൽ & ഗ്രൂപ്പ് ൽ ഒക്കെ Join ചെയ്തേക്ക് 😎"""
