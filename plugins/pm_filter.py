@@ -49,58 +49,6 @@ NON_IMG = """<b>👋 Hello {user_mention},</b>
 💡 <b><u>Search Format:</u></b> <code>Movie Name Year</code> (Eg: <i>Lucifer 2019</i>)"""
 
 
-def get_readable_duration(seconds: int) -> str:
-    if not seconds:
-        return "N/A"
-    seconds = int(seconds)
-    hours = seconds // 3600
-    minutes = (seconds % 3600) // 60
-    secs = seconds % 60
-    
-    parts = []
-    if hours > 0:
-        parts.append(f"{hours}h")
-    if minutes > 0 or hours > 0:
-        parts.append(f"{minutes}m")
-    parts.append(f"{secs}s")
-    return "".join(parts)
-
-
-def parse_file_attributes(file_name: str, duration_sec: int = 0) -> dict:
-    fname_lower = file_name.lower()
-    
-    quality = "HQ"
-    for q in ["2160p", "4k", "1080p", "720p", "480p", "360p", "hq", "hdrip"]:
-        if q in fname_lower:
-            quality = q.upper()
-            break
-            
-    languages = []
-    lang_map = {
-        "Malayalam": ["malayalam", "mal", "mlm"],
-        "Tamil": ["tamil", "tam"],
-        "Telugu": ["telugu", "tel"],
-        "Hindi": ["hindi", "hin"],
-        "English": ["english", "eng"],
-        "Kannada": ["kannada", "kan"],
-        "Dual Audio": ["dual", "multi"],
-    }
-    for lang, keys in lang_map.items():
-        if any(k in fname_lower for k in keys):
-            languages.append(lang)
-    lang_str = ", ".join(languages) if languages else "Multi / Unknown"
-    
-    subtitles = "English" if ("esub" in fname_lower or "sub" in fname_lower) else "None"
-    dur_str = get_readable_duration(duration_sec)
-    
-    return {
-        "quality": quality,
-        "duration": dur_str,
-        "language": lang_str,
-        "subtitles": subtitles
-    }
-
-
 @Client.on_message(filters.group & filters.text & filters.incoming)
 async def give_filter_handler(client: Client, message):
     is_manual = await manual_filters(client, message)
@@ -794,23 +742,11 @@ async def cb_handler(client: Client, query: CallbackQuery):
         title = files.file_name
         size = get_size(files.file_size)
         f_caption = files.caption
-        duration_sec = getattr(files, 'duration', 0) or 0
         chat_id = query.message.chat.id
         
-        attr = parse_file_attributes(title or "", duration_sec)
-        
-        # IMDb വഴി Genres എടുക്കാനുള്ള സപ്പോർട്ട്
-        imdb_genres = "N/A"
-        try:
-            imdb_data = await get_poster(title)
-            if imdb_data and imdb_data.get('genres'):
-                genres_list = imdb_data.get('genres')
-                if isinstance(genres_list, list):
-                    imdb_genres = " ".join([f"#{g.strip()}" for g in genres_list])
-                else:
-                    imdb_genres = genres_list
-        except Exception:
-            pass
+        user = query.from_user
+        user_mention = user.mention if user else "Friend"
+        user_name = user.first_name if user else "User"
         
         if query.message.chat.type == enums.ChatType.PRIVATE:
             grpid = await active_connection(str(query.from_user.id))
@@ -824,11 +760,8 @@ async def cb_handler(client: Client, query: CallbackQuery):
                     file_name='' if title is None else title,
                     file_size='' if size is None else size,
                     file_caption='' if f_caption is None else f_caption,
-                    quality=attr['quality'],
-                    duration=attr['duration'],
-                    language=attr['language'],
-                    subtitles=attr['subtitles'],
-                    genres=imdb_genres
+                    user_mention=user_mention,
+                    user_name=user_name
                 )
             except Exception as e:
                 logger.exception(e)
@@ -890,33 +823,30 @@ async def cb_handler(client: Client, query: CallbackQuery):
         title = files.file_name
         size = get_size(files.file_size)
         f_caption = files.caption
-        duration_sec = getattr(files, 'duration', 0) or 0
         
-        attr = parse_file_attributes(title or "", duration_sec)
+        user = query.from_user
+        user_mention = user.mention if user else "Friend"
+        user_name = user.first_name if user else "User"
         
-        imdb_genres = "N/A"
+        # ചാനൽ ജോയിൻ ചെയ്ത് ട്രൈ എഗൈൻ അടിക്കുമ്പോൾ വരുന്ന താങ്ക്യൂ മെസ്സേജ്
         try:
-            imdb_data = await get_poster(title)
-            if imdb_data and imdb_data.get('genres'):
-                genres_list = imdb_data.get('genres')
-                if isinstance(genres_list, list):
-                    imdb_genres = " ".join([f"#{g.strip()}" for g in genres_list])
-                else:
-                    imdb_genres = genres_list
+            thank_text = f"<b>✨ Thank you for joining our update channel, {user_mention}!\n\n👇 Here is your requested file:</b>"
+            await client.send_message(
+                chat_id=query.from_user.id,
+                text=thank_text,
+                parse_mode=enums.ParseMode.HTML
+            )
         except Exception:
             pass
-        
+
         if CUSTOM_FILE_CAPTION:
             try:
                 f_caption = CUSTOM_FILE_CAPTION.format(
                     file_name='' if title is None else title,
                     file_size='' if size is None else size,
                     file_caption='' if f_caption is None else f_caption,
-                    quality=attr['quality'],
-                    duration=attr['duration'],
-                    language=attr['language'],
-                    subtitles=attr['subtitles'],
-                    genres=imdb_genres
+                    user_mention=user_mention,
+                    user_name=user_name
                 )
             except Exception as e:
                 logger.exception(e)
@@ -1298,7 +1228,7 @@ async def auto_filter(client: Client, msg, spoll=False):
         try:
             notify_text = (
                 f"<b>========{{{user_mention}}}===========\n\n"
-                f"𝖸𝗈𝗎𝗋 𝖱𝖾𝗊𝗎𝖾𝗌𝗍 <u>[{movie_title}]</u> 𝖧𝖺𝗌 𝖡𝖾𝖾𝗇 𝖣𝖾𝗅𝖾𝗍𝖾𝖽 🗑 \n"
+                f"𝖸𝗈𝗎𝗋 𝖱𝖾𝗊𝗎𝖾𝗌ᴛ <u>[{movie_title}]</u> 𝖧𝖺𝗌 𝖡𝖾𝖾𝗇 𝖣𝖾𝗅𝖾𝗍𝖾𝖽 🗑 \n"
                 f"(𝖣𝗎𝖾 𝖳𝗈 𝖠𝗏𝗈𝗂𝖽 𝖢𝗈𝗉𝗒𝗋𝗂𝗀𝗁𝗍𝗌 𝖨𝗌𝗌𝗎𝖾😌)\n"
                 f"==============================\n"
                 f"𝖨𝖥 𝖸𝖮𝖴 𝖶𝖠𝖭𝖳 𝖳𝖧𝖠𝖳 𝖥𝖨𝖫𝖤, 𝖱𝖤𝗤𝖴𝖤𝖲𝖳 𝖠𝖦𝖠𝖨𝗭\n"
