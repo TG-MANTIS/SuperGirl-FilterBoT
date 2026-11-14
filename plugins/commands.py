@@ -17,7 +17,7 @@ from database.users_chats_db import db
 from info import CHANNELS, ADMINS, AUTH_CHANNEL, LOG_CHANNEL, PICS, SET_IMG, BATCH_FILE_CAPTION, CUSTOM_FILE_CAPTION, PROTECT_CONTENT, FORCE_IMG
 from utils import get_settings, get_size, is_subscribed, save_group_settings, temp
 from database.connections_mdb import active_connection
-from plugins.pm_filter import auto_filter, parse_file_attributes
+from plugins.pm_filter import auto_filter
 import re
 import json
 import base64
@@ -242,6 +242,10 @@ async def start_handler(client: Client, message):
         file_id = data
         pre = ""
 
+    user = message.from_user
+    user_mention = user.mention if user else "Friend"
+    user_name = user.first_name if user else "User"
+
     if data.split("-", 1)[0] == "BATCH":
         sts = await message.reply("⏳ Please wait, processing batch files...")
         file_id = data.split("-", 1)[1]
@@ -261,8 +265,6 @@ async def start_handler(client: Client, message):
             title = msg.get("title")
             size = get_size(int(msg.get("size", 0)))
             f_caption = msg.get("caption", "")
-            duration_sec = msg.get("duration", 0) or 0
-            attr = parse_file_attributes(title or "", duration_sec)
             
             if CUSTOM_FILE_CAPTION:
                 try:
@@ -270,10 +272,8 @@ async def start_handler(client: Client, message):
                         file_name='' if title is None else title, 
                         file_size='' if size is None else size, 
                         file_caption='' if f_caption is None else f_caption,
-                        quality=attr['quality'],
-                        duration=attr['duration'],
-                        language=attr['language'],
-                        subtitles=attr['subtitles']
+                        user_mention=user_mention,
+                        user_name=user_name
                     )
                 except Exception as err:
                     logger.exception(err)
@@ -319,8 +319,6 @@ async def start_handler(client: Client, message):
                 title = getattr(media, 'file_name', '')
                 size = get_size(getattr(media, 'file_size', 0))
                 orig_caption = getattr(msg, 'caption', '') or ''
-                duration_sec = getattr(media, 'duration', 0) or 0
-                attr = parse_file_attributes(title or "", duration_sec)
                 
                 if CUSTOM_FILE_CAPTION:
                     try:
@@ -328,10 +326,8 @@ async def start_handler(client: Client, message):
                             file_name=title, 
                             file_size=size, 
                             file_caption=orig_caption,
-                            quality=attr['quality'],
-                            duration=attr['duration'],
-                            language=attr['language'],
-                            subtitles=attr['subtitles']
+                            user_mention=user_mention,
+                            user_name=user_name
                         )
                     except Exception as err:
                         logger.exception(err)
@@ -374,8 +370,6 @@ async def start_handler(client: Client, message):
             file = getattr(msg, filetype.value)
             title = file.file_name
             size = get_size(file.file_size)
-            duration_sec = getattr(file, 'duration', 0) or 0
-            attr = parse_file_attributes(title or "", duration_sec)
             
             f_caption = f"<code>{title}</code>"
             if CUSTOM_FILE_CAPTION:
@@ -384,10 +378,8 @@ async def start_handler(client: Client, message):
                         file_name='' if title is None else title, 
                         file_size='' if size is None else size, 
                         file_caption='',
-                        quality=attr['quality'],
-                        duration=attr['duration'],
-                        language=attr['language'],
-                        subtitles=attr['subtitles']
+                        user_mention=user_mention,
+                        user_name=user_name
                     )
                 except Exception:
                     pass
@@ -401,8 +393,6 @@ async def start_handler(client: Client, message):
     title = files.file_name
     size = get_size(files.file_size)
     f_caption = files.caption
-    duration_sec = getattr(files, 'duration', 0) or 0
-    attr = parse_file_attributes(title or "", duration_sec)
     
     if CUSTOM_FILE_CAPTION:
         try:
@@ -410,10 +400,8 @@ async def start_handler(client: Client, message):
                 file_name='' if title is None else title, 
                 file_size='' if size is None else size, 
                 file_caption='' if f_caption is None else f_caption,
-                quality=attr['quality'],
-                duration=attr['duration'],
-                language=attr['language'],
-                subtitles=attr['subtitles']
+                user_mention=user_mention,
+                user_name=user_name
             )
         except Exception as err:
             logger.exception(err)
