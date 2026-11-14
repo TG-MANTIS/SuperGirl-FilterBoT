@@ -49,9 +49,6 @@ NON_IMG = """<b>👋 Hello {user_mention},</b>
 💡 <b><u>Search Format:</u></b> <code>Movie Name Year</code> (Eg: <i>Lucifer 2019</i>)"""
 
 
-# =====================================================================
-# UTILITY FUNCTIONS: Duration & File Attributes Parser
-# =====================================================================
 def get_readable_duration(seconds: int) -> str:
     if not seconds:
         return "N/A"
@@ -104,9 +101,6 @@ def parse_file_attributes(file_name: str, duration_sec: int = 0) -> dict:
     }
 
 
-# =====================================================================
-# MESSAGE HANDLERS: Group & Private Incoming Messages
-# =====================================================================
 @Client.on_message(filters.group & filters.text & filters.incoming)
 async def give_filter_handler(client: Client, message):
     is_manual = await manual_filters(client, message)
@@ -134,9 +128,6 @@ async def pm_text_handler(client: Client, message):
     await auto_filter(client, message)
 
 
-# =====================================================================
-# CALLBACK QUERY HANDLER: Pagination (Next/Back Pages)
-# =====================================================================
 @Client.on_callback_query(filters.regex(r"^next"))
 async def next_page_handler(client: Client, query: CallbackQuery):
     _, req_user_id, key, offset_str = query.data.split("_")
@@ -201,7 +192,7 @@ async def next_page_handler(client: Client, query: CallbackQuery):
                 [
                     InlineKeyboardButton(
                         text=f"⚡ {get_size(file.file_size)}",
-                        callback_data=f'{pre}#{file.file_id}',
+                        callback_data=f'files_#{file.file_id}',
                     ),
                     InlineKeyboardButton(
                         text=f"◾ {file.file_name}", callback_data=f'{pre}#{file.file_id}'
@@ -229,7 +220,6 @@ async def next_page_handler(client: Client, query: CallbackQuery):
     else:
         off_set = offset - 10
         
-    # താഴെയുള്ള പേജ് ബട്ടണുകൾ ഒഴിവാക്കി, പകരം ആവശ്യാനുസരണം Back / Next ബട്ടണുകൾ മാത്രം താഴെ നൽകുന്നു (അല്ലെങ്കിൽ പൂർണ്ണമായി ഒഴിവാക്കാം)
     if n_offset == 0 and off_set is not None:
         btn.append(
             [InlineKeyboardButton("⏮️ ᗷΔCK", callback_data=f"next_{req_user_id}_{key}_{off_set}"),
@@ -252,14 +242,24 @@ async def next_page_handler(client: Client, query: CallbackQuery):
             [InlineKeyboardButton("DΣLΣTΣD 🗑️", callback_data="close_data")]
         )
 
-    # നിലവിലെ പേജ് നമ്പറും ടോട്ടൽ പേജുകളും കണക്കാക്കുന്നു
     total_pages = math.ceil(int(total) / 10) if total else 1
     current_page = math.ceil(offset / 10) + 1
 
-    # മെസ്സേജിലെ പഴയ ക്യാപ്ഷൻ എടുത്ത് അതിലെ പേജ് നമ്പർ അപ്ഡേറ്റ് ചെയ്യുന്നു
-    old_caption = query.message.caption or query.message.text or ""
-    base_caption = re.sub(r'\n\n<b>📊 PΔGΣ :.*', '', old_caption)
-    updated_caption = f"{base_caption}\n\n<b>📊 PΔGΣ : {current_page} / {total_pages}</b>"
+    if query.message.caption:
+        old_html = query.message.caption.html
+    elif query.message.text:
+        old_html = query.message.text.html
+    else:
+        old_html = ""
+
+    if re.search(r'📊 PΔGΣ :</b>\s*\d+\s*/\s*\d+', old_html):
+        updated_caption = re.sub(
+            r'(📊 PΔGΣ :</b>\s*)\d+\s*/\s*\d+',
+            rf'\g<1>{current_page} / {total_pages}',
+            old_html
+        )
+    else:
+        updated_caption = f"{old_html}\n\n<b>📊 PΔGΣ :</b> {current_page} / {total_pages}"
 
     try:
         if query.message.photo:
@@ -279,9 +279,6 @@ async def next_page_handler(client: Client, query: CallbackQuery):
     await query.answer()
 
 
-# =====================================================================
-# CALLBACK QUERY HANDLER: Language & Quality Filters Menu & Back Button
-# =====================================================================
 @Client.on_callback_query(filters.regex(r"^(lang_menu|qual_menu|filter_apply|back_main_search)#"))
 async def filter_menu_handler(client: Client, query: CallbackQuery):
     data = query.data.split("#")
@@ -470,9 +467,6 @@ async def filter_menu_handler(client: Client, query: CallbackQuery):
         await query.answer(f"Filtered by {target}!", show_alert=False)
 
 
-# =====================================================================
-# CALLBACK QUERY HANDLER: General Buttons, Deletion & Connections
-# =====================================================================
 @Client.on_callback_query()
 async def cb_handler(client: Client, query: CallbackQuery):
     if query.data == "close_data":
@@ -1089,9 +1083,6 @@ async def cb_handler(client: Client, query: CallbackQuery):
             await query.answer("⚠️ This feature is only for administrators!", show_alert=True)
 
 
-# =====================================================================
-# CORE MODULE: Auto-Filter Search, IMDB/IST Time Captions & Auto-Delete
-# =====================================================================
 async def auto_filter(client: Client, msg, spoll=False):
     if not spoll:
         message = msg
@@ -1179,7 +1170,6 @@ async def auto_filter(client: Client, msg, spoll=False):
         InlineKeyboardButton('QUΔLITY', callback_data=f'qual_menu#{req}#{key}')
     ])
 
-    # താഴെയുള്ള പേജ് ബട്ടണുകൾ പൂർണ്ണമായി ഒഴിവാക്കി നെക്സ്റ്റ് ബട്ടൺ മാത്രം ആവശ്യമെങ്കിൽ ചേർക്കുന്നു
     if offset != "" and int(total_results) > 10:
         btn.append([
             InlineKeyboardButton(text="ΠΣXT ⏭️", callback_data=f"next_{req}_{key}_{offset}"),
@@ -1189,6 +1179,8 @@ async def auto_filter(client: Client, msg, spoll=False):
         btn.append([
             InlineKeyboardButton(text="DΣLΣTΣD 🗑️", callback_data="close_data")
         ])
+
+    total_pages = math.ceil(int(total_results) / 10) if total_results else 1
 
     imdb = await get_poster(search, file=(files[0]).file_name) if settings.get("imdb", True) else None
     if imdb:
@@ -1207,6 +1199,7 @@ async def auto_filter(client: Client, msg, spoll=False):
         except Exception as e:
             logger.exception(e)
             cap = f"<b>🎬 {imdb['title']} ({imdb['year']})</b>\n\n<b>⭐ Rating :</b> {imdb['rating']}\n<b>🎭 Genres :</b> {imdb['genres']}\n\n{imdb['plot']}"
+        cap += f"\n\n<b>📕 Pᴀɢᴇ :</b> 1 / {total_pages}"
     else:
         IST = pytz.timezone('Asia/Kolkata')
         now = datetime.now(IST)
@@ -1216,20 +1209,22 @@ async def auto_filter(client: Client, msg, spoll=False):
         current_date = now.strftime("%d-%m-%Y")
         
         user_mention = message.from_user.mention if message.from_user else "Friend"
+        
+        # -------------------------------------------------------------
+        # 📌 ഇതാണ് നിങ്ങൾ എഡിറ്റ് ചെയ്യാൻ ഉദ്ദേശിക്കുന്ന ക്യാപ്ഷൻ ഭാഗം. 
+        # ഭാവിയിൽ മാറ്റങ്ങൾ വരുത്തണമെങ്കിൽ ഇവിടെ മാത്രം മാറ്റിയാൽ മതിയാകും.
+        # -------------------------------------------------------------
         cap = (
             f"<b>╭⎋ • Hᴇʏ 👋 {user_mention}💝,\n"
             f"╰⎋ • Tɪᴛʟᴇ : {search}</b>"
             f"\n\n"
             f"<b>⌚ Tɪᴍᴇ :</b> {current_time}\n"
             f"<b>☁️ Dᴀʏ :</b> {current_day}\n"
-            f"<b>📅 Dᴀᴛᴇ :</b> {current_date}"
+            f"<b>📅 Dᴀᴛᴇ :</b> {current_date}\n"
+            f"<b>📕 Pᴀɢᴇ :</b> 1 / {total_pages}"
             f"\n\n"
             f"<b>{message.chat.title}</b>"
         )
-
-    # ക്യാപ്ഷന്റെ ഒടുവിലായി പേജ് നമ്പറും വിവരങ്ങളും ചേർക്കുന്നു (Page 1 / Total Pages)
-    total_pages = math.ceil(int(total_results) / 10) if total_results else 1
-    cap += f"\n\n<b>📊 PΔGΣ : 1 / {total_pages}</b>"
 
     if imdb and imdb.get('poster'):
         try:
@@ -1260,7 +1255,6 @@ async def auto_filter(client: Client, msg, spoll=False):
     if spoll:
         await msg.message.delete()
 
-    # Background task for 5-minute auto-deletion & photo with notification text
     async def delete_after_delay():
         await asyncio.sleep(300)
         
@@ -1284,7 +1278,7 @@ async def auto_filter(client: Client, msg, spoll=False):
                 f"𝖸𝗈𝗎𝗋 𝖱𝖾𝗊𝗎𝖾𝗌𝗍 <u>[{movie_title}]</u> 𝖧𝖺𝗌 𝖡𝖾𝖾𝗇 𝖣𝖾𝗅𝖾𝗍𝖾𝖽 🗑 \n"
                 f"(𝖣𝗎𝖾 𝖳𝗈 𝖠𝗏𝗈𝗂𝖽 𝖢𝗈𝗉𝗒𝗋𝗂𝗀𝗁𝗍𝗌 𝖨𝗌𝗌𝗎𝖾😌)\n"
                 f"==============================\n"
-                f"𝖨𝖥 𝖸𝖮𝖴 𝖶𝖠𝖭𝖳 𝖳𝖧𝖠𝖳 𝖥𝖨𝖫𝖤, 𝖱𝖤𝖰𝖴𝖤𝖲𝖳 𝖠𝖦𝖠𝖨𝖭\n"
+                f"𝖨𝖥 𝖸𝖮𝖴 𝖶𝖠𝖭𝖳 𝖳𝖧𝖠𝖳 𝖥𝖨𝖫𝖤, 𝖱𝖤𝗤𝖴𝖤𝖲𝖳 𝖠𝖦𝖠𝖨𝗭\n"
                 f"==============================</b>"
             )
             
@@ -1316,9 +1310,6 @@ async def auto_filter(client: Client, msg, spoll=False):
     asyncio.create_task(delete_after_delay())
 
 
-# =====================================================================
-# SPELL CHECK & MANUAL FILTERS HANDLER
-# =====================================================================
 async def advantage_spell_chok(msg):
     mv_rqst = msg.text
     search = msg.text.replace(" ", "+")
