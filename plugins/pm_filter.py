@@ -252,14 +252,14 @@ async def next_page_handler(client: Client, query: CallbackQuery):
     else:
         old_html = ""
 
-    if re.search(r'📊 PΔGΣ :</b>\s*\d+\s*/\s*\d+', old_html):
+    if re.search(r'📕 Pᴀɢᴇ :</b>\s*\d+\s*/\s*\d+', old_html):
         updated_caption = re.sub(
-            r'(📊 PΔGΣ :</b>\s*)\d+\s*/\s*\d+',
+            r'(📕 Pᴀɢᴇ :</b>\s*)\d+\s*/\s*\d+',
             rf'\g<1>{current_page} / {total_pages}',
             old_html
         )
     else:
-        updated_caption = f"{old_html}\n\n<b>📊 PΔGΣ :</b> {current_page} / {total_pages}"
+        updated_caption = f"{old_html}\n\n<b>📕 Pᴀɢᴇ :</b> {current_page} / {total_pages}"
 
     try:
         if query.message.photo:
@@ -799,6 +799,19 @@ async def cb_handler(client: Client, query: CallbackQuery):
         
         attr = parse_file_attributes(title or "", duration_sec)
         
+        # IMDb വഴി Genres എടുക്കാനുള്ള സപ്പോർട്ട്
+        imdb_genres = "N/A"
+        try:
+            imdb_data = await get_poster(title)
+            if imdb_data and imdb_data.get('genres'):
+                genres_list = imdb_data.get('genres')
+                if isinstance(genres_list, list):
+                    imdb_genres = " ".join([f"#{g.strip()}" for g in genres_list])
+                else:
+                    imdb_genres = genres_list
+        except Exception:
+            pass
+        
         if query.message.chat.type == enums.ChatType.PRIVATE:
             grpid = await active_connection(str(query.from_user.id))
             settings = await get_settings(int(grpid)) if grpid else await get_settings(chat_id)
@@ -814,7 +827,8 @@ async def cb_handler(client: Client, query: CallbackQuery):
                     quality=attr['quality'],
                     duration=attr['duration'],
                     language=attr['language'],
-                    subtitles=attr['subtitles']
+                    subtitles=attr['subtitles'],
+                    genres=imdb_genres
                 )
             except Exception as e:
                 logger.exception(e)
@@ -880,6 +894,18 @@ async def cb_handler(client: Client, query: CallbackQuery):
         
         attr = parse_file_attributes(title or "", duration_sec)
         
+        imdb_genres = "N/A"
+        try:
+            imdb_data = await get_poster(title)
+            if imdb_data and imdb_data.get('genres'):
+                genres_list = imdb_data.get('genres')
+                if isinstance(genres_list, list):
+                    imdb_genres = " ".join([f"#{g.strip()}" for g in genres_list])
+                else:
+                    imdb_genres = genres_list
+        except Exception:
+            pass
+        
         if CUSTOM_FILE_CAPTION:
             try:
                 f_caption = CUSTOM_FILE_CAPTION.format(
@@ -889,7 +915,8 @@ async def cb_handler(client: Client, query: CallbackQuery):
                     quality=attr['quality'],
                     duration=attr['duration'],
                     language=attr['language'],
-                    subtitles=attr['subtitles']
+                    subtitles=attr['subtitles'],
+                    genres=imdb_genres
                 )
             except Exception as e:
                 logger.exception(e)
@@ -1210,10 +1237,6 @@ async def auto_filter(client: Client, msg, spoll=False):
         
         user_mention = message.from_user.mention if message.from_user else "Friend"
         
-        # -------------------------------------------------------------
-        # 📌 ഇതാണ് നിങ്ങൾ എഡിറ്റ് ചെയ്യാൻ ഉദ്ദേശിക്കുന്ന ക്യാപ്ഷൻ ഭാഗം. 
-        # ഭാവിയിൽ മാറ്റങ്ങൾ വരുത്തണമെങ്കിൽ ഇവിടെ മാത്രം മാറ്റിയാൽ മതിയാകും.
-        # -------------------------------------------------------------
         cap = (
             f"<b>╭⎋ • Hᴇʏ 👋 {user_mention}💝,\n"
             f"╰⎋ • Tɪᴛʟᴇ : {search}</b>"
