@@ -828,7 +828,6 @@ async def cb_handler(client: Client, query: CallbackQuery):
         user_mention = user.mention if user else "Friend"
         user_name = user.first_name if user else "User"
         
-        # ചാനൽ ജോയിൻ ചെയ്ത് ട്രൈ എഗൈൻ അടിക്കുമ്പോൾ വരുന്ന താങ്ക്യൂ മെസ്സേജ്
         try:
             thank_text = f"<b>✨ Thank you for joining our update channel, {user_mention}!\n\n👇 Here is your requested file:</b>"
             await client.send_message(
@@ -1045,48 +1044,49 @@ async def auto_filter(client: Client, msg, spoll=False):
         message = msg
         chat_id = message.chat.id
         
+        if not message.text:
+            return
+
+        if message.text.startswith("/"):
+            return  
+            
         if message.chat.type == enums.ChatType.PRIVATE:
             grpid = await active_connection(str(message.from_user.id))
             settings = await get_settings(int(grpid)) if grpid is not None else await get_settings(chat_id)
         else:
             settings = await get_settings(chat_id)
 
-        if message.text.startswith("/"):
-            return  
-        if re.findall(r"((^\/|^,|^!|^\.|^[\U0001F600-\U000E007F]).*)", message.text):
+        if len(message.text) > 100:
             return
             
-        if 2 < len(message.text) < 100:
-            search = message.text
-            files, offset, total_results = await get_search_results(search.lower(), offset=0, filter=True)
-            if not files:
-                if settings.get("spell_check", True):
-                    if message.chat.type == enums.ChatType.PRIVATE:
-                        user_mention = message.from_user.mention if message.from_user else "Friend"
-                        msg_text = (
-                            f"<b>Hey {user_mention} 👋</b>\n\n"
-                            f"<b>❗ <i>No Results found for <code>{message.text}</code>..</i> 🥹</b>\n\n"
-                            f"<i>Please check the spelling or use the buttons below to find the correct title!</i>"
-                        )
-                        search_query = message.text.replace(" ", "+")
-                        btn = [[
-                            InlineKeyboardButton(text="🔎 GOOGLΣ", url=f"https://google.com/search?q={search_query}"),
-                            InlineKeyboardButton(text="🔮 IMDᗷ", url=f"https://imdb.com/find?q={search_query}")
-                        ]]
-                        sent_msg = await message.reply_text(text=msg_text, reply_markup=InlineKeyboardMarkup(btn))
-                        await asyncio.sleep(5)
-                        try:
-                            await sent_msg.delete()
-                            await message.delete()
-                        except Exception:
-                            pass
-                        return
-                    else:
-                        return await advantage_spell_chok(msg)
-                else:
+        search = message.text
+        files, offset, total_results = await get_search_results(search.lower(), offset=0, filter=True)
+        if not files:
+            if settings.get("spell_check", True):
+                if message.chat.type == enums.ChatType.PRIVATE:
+                    user_mention = message.from_user.mention if message.from_user else "Friend"
+                    msg_text = (
+                        f"<b>Hey {user_mention} 👋</b>\n\n"
+                        f"<b>❗ <i>No Results found for <code>{message.text}</code>..</i> 🥹</b>\n\n"
+                        f"<i>Please check the spelling or use the buttons below to find the correct title!</i>"
+                    )
+                    search_query = message.text.replace(" ", "+")
+                    btn = [[
+                        InlineKeyboardButton(text="🔎 GOOGLΣ", url=f"https://google.com/search?q={search_query}"),
+                        InlineKeyboardButton(text="🔮 IMDᗷ", url=f"https://imdb.com/find?q={search_query}")
+                    ]]
+                    sent_msg = await message.reply_text(text=msg_text, reply_markup=InlineKeyboardMarkup(btn))
+                    await asyncio.sleep(5)
+                    try:
+                        await sent_msg.delete()
+                        await message.delete()
+                    except Exception:
+                        pass
                     return
-        else:
-            return
+                else:
+                    return await advantage_spell_chok(msg)
+            else:
+                return
     else:
         chat_id = msg.message.chat.id
         settings = await get_settings(chat_id) if msg.message.chat.type != enums.ChatType.PRIVATE else (
