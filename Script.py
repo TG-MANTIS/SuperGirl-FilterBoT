@@ -51,12 +51,13 @@ ID - <code>{}</code>
 Name - {}
 """
 
-    # Updated Custom File Caption with Quality, Duration, Language, and Subtitles
+    # Updated Custom File Caption with Quality, Duration, Language, Subtitles, and IMDb Genres
     FILE_CAPTION = """<b><blockquote>📚 <code>{file_name}</code> </blockquote></b>
 
 🎬 <b>{quality}</b> | ⏳ <b>{duration}</b>
 🔊 <b>{language}</b>
 💬 <b>{subtitles}</b>
+🎭 <b>{genres}</b>
     
 <b>[©️𝐓𝐞𝐚𝐦 𝐂𝐢𝐧𝐞𝐦𝐚 𝐅𝐢𝐥𝐱™️](https://t.me/+iEbhY7mM4oE1OTVl)</b>"""
 
