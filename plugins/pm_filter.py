@@ -170,6 +170,7 @@ async def next_page_handler(client: Client, query: CallbackQuery):
     else:
         settings = await get_settings(chat_id)
     
+    pre = 'filep' if settings.get('file_secure', False) else 'file'
     is_series = bool(re.search(r's\d+e\d+|season|episode|ep\d+|bbhin|bigg boss', search_query, enums.RegExFlag.IGNORECASE if hasattr(enums, 'RegExFlag') else re.IGNORECASE)) or any(re.search(r's\d+e\d+|season|episode|ep\d+', f.file_name, re.IGNORECASE) for f in files)
     
     if is_series:
@@ -182,7 +183,7 @@ async def next_page_handler(client: Client, query: CallbackQuery):
             
             btn.append([
                 InlineKeyboardButton(
-                    text=f"⚡ {f_size} ◾ {se_tag}{f_name}", callback_data=f'files#{file.file_id}'
+                    text=f"⚡ {f_size} ◾ {se_tag}{f_name}", callback_data=f'{pre}#{file.file_id}'
                 )
             ])
     else:
@@ -190,7 +191,7 @@ async def next_page_handler(client: Client, query: CallbackQuery):
             btn = [
                 [
                     InlineKeyboardButton(
-                        text=f"⚡ {get_size(file.file_size)} ◾ {file.file_name}", callback_data=f'files#{file.file_id}'
+                        text=f"⚡ {get_size(file.file_size)} ◾ {file.file_name}", callback_data=f'{pre}#{file.file_id}'
                     ),
                 ]
                 for file in files
@@ -200,10 +201,10 @@ async def next_page_handler(client: Client, query: CallbackQuery):
                 [
                     InlineKeyboardButton(
                         text=f"⚡ {get_size(file.file_size)}",
-                        callback_data=f'files_#{file.file_id}',
+                        callback_data=f'{pre}#{file.file_id}',
                     ),
                     InlineKeyboardButton(
-                        text=f"◾ {file.file_name}", callback_data=f'files#{file.file_id}'
+                        text=f"◾ {file.file_name}", callback_data=f'{pre}#{file.file_id}'
                     ),
                 ]
                for file in files
@@ -228,27 +229,51 @@ async def next_page_handler(client: Client, query: CallbackQuery):
     else:
         off_set = offset - 10
         
-    if n_offset == 0:
+    # താഴെയുള്ള പേജ് ബട്ടണുകൾ ഒഴിവാക്കി, പകരം ആവശ്യാനുസരണം Back / Next ബട്ടണുകൾ മാത്രം താഴെ നൽകുന്നു (അല്ലെങ്കിൽ പൂർണ്ണമായി ഒഴിവാക്കാം)
+    if n_offset == 0 and off_set is not None:
         btn.append(
             [InlineKeyboardButton("⏮️ ᗷΔCK", callback_data=f"next_{req_user_id}_{key}_{off_set}"),
-             InlineKeyboardButton(f"📕PΔGΣS: {math.ceil(int(offset) / 10) + 1} / {math.ceil(total / 10)}", callback_data="pages"),
              InlineKeyboardButton("DΣLΣTΣD 🗑️", callback_data="close_data")]
         )
-    elif off_set is None:
+    elif off_set is None and n_offset != 0 and n_offset is not None:
         btn.append(
             [InlineKeyboardButton("🗑️ DΣLΣTΣD", callback_data="close_data"),
-             InlineKeyboardButton(f"📕PΔGΣS: {math.ceil(int(offset) / 10) + 1} / {math.ceil(total / 10)}", callback_data="pages"),
-             InlineKeyboardButton("ΠΣXT ⏭️", callback_data=f"next_{req_user_id}_{key}_{n_offset}")])
-    else:
+             InlineKeyboardButton("ΠΣXT ⏭️", callback_data=f"next_{req_user_id}_{key}_{n_offset}")]
+        )
+    elif off_set is not None and n_offset != 0 and n_offset is not None:
         btn.append(
             [
                 InlineKeyboardButton("⏮️ ᗷΔCK", callback_data=f"next_{req_user_id}_{key}_{off_set}"),
-                InlineKeyboardButton(f"📕PΔGΣS: {math.ceil(int(offset) / 10) + 1} / {math.ceil(total / 10)}", callback_data="pages"),
                 InlineKeyboardButton("ΠΣXT ⏭️", callback_data=f"next_{req_user_id}_{key}_{n_offset}")
             ],
         )
+    else:
+        btn.append(
+            [InlineKeyboardButton("DΣLΣTΣD 🗑️", callback_data="close_data")]
+        )
+
+    # നിലവിലെ പേജ് നമ്പറും ടോട്ടൽ പേജുകളും കണക്കാക്കുന്നു
+    total_pages = math.ceil(int(total) / 10) if total else 1
+    current_page = math.ceil(offset / 10) + 1
+
+    # മെസ്സേജിലെ പഴയ ക്യാപ്ഷൻ എടുത്ത് അതിലെ പേജ് നമ്പർ അപ്ഡേറ്റ് ചെയ്യുന്നു
+    old_caption = query.message.caption or query.message.text or ""
+    base_caption = re.sub(r'\n\n<b>📊 PΔGΣ :.*', '', old_caption)
+    updated_caption = f"{base_caption}\n\n<b>📊 PΔGΣ : {current_page} / {total_pages}</b>"
+
     try:
-        await query.edit_message_reply_markup(reply_markup=InlineKeyboardMarkup(btn))
+        if query.message.photo:
+            await query.message.edit_caption(
+                caption=updated_caption[:1024],
+                reply_markup=InlineKeyboardMarkup(btn),
+                parse_mode=enums.ParseMode.HTML
+            )
+        else:
+            await query.message.edit_text(
+                text=updated_caption,
+                reply_markup=InlineKeyboardMarkup(btn),
+                parse_mode=enums.ParseMode.HTML
+            )
     except MessageNotModified:
         pass
     await query.answer()
@@ -365,13 +390,11 @@ async def filter_menu_handler(client: Client, query: CallbackQuery):
         
         if total_results > 10:
             btn.append([
-                InlineKeyboardButton("🗑️ DΣLΣTΣD", callback_data="close_data"),
-                InlineKeyboardButton(text=f"📕PΔGΣS: 1/{math.ceil(total_results / 10)}", callback_data="pages"),
-                InlineKeyboardButton(text="ΠΣXT ⏭️", callback_data=f"next_{req_user_id}_{key}_10")
+                InlineKeyboardButton(text="ΠΣXT ⏭️", callback_data=f"next_{req_user_id}_{key}_10"),
+                InlineKeyboardButton(text="DΣLΣTΣD 🗑️", callback_data="close_data")
             ])
         else:
             btn.append([
-                InlineKeyboardButton(text="📕PΔGΣS: 1/1", callback_data="pages"),
                 InlineKeyboardButton(text="DΣLΣTΣD 🗑️", callback_data="close_data")
             ])
             
@@ -1156,16 +1179,16 @@ async def auto_filter(client: Client, msg, spoll=False):
         InlineKeyboardButton('QUΔLITY', callback_data=f'qual_menu#{req}#{key}')
     ])
 
-    if offset != "":
+    # താഴെയുള്ള പേജ് ബട്ടണുകൾ പൂർണ്ണമായി ഒഴിവാക്കി നെക്സ്റ്റ് ബട്ടൺ മാത്രം ആവശ്യമെങ്കിൽ ചേർക്കുന്നു
+    if offset != "" and int(total_results) > 10:
         btn.append([
-            InlineKeyboardButton("🗑️ DΣLΣTΣD", callback_data="close_data"),
-            InlineKeyboardButton(text=f"📕PΔGΣS: 1/{math.ceil(int(total_results) / 10)}", callback_data="pages"),
-            InlineKeyboardButton(text="ΠΣXT ⏭️", callback_data=f"next_{req}_{key}_{offset}")
+            InlineKeyboardButton(text="ΠΣXT ⏭️", callback_data=f"next_{req}_{key}_{offset}"),
+            InlineKeyboardButton(text="DΣLΣTΣD 🗑️", callback_data="close_data")
         ])
     else:
         btn.append([
-            InlineKeyboardButton(text="📕PΔGΣS: 1/1", callback_data="pages"),
-            InlineKeyboardButton(text="DΣLΣTΣD 🗑️", callback_data="close_data")])
+            InlineKeyboardButton(text="DΣLΣTΣD 🗑️", callback_data="close_data")
+        ])
 
     imdb = await get_poster(search, file=(files[0]).file_name) if settings.get("imdb", True) else None
     if imdb:
@@ -1204,6 +1227,10 @@ async def auto_filter(client: Client, msg, spoll=False):
             f"<b>{message.chat.title}</b>"
         )
 
+    # ക്യാപ്ഷന്റെ ഒടുവിലായി പേജ് നമ്പറും വിവരങ്ങളും ചേർക്കുന്നു (Page 1 / Total Pages)
+    total_pages = math.ceil(int(total_results) / 10) if total_results else 1
+    cap += f"\n\n<b>📊 PΔGΣ : 1 / {total_pages}</b>"
+
     if imdb and imdb.get('poster'):
         try:
             sent_message = await message.reply_photo(photo=imdb.get('poster'), caption=cap[:1024], reply_markup=InlineKeyboardMarkup(btn))
@@ -1214,7 +1241,6 @@ async def auto_filter(client: Client, msg, spoll=False):
             logger.exception(e)
             sent_message = await message.reply_text(cap, reply_markup=InlineKeyboardMarkup(btn))
     else:
-        # NOR_IMG സപ്പോർട്ട് ചെയ്യുന്ന പുതിയ ഭാഗം (Single & List Compatibility)
         chosen_photo = NOR_IMG
         if isinstance(chosen_photo, list):
             photo_to_send = random.choice(chosen_photo)
