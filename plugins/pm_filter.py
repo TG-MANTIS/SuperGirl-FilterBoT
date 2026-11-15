@@ -49,18 +49,23 @@ NON_IMG = """<b>👋 Hello {user_mention},</b>
 💡 <b><u>Search Format:</u></b> <code>Movie Name Year</code> (Eg: <i>Lucifer 2019</i>)"""
 
 
-@Client.on_message(filters.group & filters.text & filters.incoming)
+@Client.on_message(filters.group & filters.text & filters.incoming, group=1)
 async def give_filter_handler(client: Client, message):
-    is_manual = await manual_filters(client, message)
-    if is_manual is False:
-        await auto_filter(client, message)
+    if message.text.startswith("/") or message.text.startswith("#"):
+        return
+    try:
+        is_manual = await manual_filters(client, message)
+        if is_manual is False:
+            await auto_filter(client, message)
+    except Exception as e:
+        logger.error(f"Error in group filter handler: {e}")
 
 
-@Client.on_message(filters.private & filters.text & filters.incoming)
+@Client.on_message(filters.private & filters.text & filters.incoming, group=1)
 async def pm_text_handler(client: Client, message):
     content = message.text
-    user_name = message.from_user.first_name
-    user_id = message.from_user.id
+    user_name = message.from_user.first_name if message.from_user else "User"
+    user_id = message.from_user.id if message.from_user else 0
     
     if content.startswith("/") or content.startswith("#"):
         return  
@@ -80,7 +85,6 @@ async def pm_text_handler(client: Client, message):
 async def next_page_handler(client: Client, query: CallbackQuery):
     _, req_user_id, key, offset_str = query.data.split("_")
     
-    # എല്ലാ യൂസേഴ്സിനും പേജ് മാറ്റാൻ അനുമതി നൽകുന്നു
     try:
         offset = int(offset_str)
     except ValueError:
@@ -765,7 +769,6 @@ async def cb_handler(client: Client, query: CallbackQuery):
             f_caption = f"{title}"
 
         try:
-            # Force Sub Check എല്ലാ യൂസേഴ്സിനും ബാധകമാക്കുന്നു
             if settings.get("forcesub", True) and AUTH_CHANNEL and not await is_subscribed(client, query):
                 await query.answer(url=f"https://t.me/{temp.U_NAME}?start={ident}_{file_id}")
                 return
@@ -1043,7 +1046,7 @@ async def auto_filter(client: Client, msg, spoll=False):
         if not message.text:
             return
 
-        if message.text.startswith("/"):
+        if message.text.startswith("/") or message.text.startswith("#"):
             return  
             
         if message.chat.type == enums.ChatType.PRIVATE:
@@ -1052,10 +1055,10 @@ async def auto_filter(client: Client, msg, spoll=False):
         else:
             settings = await get_settings(chat_id)
 
-        if len(message.text) > 100:
+        if len(message.text) > 200:
             return
             
-        search = message.text
+        search = message.text.strip()
         files, offset, total_results = await get_search_results(search.lower(), offset=0, filter=True)
         if not files:
             if settings.get("spell_check", True):
