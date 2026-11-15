@@ -3,7 +3,7 @@
 #  Optimized Python 3.10 Slim Image for Telegram Bot Deployment               #
 # --------------------------------------------------------------------------- #
 
-FROM python:3.10-slim
+FROM python:3.11-slim
 
 # Set environment variables to prevent interactive prompts and bytecode generation
 ENV DEBIAN_FRONTEND=noninteractive \
