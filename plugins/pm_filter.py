@@ -80,9 +80,7 @@ async def pm_text_handler(client: Client, message):
 async def next_page_handler(client: Client, query: CallbackQuery):
     _, req_user_id, key, offset_str = query.data.split("_")
     
-    if int(req_user_id) not in [query.from_user.id, 0]:
-        return await query.answer("⚠️ This is not your search request!", show_alert=True)
-        
+    # എല്ലാ യൂസേഴ്സിനും പേജ് മാറ്റാൻ അനുമതി നൽകുന്നു
     try:
         offset = int(offset_str)
     except ValueError:
@@ -231,9 +229,6 @@ async def next_page_handler(client: Client, query: CallbackQuery):
 async def filter_menu_handler(client: Client, query: CallbackQuery):
     data = query.data.split("#")
     action, req_user_id, key = data[0], data[1], data[2]
-    
-    if int(req_user_id) not in [query.from_user.id, 0]:
-        return await query.answer("⚠️ This is not for you!", show_alert=True)
         
     search_query = BUTTONS.get(key)
     if not search_query:
@@ -770,6 +765,7 @@ async def cb_handler(client: Client, query: CallbackQuery):
             f_caption = f"{title}"
 
         try:
+            # Force Sub Check എല്ലാ യൂസേഴ്സിനും ബാധകമാക്കുന്നു
             if settings.get("forcesub", True) and AUTH_CHANNEL and not await is_subscribed(client, query):
                 await query.answer(url=f"https://t.me/{temp.U_NAME}?start={ident}_{file_id}")
                 return
