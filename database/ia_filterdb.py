@@ -124,7 +124,8 @@ async def get_user_assigned_db_uri(user_id):
 
 async def get_media_model_for_user(user_id=None):
     """
-    Returns the appropriate Media model and database instance based on user assignment.
+    Returns the appropriate Media model and database instance based on user assignment,
+    automatically falling back to the Main Database if no DB is assigned or files are missing.
     """
     if user_id:
         paid_uri = await get_user_assigned_db_uri(user_id)
@@ -148,8 +149,13 @@ async def get_media_model_for_user(user_id=None):
                     paid_inst.register(PaidMedia)
                 except Exception:
                     pass
-                return [PaidMedia], paid_db
+                
+                # Check if the paid db actually has files, if so use it, otherwise fallback
+                count = await PaidMedia.count_documents({})
+                if count > 0:
+                    return [PaidMedia], paid_db
 
+    # Fallback to Main Database for regular users or non-cloned setups
     return main_media_classes, db
 
 
