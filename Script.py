@@ -1,17 +1,19 @@
 class script(object):
     START_TXT = """<b>👋 Hey 🇮🇳 {},</b>
+    
 <i>Iam a</i> <b>autofilter bot</b> <i>I will give movies in your group and my pm! Also I can share files...</i>"""
     
     ABOUT_TXT = """<b>╭─── ✦ ABOUT ME ✦ ───╮</b>
 <b>╭🤖  • My name - {}</b>
-<b>╰👤  • Creator - <a href=https://t.me/TG_x_filter>🇮🇳 𝗛𝗘𝗗𝗗𝗬 ◢ ◤</b></a></i>
+<b>╰👤  • Creator - <a href=https://t.me/TG_x_filter>🇮🇳 𝗛𝗘𝗗𝗗𝗬 ◢ ◤</b></a>
 <b>╭🖥️  • Developer - Mantis</b>
 <b>╰📚  • Library - Program</b> 
 <b>╭📝  • Language - Python</b>
 <b>╰🚀  • Bot Update - Click Here</b>
 <b>╭🔋  • Database - MongoDB</b>
 <b>╰📡  • Bot Server - Anywhere</b>
-<b>╰─────────────────╯</b>"""
+<b>╰─────────────────╯</b>
+<b>👨‍💻 Managed By <a href=https://t.me/Mallu_Movie_Hub_Group>CINEMA FLIX</b></a>"""
     
     STATUS_TXT = """<b>📊 𝙂𝙇O𝘽𝘼𝙇 𝙎𝙏𝘼𝙏𝙐𝙎 𝘽𝙊𝘼𝙍𝘿 📊</b>
 
