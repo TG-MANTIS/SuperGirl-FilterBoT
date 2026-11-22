@@ -4,14 +4,12 @@ class script(object):
 <i>◍ <i>I, m⚡<a href=https://t.me/{}>{}</a>⚡or you can call me as</i><b>🤖Auto Filter Bot 🤖⚙️</b>\n\n◍ <i>Here you can request movie's, just sent</i> <b>🎭𝐌𝐨𝐯𝐢𝐞 𝐍𝐚𝐦𝐞🎭</b> <i>With proper</i> <b>🧐𝐆𝐨𝐨𝐠𝐥𝐞🧐</b> <i>spelling.!</i>\n<b>──────────────────</b>\n<b>≡ Managed By <a href=https://t.me/Mallu_Movie_Hub_Group>CINEMA FLIX</b></a>"""
     
     ABOUT_TXT = """<b>╭─── ✦ ABOUT ME ✦ ───╮</b>
-<b>╭🤖  • My name - {}</b>
-<b>╰👤  • Creator - <a href=https://t.me/TG_x_filter>🇮🇳 𝗛𝗘𝗗𝗗𝗬 ◢ ◤</b></a>
-<b>╭🖥️  • Developer - Mantis</b>
-<b>╰📚  • Library - Program</b> 
-<b>╭📝  • Language - Python</b>
-<b>╰🚀  • Bot Update - Click Here</b>
-<b>╭🔋  • Database - MongoDB</b>
-<b>╰📡  • Bot Server - Anywhere</b>
+<b>○ My Name : {}</b>
+<b>○ Creator : Mantis</b>
+<b>○ Language : Python</b> 
+<b>○ Library : Program</b> 
+<b>○ Server : Anywhere</b> 
+<b>○ Database : Mangodb</b>
 <b>╰─────────────────╯</b>
 <b>👨‍💻 Managed By <a href=https://t.me/Mallu_Movie_Hub_Group>CINEMA FLIX</b></a>"""
     
