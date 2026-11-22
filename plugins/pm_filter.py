@@ -1177,7 +1177,7 @@ async def auto_filter(client: Client, msg, spoll=False):
             f"<b>╭◍ Date :</b> {current_date}\n"
             f"<b>╰◍ Page :</b> 1 / {total_pages}"
             f"\n\n"
-            f"<b>──────────────────</b>\n
+            f"<b>──────────────────</b>\n"
             f"<b>≡ Powered By : {message.chat.title}</b>"
         )
 
