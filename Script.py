@@ -8,21 +8,16 @@ class script(object):
 └── <b>— — — — — — — — — — —</b>
 🎬 <b>By Jean Home Network</b>"""
     
-    ABOUT_TXT = """<b>━━━❰ {} ❱━━━➣</b>
-    
-<b>○ <i>Owner Name : <a href=https://t.me/TG_x_filter>🇮🇳 𝗛𝗘𝗗𝗗𝗬 ◢ ◤</b></a></i>
-
-<b>○ <i>Creator : <a href=tg://settings>My Friend</b></a></i>
-
-<b>○ <i>Library : Pyrogram</b></i>
-
-<b>○ <i>Language : Python3</b></i>
-
-<b>○ <i>Data Base : MongoDB</b></i>
-
-<b>○ <i>Build Status : v5.2 [Stable]</b></i>
-
-<b>〰〰〰〰〰〰〰〰〰〰〰〰〰〰〰〰</b>"""
+    ABOUT_TXT = """<b>╭─── ✦ ABOUT ME ✦ ───╮</b>
+<b>╭🤖  • My name - {}</b>
+<b>╰👤  • Creator - <a href=https://t.me/TG_x_filter>🇮🇳 𝗛𝗘𝗗𝗗𝗬 ◢ ◤</b></a></i>
+<b>╭🖥️  • Developer - Mantis</b>
+<b>╰📚  • Library - Program</b> 
+<b>╭📝  • Language - Python</b>
+<b>╰🚀  • Bot Update - Click Here</b>
+<b>╭🔋  • Database - MongoDB</b>
+<b>╰📡  • Bot Server - Anywhere</b>
+<b>╰─────────────────╯</b>"""
     
     STATUS_TXT = """<b>📊 𝙂𝙇O𝘽𝘼𝙇 𝙎𝙏𝘼𝙏𝙐𝙎 𝘽𝙊𝘼𝙍𝘿 📊</b>
 
@@ -58,11 +53,11 @@ Name - {}
 
 <b>⚙️ ꜰɪʟᴇ sɪᴢᴇ:</b> {file_size}
 
-<b>╭────── • ◆ • ──────╮
-📮 ᴊᴏɪɴ : <a href=https://t.me/CFOTTUPDATE>ᴄʜᴀɴɴᴇʟ</b></a>
-🔖 ᴍᴏᴠɪᴇs : <a href=https://t.me/Mallu_Movie_Hub_Group>ɢʀᴏᴜᴘ</b></a>
-╰────── • ◆ • ──────╯
-🎗 ʝσιи • ѕнαяє • ѕυρρσят 🎗</b>
+<b>╭────── • ◆ • ──────╮</b>
+<b>📮 ᴊᴏɪɴ : <a href=https://t.me/CFOTTUPDATE>ᴄʜᴀɴɴᴇʟ</b></a>
+<b>🔖 ᴍᴏᴠɪᴇs : <a href=https://t.me/Mallu_Movie_Hub_Group>ɢʀᴏᴜᴘ</b></a>
+<b>╰────── • ◆ • ──────╯</b>
+<b>🎗 ʝσιи • ѕнαяє • ѕυρρσят 🎗</b>
     
 <b><a href=https://t.me/+iEbhY7mM4oE1OTVl>©️𝐓𝐞𝐚𝐦 𝐂𝐢𝐧𝐞𝐦𝐚 𝐅𝐢𝐥𝐱™️</b></a>"""
 
