@@ -1,12 +1,6 @@
 class script(object):
     START_TXT = """<b>👋 Hey 🇮🇳 {},</b>
-
-<b>I'm Sung Jin-woo 🕶️, an awesome Autofilter bot with powerful features.</b>
-├── <b>— — — — — — — — — — —</b>
-├── <b>⚡ I provide kind of content to users,</b>
-├── <b>✨ and it's completely #free.</b>
-└── <b>— — — — — — — — — — —</b>
-🎬 <b>By Jean Home Network</b>"""
+<i>Iam a</i> <b>autofilter bot</b> <i>I will give movies in your group and my pm! Also I can share files...</i>"""
     
     ABOUT_TXT = """<b>╭─── ✦ ABOUT ME ✦ ───╮</b>
 <b>╭🤖  • My name - {}</b>
