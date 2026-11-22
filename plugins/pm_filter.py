@@ -1167,16 +1167,16 @@ async def auto_filter(client: Client, msg, spoll=False):
         user_mention = message.from_user.mention if message.from_user else "Friend"
         
         cap = (
-            f"<b>➲ Result for you :</b><code>{search}</code>"
-            f"\n"
-            f"<b>╭◍ Hey {user_mention},</b>\n"
+            f"<b>➲ Result for you : </b><code>{search}</code>"
+            f"\n\n"
+            f"<b>╭◍ Hey : {user_mention},</b>\n"
             f"<b>╰◍ Total Files : {str(total_results)}</b>"
             f"\n\n"
             f"<b>╭◍ Time :</b> {current_time}\n"
             f"<b>╰◍ Day :</b> {current_day}\n"
             f"<b>╭◍ Date :</b> {current_date}\n"
             f"<b>╰◍ Page :</b> 1 / {total_pages}"
-            f"\n\n"
+            f"\n"
             f"<b>──────────────────</b>\n"
             f"<b>≡ Powered By : {message.chat.title}</b>"
         )
