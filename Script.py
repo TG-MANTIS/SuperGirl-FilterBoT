@@ -1,5 +1,5 @@
 class script(object):
-    START_TXT = """<b>👋 Hey 🇮🇳 {},</b>
+    START_TXT = """<b>➲ Hey {},</b>
     
 <i>◍ <i>I, m⚡<a href=https://t.me/{}>{}</a>⚡or you can call me as</i><b>🤖Auto Filter Bot 🤖⚙️</b>\n◍ <i>Here you can request movie's, just sent</i> <b>🎭𝐌𝐨𝐯𝐢𝐞 𝐍𝐚𝐦𝐞🎭</b> <i>With proper</i> <b>🧐𝐆𝐨𝐨𝐠𝐥𝐞🧐</b> <i>spelling.!</i><b>──────────────────≡ Managed By <a href=https://t.me/Mallu_Movie_Hub_Group>CINEMA FLIX</b></a>"""
     
