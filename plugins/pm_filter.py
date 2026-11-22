@@ -1167,15 +1167,18 @@ async def auto_filter(client: Client, msg, spoll=False):
         user_mention = message.from_user.mention if message.from_user else "Friend"
         
         cap = (
-            f"<b>╭⎋ • Hᴇʏ 👋 {user_mention}💝,\n"
-            f"╰⎋ • Tɪᴛʟᴇ : {search}</b>"
+            f"<b>➲ Result for you :</b><code>{search}</code>"
+            f"\n"
+            f"<b>╭◍ Hey {user_mention},</b>\n"
+            f"<b>╰◍ Total Files : {str(total_results)}</b>"
             f"\n\n"
-            f"<b>⌚ Tɪᴍᴇ :</b> {current_time}\n"
-            f"<b>☁️ Dᴀʏ :</b> {current_day}\n"
-            f"<b>📅 Dᴀᴛᴇ :</b> {current_date}\n"
-            f"<b>📕 Pᴀɢᴇ :</b> 1 / {total_pages}"
+            f"<b>╭◍ Time :</b> {current_time}\n"
+            f"<b>╰◍ Day :</b> {current_day}\n"
+            f"<b>╭◍ Date :</b> {current_date}\n"
+            f"<b>╰◍ Page :</b> 1 / {total_pages}"
             f"\n\n"
-            f"<b>{message.chat.title}</b>"
+            f"<b>──────────────────</b>\n
+            f"<b>≡ Powered By : {message.chat.title}</b>"
         )
 
     if imdb and imdb.get('poster'):
