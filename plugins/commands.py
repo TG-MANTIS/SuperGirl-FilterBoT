@@ -127,7 +127,7 @@ async def start_handler(client: Client, message):
         await client.send_photo(
             chat_id=message.from_user.id,
             photo=FORCE_IMG,
-            caption="<b>Please click the Join Channel button below and then click Try Again to get your file!</b>",
+            caption="<b><u>🔰PLEASE FOLLOW THIS RULES🔰</u></b>\n\n<i>Click the</i><b>☛ Join Channel ☚</b> <i>And then Click</i> <b>☛ Try Again ☚</b> <i>And you Will Get the file.🗳️</i>\n\n<i>താഴെ ഉള്ള ജോയിൻ ലിങ്കിൽ ക്ലിക്ക് ചെയ്തു</i> <b>☛ Join Channel ☚</b> <i>ക്ലിക്ക് ചെയ്ത് കഴിഞ്ഞ്</i> <b>☛ Try Again ☚</b> <i>ക്ലിക്ക് ചെയ്താൽ നിങ്ങൾക് സിനിമ ലഭിക്കുന്നതാണ്.🗳️</i>",
             reply_markup=InlineKeyboardMarkup(btn),
             parse_mode=enums.ParseMode.HTML
         )
