@@ -82,7 +82,7 @@ async def start_handler(client: Client, message):
 
         buttons = [
             [
-                InlineKeyboardButton('🤖 Create Clone Bot', callback_data='clone_bot_start')
+                InlineKeyboardButton('+ Add Me To Group +', url=f'http://t.me/{temp.U_NAME}?startgroup=true')
             ],
             [
                 InlineKeyboardButton('✘ Close', callback_data='close_data'),
@@ -140,7 +140,7 @@ async def start_handler(client: Client, message):
 
         buttons = [
             [
-                InlineKeyboardButton('🤖 Create Clone Bot', callback_data='clone_bot_start')
+                InlineKeyboardButton('+ Add Me To Group +', url=f'http://t.me/{temp.U_NAME}?startgroup=true')
             ],
             [
                 InlineKeyboardButton('✘ Close', callback_data='close_data'),
