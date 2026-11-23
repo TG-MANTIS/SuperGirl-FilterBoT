@@ -882,6 +882,8 @@ async def cb_handler(client: Client, query: CallbackQuery):
         start_pic_enabled = settings.get("start_pic", True) if settings else True
 
         buttons = [[
+            InlineKeyboardButton('+ Add Me To Group +', url=f'http://t.me/{temp.U_NAME}?startgroup=true')
+            ],[
             InlineKeyboardButton('✘ Close', callback_data='close_data'),
             InlineKeyboardButton('About 〄', callback_data='about')
         ]]
