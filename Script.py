@@ -3,9 +3,9 @@ class script(object):
     
 <b>◍ My name is⚡<a href=https://t.me/{}>{}</a>⚡</b>\n<b>◍ I can provide movies,</b>\n<b>◍ Just add me to group and make me admin..!</b>\n<b>──────────────────</b>\n<b><a href=https://t.me/cinema_flix_updates>🎭Cɪɴᴇᴍᴀ Fʟɪx™ ~ [Uᴩᴅᴀᴛᴇꜱ]</b></a>"""
     
-    ABOUT_TXT = """<b>➲ ABOUT ME</b>
+    ABOUT_TXT = """<b>➲ About Me</b>
     
-<b>○ My Name : <a href=https://t.me/{}>{}</b>
+<b>○ My Name : <a href=https://t.me/{}>{}</a></b>
 <b>○ Creator : Mantis</b>
 <b>○ Language : <a href=https://www.python.org>Python</b></a>
 <b>○ Library : <a href=https://pyrogram.org>Program</b></a>
