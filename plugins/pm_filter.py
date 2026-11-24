@@ -158,8 +158,8 @@ async def next_page_handler(client: Client, query: CallbackQuery):
     )
     btn.insert(1, 
         [
-            InlineKeyboardButton('🔊𝐋𝖆𝖓𝖌𝖚𝖆𝖌𝖊', callback_data=f'lang_menu#{req_user_id}#{key}'),
-            InlineKeyboardButton('𝐐𝖚𝖆𝖑𝖎𝖙𝐲🎥', callback_data=f'qual_menu#{req_user_id}#{key}')
+            InlineKeyboardButton('☊ Language', callback_data=f'lang_menu#{req_user_id}#{key}'),
+            InlineKeyboardButton('Quality ⎙', callback_data=f'qual_menu#{req_user_id}#{key}')
         ]
     )
     
@@ -172,24 +172,25 @@ async def next_page_handler(client: Client, query: CallbackQuery):
         
     if n_offset == 0 and off_set is not None:
         btn.append(
-            [InlineKeyboardButton("⏮️𝐁𝖆𝖈𝐤", callback_data=f"next_{req_user_id}_{key}_{off_set}"),
-             InlineKeyboardButton("𝐃𝖊𝖑𝖊𝖙𝖊𝐝🗑️", callback_data="close_data")]
+            [InlineKeyboardButton("⇇ Back", callback_data=f"next_{req_user_id}_{key}_{off_set}"),
+             InlineKeyboardButton("Delete 〆", callback_data="close_data")]
         )
     elif off_set is None and n_offset != 0 and n_offset is not None:
         btn.append(
-            [InlineKeyboardButton("🗑️𝐃𝖊𝖑𝖊𝖙𝖊𝐝", callback_data="close_data"),
-             InlineKeyboardButton("𝐍𝖊𝖝𝖙⏭️", callback_data=f"next_{req_user_id}_{key}_{n_offset}")]
+            [InlineKeyboardButton("〆 Delete", callback_data="close_data"),
+             InlineKeyboardButton("Next ⇉", callback_data=f"next_{req_user_id}_{key}_{n_offset}")]
         )
     elif off_set is not None and n_offset != 0 and n_offset is not None:
         btn.append(
             [
-                InlineKeyboardButton("⏮️𝐁𝖆𝖈𝐤", callback_data=f"next_{req_user_id}_{key}_{off_set}"),
-                InlineKeyboardButton("𝐍𝖊𝖝𝖙⏭️", callback_data=f"next_{req_user_id}_{key}_{n_offset}")
+                InlineKeyboardButton("⇇ Back", callback_data=f"next_{req_user_id}_{key}_{off_set}"),
+                InlineKeyboardButton("Next ⇉", callback_data=f"next_{req_user_id}_{key}_{n_offset}")
             ],
         )
     else:
         btn.append(
-            [InlineKeyboardButton("𝐃𝖊𝖑𝖊𝖙𝖊𝐝🗑️", callback_data="close_data")]
+            [InlineKeyboardButton("✦ Bot Pm", url=f"https://t.me/{temp.U_NAME}"),
+             InlineKeyboardButton("Delete 〆", callback_data="close_data")]
         )
 
     total_pages = math.ceil(int(total) / 10) if total else 1
@@ -246,31 +247,28 @@ async def filter_menu_handler(client: Client, query: CallbackQuery):
             ],
             [
                 InlineKeyboardButton("Telugu", callback_data=f"filter_apply#{req_user_id}#{key}#Telugu"),
-                InlineKeyboardButton("Kannada", callback_data=f"filter_apply#{req_user_id}#{key}#Kannada")
+                InlineKeyboardButton("Kannada", callback_data=f"filter_apply#{req_user_id}#{key}#Kannada"),
+                InlineKeyboardButton("Hindi", callback_data=f"filter_apply#{req_user_id}#{key}#Hindi")
             ],
             [
-                InlineKeyboardButton("Hindi", callback_data=f"filter_apply#{req_user_id}#{key}#Hindi"),
-                InlineKeyboardButton("English", callback_data=f"filter_apply#{req_user_id}#{key}#English")
-            ],
-            [
+                InlineKeyboardButton("English", callback_data=f"filter_apply#{req_user_id}#{key}#English"),
                 InlineKeyboardButton("Japanese", callback_data=f"filter_apply#{req_user_id}#{key}#Japanese"),
                 InlineKeyboardButton("Korean", callback_data=f"filter_apply#{req_user_id}#{key}#Korean")
             ],
             [
                 InlineKeyboardButton("Chinese", callback_data=f"filter_apply#{req_user_id}#{key}#Chinese"),
-                InlineKeyboardButton("Punjabi", callback_data=f"filter_apply#{req_user_id}#{key}#Punjabi")
+                InlineKeyboardButton("Punjabi", callback_data=f"filter_apply#{req_user_id}#{key}#Punjabi"),
+                InlineKeyboardButton("Marathi", callback_data=f"filter_apply#{req_user_id}#{key}#Marathi")
             ],
             [
-                InlineKeyboardButton("Marathi", callback_data=f"filter_apply#{req_user_id}#{key}#Marathi"),
-                InlineKeyboardButton("Dual Audio", callback_data=f"filter_apply#{req_user_id}#{key}#Dual Audio")
-            ],
-            [
-                InlineKeyboardButton("Multi Audio", callback_data=f"filter_apply#{req_user_id}#{key}#Multi Audio"),
+                
+                InlineKeyboardButton("Dual", callback_data=f"filter_apply#{req_user_id}#{key}#Dual Audio"),
+                InlineKeyboardButton("Multi", callback_data=f"filter_apply#{req_user_id}#{key}#Multi Audio"),
                 InlineKeyboardButton("Other", callback_data=f"filter_apply#{req_user_id}#{key}#Other")
             ],
             [
-                InlineKeyboardButton("⏮️𝐁𝖆𝖈𝐤", callback_data=f"back_main_search#{req_user_id}#{key}"),
-                InlineKeyboardButton("𝐃𝖊𝖑𝖊𝖙𝖊𝐝🗑️", callback_data="close_data")
+                InlineKeyboardButton("⇇ Back", callback_data=f"back_main_search#{req_user_id}#{key}"),
+                InlineKeyboardButton("Delete 〆", callback_data="close_data")
             ]
         ]
         await query.message.edit_reply_markup(reply_markup=InlineKeyboardMarkup(buttons))
@@ -287,8 +285,8 @@ async def filter_menu_handler(client: Client, query: CallbackQuery):
                 InlineKeyboardButton("2160p (4K)", callback_data=f"filter_apply#{req_user_id}#{key}#2160p")
             ],
             [
-                InlineKeyboardButton("⏮️𝐁𝖆𝖈𝐤", callback_data=f"back_main_search#{req_user_id}#{key}"),
-                InlineKeyboardButton("𝐃𝖊𝖑𝖊𝖙𝖊𝐝🗑️", callback_data="close_data")
+                InlineKeyboardButton("⇇ Back", callback_data=f"back_main_search#{req_user_id}#{key}"),
+                InlineKeyboardButton("Delete 〆", callback_data="close_data")
             ]
         ]
         await query.message.edit_reply_markup(reply_markup=InlineKeyboardMarkup(buttons))
@@ -328,18 +326,19 @@ async def filter_menu_handler(client: Client, query: CallbackQuery):
             InlineKeyboardButton(f'☂️ {search_query} ', 'dupe')
         ])
         btn.insert(1, [
-            InlineKeyboardButton('🔊𝐋𝖆𝖓𝖌𝖚𝖆𝖌𝖊', callback_data=f'lang_menu#{req_user_id}#{key}'),
-            InlineKeyboardButton('𝐐𝖚𝖆𝖑𝖎𝖙𝐲🎥', callback_data=f'qual_menu#{req_user_id}#{key}')
+            InlineKeyboardButton('☊ Language', callback_data=f'lang_menu#{req_user_id}#{key}'),
+            InlineKeyboardButton('Quality ⎙', callback_data=f'qual_menu#{req_user_id}#{key}')
         ])
         
         if total_results > 10:
             btn.append([
-                InlineKeyboardButton(text="𝐍𝖊𝖝𝖙⏭️", callback_data=f"next_{req_user_id}_{key}_10"),
-                InlineKeyboardButton(text="𝐃𝖊𝖑𝖊𝖙𝖊𝐝🗑️", callback_data="close_data")
+                InlineKeyboardButton(text="〆 Delete", callback_data="close_data"),
+                InlineKeyboardButton(text="Next ⇉", callback_data=f"next_{req_user_id}_{key}_10")
             ])
         else:
             btn.append([
-                InlineKeyboardButton(text="𝐃𝖊𝖑𝖊𝖙𝖊𝐝🗑️", callback_data="close_data")
+                InlineKeyboardButton("✦ Bot Pm", url=f"https://t.me/{temp.U_NAME}"),
+                InlineKeyboardButton(text="Delete 〆", callback_data="close_data")
             ])
             
         await query.message.edit_reply_markup(reply_markup=InlineKeyboardMarkup(btn))
@@ -403,11 +402,11 @@ async def filter_menu_handler(client: Client, query: CallbackQuery):
             btn.append([InlineKeyboardButton(text=f"⚡ {f_size} ◾ {file.file_name}", callback_data=f'{pre}#{file.file_id}')])
             
         btn.insert(0, [
-            InlineKeyboardButton(f"🔮 𝐅𝖎𝖑𝖙𝖊𝖗𝖊𝐝: {target}", callback_data="pages")
+            InlineKeyboardButton(f"☛ Filtered : {target}", callback_data="pages")
         ])
         btn.append([
-            InlineKeyboardButton("⏮️𝐁𝖆𝖈𝐤", callback_data=f"back_main_search#{req_user_id}#{key}"),
-            InlineKeyboardButton("𝐃𝖊𝖑𝖊𝖙𝖊𝐝🗑️", callback_data="close_data")
+            InlineKeyboardButton("⇇ Back", callback_data=f"back_main_search#{req_user_id}#{key}"),
+            InlineKeyboardButton("Delete 〆", callback_data="close_data")
         ])
         
         await query.message.edit_reply_markup(reply_markup=InlineKeyboardMarkup(btn))
@@ -778,11 +777,11 @@ async def cb_handler(client: Client, query: CallbackQuery):
             else:
                 file_keyboard = InlineKeyboardMarkup([
                     [
-                        InlineKeyboardButton('🚸𝐆𝖗𝖔𝖚𝖕', url="https://t.me/+iEbhY7mM4oE1OTVl"),
-                        InlineKeyboardButton('𝐃𝖊𝖑𝖊𝖙𝖊🗑️', callback_data='close_data')
+                        InlineKeyboardButton('⌬ Group', url="https://t.me/+iEbhY7mM4oE1OTVl"),
+                        InlineKeyboardButton('Delete 〆', callback_data='close_data')
                     ],
                     [
-                        InlineKeyboardButton(text=f'⚙️𝐅𝖎𝖑𝖊 𝐒𝖎𝐳𝖊: {size}', callback_data='gxneo')
+                        InlineKeyboardButton(text=f'▣ File Size: {size} ▣', callback_data='gxneo')
                     ]
                 ])
 
@@ -856,11 +855,11 @@ async def cb_handler(client: Client, query: CallbackQuery):
         
         file_keyboard = InlineKeyboardMarkup([
             [
-                InlineKeyboardButton('🚸𝐆𝖗𝖔𝖚𝖕', url="https://t.me/+iEbhY7mM4oE1OTVl"),
-                InlineKeyboardButton('𝐃𝖊𝖑𝖊𝖙𝖊𝐝🗑️', callback_data='close_data')
+                InlineKeyboardButton('⌬ Group', url="https://t.me/+iEbhY7mM4oE1OTVl"),
+                InlineKeyboardButton('Delete 〆', callback_data='close_data')
             ],
             [
-                InlineKeyboardButton(text=f'⚙️𝐅𝖎𝖑𝖊 𝐒𝖎𝐳𝖊: {size}', callback_data='gxneo')
+                InlineKeyboardButton(text=f'▣ File Size: {size} ▣', callback_data='gxneo')
             ]
         ])
 
@@ -929,7 +928,7 @@ async def cb_handler(client: Client, query: CallbackQuery):
         start_pic_enabled = settings.get("start_pic", True) if settings else True
 
         buttons = [[
-            InlineKeyboardButton('🔙 Back', callback_data='start'),
+            InlineKeyboardButton('⇇ Back', callback_data='start'),
             InlineKeyboardButton('⏍ Status ⏍', callback_data='stats'),
             InlineKeyboardButton('Close ✘', callback_data='close_data')
         ]]
@@ -971,8 +970,8 @@ async def cb_handler(client: Client, query: CallbackQuery):
                 
     elif query.data == "stats":
         buttons = [[
-            InlineKeyboardButton('🔙 Back', callback_data='about'),
-            InlineKeyboardButton('Refresh ✦', callback_data='rfrsh')
+            InlineKeyboardButton('⇇ Back', callback_data='about'),
+            InlineKeyboardButton('Refresh ⧗', callback_data='rfrsh')
         ]]
         reply_markup = InlineKeyboardMarkup(buttons)
         
@@ -1003,8 +1002,8 @@ async def cb_handler(client: Client, query: CallbackQuery):
         start_pic_enabled = settings.get("start_pic", True) if settings else True
 
         buttons = [[
-            InlineKeyboardButton('🔙 Back', callback_data='about'),
-            InlineKeyboardButton('Refresh ✦', callback_data='rfrsh')
+            InlineKeyboardButton('⇇ Back', callback_data='about'),
+            InlineKeyboardButton('Refresh ⧗', callback_data='rfrsh')
         ]]
         reply_markup = InlineKeyboardMarkup(buttons)
         
@@ -1124,18 +1123,19 @@ async def auto_filter(client: Client, msg, spoll=False):
         InlineKeyboardButton(f'☂️ {search} ', 'dupe')
     ])
     btn.insert(1, [
-        InlineKeyboardButton('LΔΠGUΔGΣ', callback_data=f'lang_menu#{req}#{key}'),
-        InlineKeyboardButton('QUΔLITY', callback_data=f'qual_menu#{req}#{key}')
+        InlineKeyboardButton('☊ Language', callback_data=f'lang_menu#{req}#{key}'),
+        InlineKeyboardButton('Quality ⎙', callback_data=f'qual_menu#{req}#{key}')
     ])
 
     if offset != "" and int(total_results) > 10:
         btn.append([
-            InlineKeyboardButton(text="ΠΣXT ⏭️", callback_data=f"next_{req}_{key}_{offset}"),
-            InlineKeyboardButton(text="DΣLΣTΣD 🗑️", callback_data="close_data")
+            InlineKeyboardButton(text="〆 Delete", callback_data="close_data"),
+            InlineKeyboardButton(text="Next ⇉", callback_data=f"next_{req}_{key}_{offset}")
         ])
     else:
         btn.append([
-            InlineKeyboardButton(text="DΣLΣTΣD 🗑️", callback_data="close_data")
+            InlineKeyboardButton("✦ Bot Pm", url=f"https://t.me/{temp.U_NAME}"),
+            InlineKeyboardButton(text="Delete 〆", callback_data="close_data")
         ])
 
     total_pages = math.ceil(int(total_results) / 10) if total_results else 1
