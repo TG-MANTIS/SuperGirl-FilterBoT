@@ -5,7 +5,7 @@ class script(object):
     
     ABOUT_TXT = """<b>➲ About Me</b>
     
-<b>○ My Name : <a href=https://t.me/{}>{}</a></b>
+<b>○ My Name : <a href=https://t.me/{}</a></b>
 <b>○ Creator : Mantis</b>
 <b>○ Language : <a href=https://www.python.org>Python</b></a>
 <b>○ Library : <a href=https://pyrogram.org>Program</b></a>
