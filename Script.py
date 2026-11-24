@@ -1,17 +1,18 @@
 class script(object):
     START_TXT = """<b>➲ Hello {},</b>
     
-<b>◍ My name is⚡<a href=https://t.me/{}>{}</a>⚡</b>\n<b>◍ I can provide movies,</b>\n<b>◍ Just add me to group and make me admin..!</b>\n<b>──────────────────</b>\n<b>≡ Managed By <a href=https://t.me/Mallu_Movie_Hub_Group>CINEMA FLIX</b></a>"""
+<b>◍ My name is⚡<a href=https://t.me/{}>{}</a>⚡</b>\n<b>◍ I can provide movies,</b>\n<b>◍ Just add me to group and make me admin..!</b>\n<b>──────────────────</b>\n<b><a href=https://t.me/cinema_flix_updates>🎭Cɪɴᴇᴍᴀ Fʟɪx™ ~ [Uᴩᴅᴀᴛᴇꜱ]</b></a>"""
     
     ABOUT_TXT = """<b>➲ ABOUT ME</b>
-<b>○ My Name : {}</b>
+    
+<b>○ My Name : <a href=https://t.me/{}>{}</b>
 <b>○ Creator : Mantis</b>
 <b>○ Language : <a href=https://www.python.org>Python</b></a>
 <b>○ Library : <a href=https://pyrogram.org>Program</b></a>
 <b>○ Server : <a href=https://t.me/Mallu_Movie_Hub_Group>Anywhere</b></a> 
 <b>○ Database : <a href=https://www.mongodb.com>Mangodb</b></a>
-<b>────────────────────</b>
-<b>👨‍💻 Managed By <a href=https://t.me/Mallu_Movie_Hub_Group>CINEMA FLIX</b></a>"""
+<b>──────────────────</b>
+<b><a href=https://t.me/cinema_flix_updates>🎭Cɪɴᴇᴍᴀ Fʟɪx™ ~ [Uᴩᴅᴀᴛᴇꜱ]</b></a>"""
     
     STATUS_TXT = """<b>📊 𝙂𝙇O𝘽𝘼𝙇 𝙎𝙏𝘼𝙏𝙐𝙎 𝘽𝙊𝘼𝙍𝘿 📊</b>
 
@@ -52,6 +53,6 @@ Name - {}
 <b>╰────── • ◆ • ──────╯</b>
 <b>☟ ʝσιи • ѕнαʀє • ѕυρρσʀт ☟</b>
     
-<b><a href=https://t.me/+iEbhY7mM4oE1OTVl>Cɪɴᴇᴍᴀ Fʟɪx™ ~『Uᴩᴅᴀᴛᴇꜱ』</b></a>"""
+<b><a href=https://t.me/cinema_flix_updates>🎭Cɪɴᴇᴍᴀ Fʟɪx™ ~ [Uᴩᴅᴀᴛᴇꜱ]</b></a>"""
 
     START_TXT_GROUP = """ഹലോ {}\n\n• എന്താണ് സഹോദരന് വേണ്ടത്? സ്റ്റാർട്ട്‌ ആയപ്പോ ഒരു സുഖം കിട്ടി അല്ലേ.. 🤭😜\n\n• എന്തായാലും വന്നതല്ലേ. ഇവിടെ കാണുന്ന ചാനൽ & ഗ്രൂപ്പ് ൽ ഒക്കെ Join ചെയ്തേക്ക് 😎"""
