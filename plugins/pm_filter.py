@@ -31,6 +31,10 @@ logger.setLevel(logging.INFO)
 PM_BUTTONS = {}
 BUTTONS = {}
 
+# Spell-check sticker file_id and auto-delete delay (in seconds)
+SPELL_STICKER_ID = "my_sticker_id"
+SPELL_AUTO_DELETE_DELAY = 5
+
 NON_IMG = """<b>➲ Hello {user_mention},</b>
 
 <b>✗ <i>Could not find <code>{mv_rqst}</code> in our database!</i></b>
@@ -1267,6 +1271,16 @@ async def auto_filter(client: Client, msg, spoll=False):
     asyncio.create_task(delete_after_delay())
 
 
+async def _auto_delete_spell(messages, delay=SPELL_AUTO_DELETE_DELAY):
+    await asyncio.sleep(delay)
+    for m in messages:
+        if m is not None:
+            try:
+                await m.delete()
+            except Exception:
+                pass
+
+
 async def advantage_spell_chok(msg):
     mv_rqst = msg.text
     search = msg.text.replace(" ", "+")
@@ -1277,12 +1291,26 @@ async def advantage_spell_chok(msg):
     
     user_mention = msg.from_user.mention if msg.from_user else "Friend"
     
-    await msg.reply_photo(
-        photo="https://envs.sh/RCE.jpg", 
-        caption=NON_IMG.format(user_mention=user_mention, mv_rqst=mv_rqst),
-        reply_markup=InlineKeyboardMarkup(btn)
-    )
-    await msg.delete()
+    sticker_msg = None
+    info_msg = None
+
+    try:
+        sticker_msg = await msg.reply_sticker(sticker=SPELL_STICKER_ID)
+    except Exception as e:
+        logger.error(f"Failed to send spell-check sticker: {e}")
+
+    try:
+        target_msg = sticker_msg if sticker_msg else msg
+        info_msg = await target_msg.reply_text(
+            text=NON_IMG.format(user_mention=user_mention, mv_rqst=mv_rqst),
+            reply_markup=InlineKeyboardMarkup(btn),
+            parse_mode=enums.ParseMode.HTML,
+            disable_web_page_preview=True
+        )
+    except Exception as e:
+        logger.error(f"Failed to send spell-check info message: {e}")
+
+    asyncio.create_task(_auto_delete_spell([sticker_msg, info_msg, msg], delay=SPELL_AUTO_DELETE_DELAY))
     return
 
 
