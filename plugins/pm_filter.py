@@ -206,11 +206,11 @@ async def next_page_handler(client: Client, query: CallbackQuery):
     if re.search(r'⎎ Page :</b>\s*\d+\s*/\s*\d+', old_html):
         updated_caption = re.sub(
             r'(⎎ Page :</b>\s*)\d+\s*/\s*\d+',
-            rf'\g<1>{current_page} {total_pages}',
+            rf'\g<1>{current_page}-{total_pages}',
             old_html
         )
     else:
-        updated_caption = f"{old_html}\n\n<b>⎎ Page :</b> {current_page} {total_pages}"
+        updated_caption = f"{old_html}\n\n<b>⎎ Page :</b> {current_page}-{total_pages}"
 
     try:
         if query.message.photo:
@@ -1072,8 +1072,8 @@ async def auto_filter(client: Client, msg, spoll=False):
                     )
                     search_query = message.text.replace(" ", "+")
                     btn = [[
-                        InlineKeyboardButton(text="🔎 GOOGLΣ", url=f"https://google.com/search?q={search_query}"),
-                        InlineKeyboardButton(text="🔮 IMDᗷ", url=f"https://imdb.com/find?q={search_query}")
+                        InlineKeyboardButton(text="⌘ Google", url=f"https://google.com/search?q={search_query}"),
+                        InlineKeyboardButton(text="Imdb ⌘", url=f"https://imdb.com/find?q={search_query}")
                     ]]
                     sent_msg = await message.reply_text(text=msg_text, reply_markup=InlineKeyboardMarkup(btn))
                     await asyncio.sleep(5)
@@ -1120,7 +1120,7 @@ async def auto_filter(client: Client, msg, spoll=False):
     BUTTONS[key] = search
     
     btn.insert(0, [
-        InlineKeyboardButton(f'☂️ {search} ', 'dupe')
+        InlineKeyboardButton(f'⇊ {search} ⇊', 'dupe')
     ])
     btn.insert(1, [
         InlineKeyboardButton('☊ Language', callback_data=f'lang_menu#{req}#{key}'),
@@ -1134,7 +1134,7 @@ async def auto_filter(client: Client, msg, spoll=False):
         ])
     else:
         btn.append([
-            InlineKeyboardButton("✦ Bot Pm", url=f"https://t.me/{temp.U_NAME}"),
+            InlineKeyboardButton("ᴥ︎ Bot Pm", url=f"https://t.me/{temp.U_NAME}"),
             InlineKeyboardButton(text="Delete 〆", callback_data="close_data")
         ])
 
@@ -1239,7 +1239,7 @@ async def auto_filter(client: Client, msg, spoll=False):
                 f"==============================</b>"
             )
             
-            photo_url = "https://envs.sh/RCE.jpg"
+            photo_url = "https://graph.org/file/88da92d37f6ccb66972a7-00db3196dc93ded17b.jpg"
             photo_msg = None
             try:
                 photo_msg = await client.send_photo(
@@ -1271,8 +1271,8 @@ async def advantage_spell_chok(msg):
     mv_rqst = msg.text
     search = msg.text.replace(" ", "+")
     btn = [[
-        InlineKeyboardButton(text="🔎 GOOGLΣ", url=f"https://google.com/search?q={search}"),
-        InlineKeyboardButton(text="🔮 IMDᗷ", url=f"https://imdb.com/find?q={search}")
+        InlineKeyboardButton(text="⌘ Google", url=f"https://google.com/search?q={search}"),
+        InlineKeyboardButton(text="Imdb ⌘", url=f"https://imdb.com/find?q={search}")
     ]]
     
     user_mention = msg.from_user.mention if msg.from_user else "Friend"
