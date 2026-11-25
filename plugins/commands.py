@@ -189,28 +189,28 @@ async def start_handler(client: Client, message):
         if settings is not None:
             buttons = [
                 [
-                    InlineKeyboardButton('Filter Button', callback_data=f'setgs#button#{settings["button"]}#{grp_id}#1'),
+                    InlineKeyboardButton('Button', callback_data=f'setgs#button#{settings["button"]}#{grp_id}#1'),
                     InlineKeyboardButton('Single' if settings["button"] else 'Double', callback_data=f'setgs#button#{settings["button"]}#{grp_id}#1')
                 ],
                 [
                     InlineKeyboardButton('Bot PM', callback_data=f'setgs#botpm#{settings["botpm"]}#{grp_id}#1'),
-                    InlineKeyboardButton('✅ Yes' if settings["botpm"] else '❌ No', callback_data=f'setgs#botpm#{settings["botpm"]}#{grp_id}#1')
+                    InlineKeyboardButton('√ Yes' if settings["botpm"] else '❌ No', callback_data=f'setgs#botpm#{settings["botpm"]}#{grp_id}#1')
                 ],
                 [
                     InlineKeyboardButton('File Secure', callback_data=f'setgs#file_secure#{settings["file_secure"]}#{grp_id}#1'),
-                    InlineKeyboardButton('✅ Yes' if settings["file_secure"] else '❌ No', callback_data=f'setgs#file_secure#{settings["file_secure"]}#{grp_id}#1')
+                    InlineKeyboardButton('√ Yes' if settings["file_secure"] else '❌ No', callback_data=f'setgs#file_secure#{settings["file_secure"]}#{grp_id}#1')
                 ],
                 [
                     InlineKeyboardButton('IMDB', callback_data=f'setgs#imdb#{settings["imdb"]}#{grp_id}#1'),
-                    InlineKeyboardButton('✅ Yes' if settings["imdb"] else '❌ No', callback_data=f'setgs#imdb#{settings["imdb"]}#{grp_id}#1')
+                    InlineKeyboardButton('√ Yes' if settings["imdb"] else '❌ No', callback_data=f'setgs#imdb#{settings["imdb"]}#{grp_id}#1')
                 ],
                 [
-                    InlineKeyboardButton('Spell Check', callback_data=f'setgs#spell_check#{settings["spell_check"]}#{grp_id}#1'),
-                    InlineKeyboardButton('✅ Yes' if settings["spell_check"] else '❌ No', callback_data=f'setgs#spell_check#{settings["spell_check"]}#{grp_id}#1')
+                    InlineKeyboardButton('Spell Msg', callback_data=f'setgs#spell_check#{settings["spell_check"]}#{grp_id}#1'),
+                    InlineKeyboardButton('√ Yes' if settings["spell_check"] else '❌ No', callback_data=f'setgs#spell_check#{settings["spell_check"]}#{grp_id}#1')
                 ],
                 [
-                    InlineKeyboardButton('Next ⇛', callback_data=f'set_group_menu#{grp_id}#2'),
-                    InlineKeyboardButton('Close', callback_data='close_data')
+                    InlineKeyboardButton('Close', callback_data='close_data'),
+                    InlineKeyboardButton('Next ⇛', callback_data=f'set_group_menu#{grp_id}#2')
                 ]
             ]
             reply_markup = InlineKeyboardMarkup(buttons)
@@ -766,11 +766,11 @@ async def settings_handler(client: Client, message):
 
         buttons = InlineKeyboardMarkup([
             [
-                InlineKeyboardButton("🌐 Open Source (Group)", callback_data=f"set_group_menu#{chat_id}#1"),
-                InlineKeyboardButton("🔒 Private Source (PM)", url=f"https://t.me/{client.me.username}?start=settings_{chat_id}")
+                InlineKeyboardButton("•Open(Group)", callback_data=f"set_group_menu#{chat_id}#1"),
+                InlineKeyboardButton("Private(PM)•", url=f"https://t.me/{client.me.username}?start=settings_{chat_id}")
             ],
             [
-                InlineKeyboardButton("Close", callback_data="close_data")
+                InlineKeyboardButton("✗ Close Msg ✗", callback_data="close_data")
             ]
         ])
         
@@ -803,28 +803,28 @@ async def settings_handler(client: Client, message):
             if settings is not None:
                 buttons = [
                     [
-                        InlineKeyboardButton('Filter Button', callback_data=f'setgs#button#{settings["button"]}#{grp_id}#1'),
+                        InlineKeyboardButton('⊶Button⊶', callback_data=f'setgs#button#{settings["button"]}#{grp_id}#1'),
                         InlineKeyboardButton('Single' if settings["button"] else 'Double', callback_data=f'setgs#button#{settings["button"]}#{grp_id}#1')
                     ],
                     [
-                        InlineKeyboardButton('Bot PM', callback_data=f'setgs#botpm#{settings["botpm"]}#{grp_id}#1'),
-                        InlineKeyboardButton('✅ Yes' if settings["botpm"] else '❌ No', callback_data=f'setgs#botpm#{settings["botpm"]}#{grp_id}#1')
+                        InlineKeyboardButton('⊶Bot PM⊶', callback_data=f'setgs#botpm#{settings["botpm"]}#{grp_id}#1'),
+                        InlineKeyboardButton('√ Yes' if settings["botpm"] else '⛌ No', callback_data=f'setgs#botpm#{settings["botpm"]}#{grp_id}#1')
                     ],
                     [
-                        InlineKeyboardButton('File Secure', callback_data=f'setgs#file_secure#{settings["file_secure"]}#{grp_id}#1'),
-                        InlineKeyboardButton('✅ Yes' if settings["file_secure"] else '❌ No', callback_data=f'setgs#file_secure#{settings["file_secure"]}#{grp_id}#1')
+                        InlineKeyboardButton('⊶File Secure⊶', callback_data=f'setgs#file_secure#{settings["file_secure"]}#{grp_id}#1'),
+                        InlineKeyboardButton('√ Yes' if settings["file_secure"] else '⛌ No', callback_data=f'setgs#file_secure#{settings["file_secure"]}#{grp_id}#1')
                     ],
                     [
-                        InlineKeyboardButton('IMDB', callback_data=f'setgs#imdb#{settings["imdb"]}#{grp_id}#1'),
-                        InlineKeyboardButton('✅ Yes' if settings["imdb"] else '❌ No', callback_data=f'setgs#imdb#{settings["imdb"]}#{grp_id}#1')
+                        InlineKeyboardButton('⊶IMDB⊶', callback_data=f'setgs#imdb#{settings["imdb"]}#{grp_id}#1'),
+                        InlineKeyboardButton('√ Yes' if settings["imdb"] else '⛌ No', callback_data=f'setgs#imdb#{settings["imdb"]}#{grp_id}#1')
                     ],
                     [
-                        InlineKeyboardButton('Spell Check', callback_data=f'setgs#spell_check#{settings["spell_check"]}#{grp_id}#1'),
-                        InlineKeyboardButton('✅ Yes' if settings["spell_check"] else '❌ No', callback_data=f'setgs#spell_check#{settings["spell_check"]}#{grp_id}#1')
+                        InlineKeyboardButton('⊶Spell Msg⊶', callback_data=f'setgs#spell_check#{settings["spell_check"]}#{grp_id}#1'),
+                        InlineKeyboardButton('√ Yes' if settings["spell_check"] else '⛌ No', callback_data=f'setgs#spell_check#{settings["spell_check"]}#{grp_id}#1')
                     ],
                     [
-                        InlineKeyboardButton('Next ⇛', callback_data=f'set_group_menu#{grp_id}#2'),
-                        InlineKeyboardButton('Close', callback_data='close_data')
+                        InlineKeyboardButton('✗ Close', callback_data='close_data'),
+                        InlineKeyboardButton('Next ⇛', callback_data=f'set_group_menu#{grp_id}#2')
                     ]
                 ]
                 reply_markup = InlineKeyboardMarkup(buttons)
@@ -880,28 +880,28 @@ async def set_group_menu_callback_handler(client: Client, query):
         if page == 1:
             buttons = [
                 [
-                    InlineKeyboardButton('Filter Button', callback_data=f'setgs#button#{settings.get("button", True)}#{grp_id}#1'),
+                    InlineKeyboardButton('⊶Button⊶', callback_data=f'setgs#button#{settings.get("button", True)}#{grp_id}#1'),
                     InlineKeyboardButton('Single' if settings.get("button", True) else 'Double', callback_data=f'setgs#button#{settings.get("button", True)}#{grp_id}#1')
                 ],
                 [
-                    InlineKeyboardButton('Bot PM', callback_data=f'setgs#botpm#{settings.get("botpm", True)}#{grp_id}#1'),
-                    InlineKeyboardButton('✅ Yes' if settings.get("botpm", True) else '❌ No', callback_data=f'setgs#botpm#{settings.get("botpm", True)}#{grp_id}#1')
+                    InlineKeyboardButton('⊶Bot PM⊶', callback_data=f'setgs#botpm#{settings.get("botpm", True)}#{grp_id}#1'),
+                    InlineKeyboardButton('√ Yes' if settings.get("botpm", True) else '⛌ No', callback_data=f'setgs#botpm#{settings.get("botpm", True)}#{grp_id}#1')
                 ],
                 [
-                    InlineKeyboardButton('File Secure', callback_data=f'setgs#file_secure#{settings.get("file_secure", False)}#{grp_id}#1'),
-                    InlineKeyboardButton('✅ Yes' if settings.get("file_secure", False) else '❌ No', callback_data=f'setgs#file_secure#{settings.get("file_secure", False)}#{grp_id}#1')
+                    InlineKeyboardButton('⊶File Secure⊶', callback_data=f'setgs#file_secure#{settings.get("file_secure", False)}#{grp_id}#1'),
+                    InlineKeyboardButton('√ Yes' if settings.get("file_secure", False) else '⛌ No', callback_data=f'setgs#file_secure#{settings.get("file_secure", False)}#{grp_id}#1')
                 ],
                 [
-                    InlineKeyboardButton('IMDB', callback_data=f'setgs#imdb#{settings.get("imdb", True)}#{grp_id}#1'),
-                    InlineKeyboardButton('✅ Yes' if settings.get("imdb", True) else '❌ No', callback_data=f'setgs#imdb#{settings.get("imdb", True)}#{grp_id}#1')
+                    InlineKeyboardButton('⊶IMDB⊶', callback_data=f'setgs#imdb#{settings.get("imdb", True)}#{grp_id}#1'),
+                    InlineKeyboardButton('√ Yes' if settings.get("imdb", True) else '⛌ No', callback_data=f'setgs#imdb#{settings.get("imdb", True)}#{grp_id}#1')
                 ],
                 [
-                    InlineKeyboardButton('Spell Check', callback_data=f'setgs#spell_check#{settings.get("spell_check", True)}#{grp_id}#1'),
-                    InlineKeyboardButton('✅ Yes' if settings.get("spell_check", True) else '❌ No', callback_data=f'setgs#spell_check#{settings.get("spell_check", True)}#{grp_id}#1')
+                    InlineKeyboardButton('⊶Spell Msg⊶', callback_data=f'setgs#spell_check#{settings.get("spell_check", True)}#{grp_id}#1'),
+                    InlineKeyboardButton('√ Yes' if settings.get("spell_check", True) else '⛌ No', callback_data=f'setgs#spell_check#{settings.get("spell_check", True)}#{grp_id}#1')
                 ],
                 [
-                    InlineKeyboardButton('Next ⇛', callback_data=f'set_group_menu#{grp_id}#2'),
-                    InlineKeyboardButton('Close', callback_data='close_data')
+                    InlineKeyboardButton('✗ Close', callback_data='close_data'),
+                    InlineKeyboardButton('Next ⇛', callback_data=f'set_group_menu#{grp_id}#2')
                 ]
             ]
             text = f"<b>⚙️ Settings for {title} (Page 1/2)</b>"
@@ -910,28 +910,28 @@ async def set_group_menu_callback_handler(client: Client, query):
             start_pic = settings.get("start_pic", True)
             buttons = [
                 [
-                    InlineKeyboardButton('Welcome', callback_data=f'setgs#welcome#{settings.get("welcome", True)}#{grp_id}#2'),
-                    InlineKeyboardButton('✅ Yes' if settings.get("welcome", True) else '❌ No', callback_data=f'setgs#welcome#{settings.get("welcome", True)}#{grp_id}#2')
+                    InlineKeyboardButton('⊶Welcome⊶', callback_data=f'setgs#welcome#{settings.get("welcome", True)}#{grp_id}#2'),
+                    InlineKeyboardButton('√ Yes' if settings.get("welcome", True) else '⛌ No', callback_data=f'setgs#welcome#{settings.get("welcome", True)}#{grp_id}#2')
                 ],
                 [
-                    InlineKeyboardButton('Goodbye', callback_data=f'setgs#goodbye#{settings.get("goodbye", False)}#{grp_id}#2'),
-                    InlineKeyboardButton('✅ Yes' if settings.get("goodbye", False) else '❌ No', callback_data=f'setgs#goodbye#{settings.get("goodbye", False)}#{grp_id}#2')
+                    InlineKeyboardButton('⊶Goodbye⊶', callback_data=f'setgs#goodbye#{settings.get("goodbye", False)}#{grp_id}#2'),
+                    InlineKeyboardButton('√ Yes' if settings.get("goodbye", False) else '⛌ No', callback_data=f'setgs#goodbye#{settings.get("goodbye", False)}#{grp_id}#2')
                 ],
                 [
-                    InlineKeyboardButton('Force Sub', callback_data=f'setgs#forcesub#{settings.get("forcesub", True)}#{grp_id}#2'),
-                    InlineKeyboardButton('✅ Yes' if settings.get("forcesub", True) else '❌ No', callback_data=f'setgs#forcesub#{settings.get("forcesub", True)}#{grp_id}#2')
+                    InlineKeyboardButton('⊶Force Sub⊶', callback_data=f'setgs#forcesub#{settings.get("forcesub", True)}#{grp_id}#2'),
+                    InlineKeyboardButton('√ Yes' if settings.get("forcesub", True) else '⛌ No', callback_data=f'setgs#forcesub#{settings.get("forcesub", True)}#{grp_id}#2')
                 ],
                 [
-                    InlineKeyboardButton('Anti-Link 🛡️', callback_data=f'setgs#antilink#{antilink}#{grp_id}#2'),
-                    InlineKeyboardButton('✅ On' if antilink else '❌ Off', callback_data=f'setgs#antilink#{antilink}#{grp_id}#2')
+                    InlineKeyboardButton('⊶Anti-Link⊶', callback_data=f'setgs#antilink#{antilink}#{grp_id}#2'),
+                    InlineKeyboardButton('√ On' if antilink else '⛌ Off', callback_data=f'setgs#antilink#{antilink}#{grp_id}#2')
                 ],
                 [
-                    InlineKeyboardButton('Start Pic 🖼️', callback_data=f'setgs#start_pic#{start_pic}#{grp_id}#2'),
-                    InlineKeyboardButton('✅ On' if start_pic else '❌ Off', callback_data=f'setgs#start_pic#{start_pic}#{grp_id}#2')
+                    InlineKeyboardButton('⊶Start Img⊶', callback_data=f'setgs#start_pic#{start_pic}#{grp_id}#2'),
+                    InlineKeyboardButton('√ On' if start_pic else '⛌ Off', callback_data=f'setgs#start_pic#{start_pic}#{grp_id}#2')
                 ],
                 [
                     InlineKeyboardButton('⭅ Back', callback_data=f'set_group_menu#{grp_id}#1'),
-                    InlineKeyboardButton('Close', callback_data='close_data')
+                    InlineKeyboardButton('Close ✗', callback_data='close_data')
                 ]
             ]
             text = f"<b>⚙️ Settings for {title} (Page 2/2)</b>"
@@ -983,28 +983,28 @@ async def settings_update_callback_handler(client: Client, query):
         if page_num == 1:
             buttons = [
                 [
-                    InlineKeyboardButton('Filter Button', callback_data=f'setgs#button#{settings.get("button", True)}#{grp_id}#1'),
+                    InlineKeyboardButton('⊶Button⊶', callback_data=f'setgs#button#{settings.get("button", True)}#{grp_id}#1'),
                     InlineKeyboardButton('Single' if settings.get("button", True) else 'Double', callback_data=f'setgs#button#{settings.get("button", True)}#{grp_id}#1')
                 ],
                 [
-                    InlineKeyboardButton('Bot PM', callback_data=f'setgs#botpm#{settings.get("botpm", True)}#{grp_id}#1'),
-                    InlineKeyboardButton('✅ Yes' if settings.get("botpm", True) else '❌ No', callback_data=f'setgs#botpm#{settings.get("botpm", True)}#{grp_id}#1')
+                    InlineKeyboardButton('⊶Bot PM⊶', callback_data=f'setgs#botpm#{settings.get("botpm", True)}#{grp_id}#1'),
+                    InlineKeyboardButton('√ Yes' if settings.get("botpm", True) else '⛌ No', callback_data=f'setgs#botpm#{settings.get("botpm", True)}#{grp_id}#1')
                 ],
                 [
-                    InlineKeyboardButton('File Secure', callback_data=f'setgs#file_secure#{settings.get("file_secure", False)}#{grp_id}#1'),
-                    InlineKeyboardButton('✅ Yes' if settings.get("file_secure", False) else '❌ No', callback_data=f'setgs#file_secure#{settings.get("file_secure", False)}#{grp_id}#1')
+                    InlineKeyboardButton('⊶File Secure⊶', callback_data=f'setgs#file_secure#{settings.get("file_secure", False)}#{grp_id}#1'),
+                    InlineKeyboardButton('√ Yes' if settings.get("file_secure", False) else '⛌ No', callback_data=f'setgs#file_secure#{settings.get("file_secure", False)}#{grp_id}#1')
                 ],
                 [
-                    InlineKeyboardButton('IMDB', callback_data=f'setgs#imdb#{settings.get("imdb", True)}#{grp_id}#1'),
-                    InlineKeyboardButton('✅ Yes' if settings.get("imdb", True) else '❌ No', callback_data=f'setgs#imdb#{settings.get("imdb", True)}#{grp_id}#1')
+                    InlineKeyboardButton('⊶IMDB⊶', callback_data=f'setgs#imdb#{settings.get("imdb", True)}#{grp_id}#1'),
+                    InlineKeyboardButton('√ Yes' if settings.get("imdb", True) else '⛌ No', callback_data=f'setgs#imdb#{settings.get("imdb", True)}#{grp_id}#1')
                 ],
                 [
-                    InlineKeyboardButton('Spell Check', callback_data=f'setgs#spell_check#{settings.get("spell_check", True)}#{grp_id}#1'),
-                    InlineKeyboardButton('✅ Yes' if settings.get("spell_check", True) else '❌ No', callback_data=f'setgs#spell_check#{settings.get("spell_check", True)}#{grp_id}#1')
+                    InlineKeyboardButton('⊶Spell Msg⊶', callback_data=f'setgs#spell_check#{settings.get("spell_check", True)}#{grp_id}#1'),
+                    InlineKeyboardButton('√ Yes' if settings.get("spell_check", True) else '⛌ No', callback_data=f'setgs#spell_check#{settings.get("spell_check", True)}#{grp_id}#1')
                 ],
                 [
-                    InlineKeyboardButton('Next ⇛', callback_data=f'set_group_menu#{grp_id}#2'),
-                    InlineKeyboardButton('Close', callback_data='close_data')
+                    InlineKeyboardButton('✗ Close', callback_data='close_data'),
+                    InlineKeyboardButton('Next ⇛', callback_data=f'set_group_menu#{grp_id}#2')
                 ]
             ]
             text = f"<b>⚙️ Settings for {title} (Page 1/2)</b>"
@@ -1013,28 +1013,28 @@ async def settings_update_callback_handler(client: Client, query):
             start_pic = settings.get("start_pic", True)
             buttons = [
                 [
-                    InlineKeyboardButton('Welcome', callback_data=f'setgs#welcome#{settings.get("welcome", True)}#{grp_id}#2'),
-                    InlineKeyboardButton('✅ Yes' if settings.get("welcome", True) else '❌ No', callback_data=f'setgs#welcome#{settings.get("welcome", True)}#{grp_id}#2')
+                    InlineKeyboardButton('⊶Welcome⊶', callback_data=f'setgs#welcome#{settings.get("welcome", True)}#{grp_id}#2'),
+                    InlineKeyboardButton('√ Yes' if settings.get("welcome", True) else '⛌ No', callback_data=f'setgs#welcome#{settings.get("welcome", True)}#{grp_id}#2')
                 ],
                 [
-                    InlineKeyboardButton('Goodbye', callback_data=f'setgs#goodbye#{settings.get("goodbye", False)}#{grp_id}#2'),
-                    InlineKeyboardButton('✅ Yes' if settings.get("goodbye", False) else '❌ No', callback_data=f'setgs#goodbye#{settings.get("goodbye", False)}#{grp_id}#2')
+                    InlineKeyboardButton('⊶Goodbye⊶', callback_data=f'setgs#goodbye#{settings.get("goodbye", False)}#{grp_id}#2'),
+                    InlineKeyboardButton('√ Yes' if settings.get("goodbye", False) else '⛌ No', callback_data=f'setgs#goodbye#{settings.get("goodbye", False)}#{grp_id}#2')
                 ],
                 [
-                    InlineKeyboardButton('Force Sub', callback_data=f'setgs#forcesub#{settings.get("forcesub", True)}#{grp_id}#2'),
-                    InlineKeyboardButton('✅ Yes' if settings.get("forcesub", True) else '❌ No', callback_data=f'setgs#forcesub#{settings.get("forcesub", True)}#{grp_id}#2')
+                    InlineKeyboardButton('⊶Force Sub⊶', callback_data=f'setgs#forcesub#{settings.get("forcesub", True)}#{grp_id}#2'),
+                    InlineKeyboardButton('√ Yes' if settings.get("forcesub", True) else '⛌ No', callback_data=f'setgs#forcesub#{settings.get("forcesub", True)}#{grp_id}#2')
                 ],
                 [
-                    InlineKeyboardButton('Anti-Link 🛡️', callback_data=f'setgs#antilink#{antilink}#{grp_id}#2'),
-                    InlineKeyboardButton('✅ On' if antilink else '❌ Off', callback_data=f'setgs#antilink#{antilink}#{grp_id}#2')
+                    InlineKeyboardButton('⊶Anti-Link⊶', callback_data=f'setgs#antilink#{antilink}#{grp_id}#2'),
+                    InlineKeyboardButton('√ On' if antilink else '⛌ Off', callback_data=f'setgs#antilink#{antilink}#{grp_id}#2')
                 ],
                 [
-                    InlineKeyboardButton('Start Pic 🖼️', callback_data=f'setgs#start_pic#{start_pic}#{grp_id}#2'),
-                    InlineKeyboardButton('✅ On' if start_pic else '❌ Off', callback_data=f'setgs#start_pic#{start_pic}#{grp_id}#2')
+                    InlineKeyboardButton('⊶Start Img⊶', callback_data=f'setgs#start_pic#{start_pic}#{grp_id}#2'),
+                    InlineKeyboardButton('√ On' if start_pic else '⛌ Off', callback_data=f'setgs#start_pic#{start_pic}#{grp_id}#2')
                 ],
                 [
                     InlineKeyboardButton('⭅ Back', callback_data=f'set_group_menu#{grp_id}#1'),
-                    InlineKeyboardButton('Close', callback_data='close_data')
+                    InlineKeyboardButton('Close ✗', callback_data='close_data')
                 ]
             ]
             text = f"<b>⚙️ Settings for {title} (Page 2/2)</b>"
