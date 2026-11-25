@@ -32,7 +32,7 @@ PM_BUTTONS = {}
 BUTTONS = {}
 
 # Spell-check sticker file_id and auto-delete delay (in seconds)
-SPELL_STICKER_ID = "my_sticker_id"
+SPELL_STICKER_ID = "CAACAgUAAxkBAAK0RmiXOmwigy1vyCPW6bVj5Pj_Wm4VAAL9AgAC7mPZVDXgUJOcmcMUNgQ"
 SPELL_AUTO_DELETE_DELAY = 5
 
 NON_IMG = """<b>➲ Hello {user_mention},</b>
