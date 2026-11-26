@@ -39,6 +39,45 @@ async def _resolve_bot_username(client: Client) -> str:
     return temp.U_NAME
 
 
+def _build_file_caption(title: str | None, size_str: str | None, orig_caption: str | None, user_mention: str, user_name: str) -> str:
+    """Formats CUSTOM_FILE_CAPTION or falls back to a clean default caption."""
+    safe_title = "" if title is None else str(title)
+    safe_size = "" if size_str is None else str(size_str)
+    safe_orig = "" if orig_caption is None else str(orig_caption)
+
+    if CUSTOM_FILE_CAPTION:
+        try:
+            formatted = CUSTOM_FILE_CAPTION.format(
+                file_name=safe_title,
+                file_size=safe_size,
+                file_caption=safe_orig,
+                user_mention=user_mention,
+                user_name=user_name,
+            )
+            if formatted and formatted.strip():
+                return formatted
+        except Exception as err:
+            logger.exception(f"Error formatting CUSTOM_FILE_CAPTION: {err}")
+
+    if safe_title:
+        return f"<code>{safe_title}</code>"
+    return safe_orig or "Media File"
+
+
+def _build_file_keyboard(size_str: str | None) -> InlineKeyboardMarkup:
+    """Builds inline keyboard for delivered media files."""
+    size_label = size_str if size_str else "N/A"
+    return InlineKeyboardMarkup([
+        [
+            InlineKeyboardButton('🚸 Group', url="https://t.me/+iEbhY7mM4oE1OTVl"),
+            InlineKeyboardButton('Delete 🗑️', callback_data='close_data')
+        ],
+        [
+            InlineKeyboardButton(text=f'⚙️ File Size: {size_label}', callback_data='gxneo')
+        ]
+    ])
+
+
 # --------------------------------------------------------------------------- #
 #  /start Command Handler (Group & Private Welcome & File Delivery)          #
 # --------------------------------------------------------------------------- #
@@ -273,21 +312,7 @@ async def start_handler(client: Client, message):
         for msg in msgs:
             title = msg.get("title")
             size = get_size(int(msg.get("size", 0)))
-            f_caption = msg.get("caption", "")
-            
-            if CUSTOM_FILE_CAPTION:
-                try:
-                    f_caption = CUSTOM_FILE_CAPTION.format(
-                        file_name='' if title is None else title, 
-                        file_size='' if size is None else size, 
-                        file_caption='' if f_caption is None else f_caption,
-                        user_mention=user_mention,
-                        user_name=user_name
-                    )
-                except Exception as err:
-                    logger.exception(err)
-            if f_caption is None or f_caption == "":
-                f_caption = f"{title}"
+            f_caption = _build_file_caption(title, size, msg.get("caption", ""), user_mention, user_name)
             try:
                 await client.send_cached_media(
                     chat_id=message.from_user.id,
@@ -328,21 +353,7 @@ async def start_handler(client: Client, message):
                 title = getattr(media, 'file_name', '')
                 size = get_size(getattr(media, 'file_size', 0))
                 orig_caption = getattr(msg, 'caption', '') or ''
-                
-                if CUSTOM_FILE_CAPTION:
-                    try:
-                        f_caption = CUSTOM_FILE_CAPTION.format(
-                            file_name=title, 
-                            file_size=size, 
-                            file_caption=orig_caption,
-                            user_mention=user_mention,
-                            user_name=user_name
-                        )
-                    except Exception as err:
-                        logger.exception(err)
-                        f_caption = orig_caption
-                else:
-                    f_caption = orig_caption or title
+                f_caption = _build_file_caption(title, size, orig_caption, user_mention, user_name)
                 try:
                     await msg.copy(message.chat.id, caption=f_caption, protect_content=True if protect == "/pbatch" else False, parse_mode=enums.ParseMode.HTML)
                 except FloodWait as e:
@@ -382,30 +393,61 @@ async def start_handler(client: Client, message):
         files_ = None
 
     if not files_:
-        # Try direct cached media fallback if file_id is a valid Telegram file_id
+        # Direct cached media fallback with full caption & buttons
         try:
             msg = await client.send_cached_media(
                 chat_id=message.from_user.id,
                 file_id=file_id,
                 protect_content=True if pre == "filep" else False,
             )
-            logger.info(f"Delivered file directly via cached media fallback: {file_id}")
+            title = None
+            size_str = None
+            orig_cap = None
+            if getattr(msg, "media", None):
+                media_obj = getattr(msg, msg.media.value, None)
+                if media_obj:
+                    title = getattr(media_obj, "file_name", None)
+                    raw_size = getattr(media_obj, "file_size", None)
+                    if raw_size:
+                        size_str = get_size(int(raw_size))
+            orig_cap = getattr(msg, "caption", None)
+            f_caption = _build_file_caption(title, size_str, orig_cap, user_mention, user_name)
+            file_keyboard = _build_file_keyboard(size_str)
+            try:
+                await msg.edit_caption(f_caption, reply_markup=file_keyboard, parse_mode=enums.ParseMode.HTML)
+            except Exception as cap_err:
+                logger.warning(f"Could not edit caption on fallback media: {cap_err}")
+            logger.info(f"Delivered file via cached media fallback with caption: {file_id}")
             return
         except Exception as direct_err:
             logger.warning(f"Direct cached media fallback failed for '{file_id}': {direct_err}")
 
-        # Try base64 encoded payload fallback only if valid base64
+        # Base64 encoded payload fallback
         try:
             padded = data + "=" * (-len(data) % 4)
             decoded_bytes = base64.urlsafe_b64decode(padded.encode("ascii"))
             decoded_str = decoded_bytes.decode("ascii")
             if "_" in decoded_str:
                 b_pre, b_file_id = decoded_str.split("_", 1)
-                await client.send_cached_media(
+                msg = await client.send_cached_media(
                     chat_id=message.from_user.id,
                     file_id=b_file_id,
                     protect_content=True if b_pre == "filep" else False,
                 )
+                title = None
+                size_str = None
+                if getattr(msg, "media", None):
+                    media_obj = getattr(msg, msg.media.value, None)
+                    if media_obj:
+                        title = getattr(media_obj, "file_name", None)
+                        raw_size = getattr(media_obj, "file_size", None)
+                        if raw_size:
+                            size_str = get_size(int(raw_size))
+                f_caption = _build_file_caption(title, size_str, getattr(msg, "caption", None), user_mention, user_name)
+                try:
+                    await msg.edit_caption(f_caption, reply_markup=_build_file_keyboard(size_str), parse_mode=enums.ParseMode.HTML)
+                except Exception:
+                    pass
                 return
         except Exception:
             pass
@@ -415,33 +457,11 @@ async def start_handler(client: Client, message):
     
     files = files_[0]
     title = getattr(files, "file_name", None)
-    size = get_size(getattr(files, "file_size", 0))
-    f_caption = getattr(files, "caption", None)
+    size_str = get_size(getattr(files, "file_size", 0))
+    orig_caption = getattr(files, "caption", None)
     actual_file_id = getattr(files, "file_id", file_id)
-    
-    if CUSTOM_FILE_CAPTION:
-        try:
-            f_caption = CUSTOM_FILE_CAPTION.format(
-                file_name='' if title is None else title, 
-                file_size='' if size is None else size, 
-                file_caption='' if f_caption is None else f_caption,
-                user_mention=user_mention,
-                user_name=user_name
-            )
-        except Exception as err:
-            logger.exception(err)
-    if f_caption is None or f_caption == "":
-        f_caption = f"{title or 'Media File'}"
-        
-    file_keyboard = InlineKeyboardMarkup([
-        [
-            InlineKeyboardButton('🚸 Group', url="https://t.me/+iEbhY7mM4oE1OTVl"),
-            InlineKeyboardButton('Delete 🗑️', callback_data='close_data')
-        ],
-        [
-            InlineKeyboardButton(text=f'⚙️ File Size: {size}', callback_data='gxneo')
-        ]
-    ])
+    f_caption = _build_file_caption(title, size_str, orig_caption, user_mention, user_name)
+    file_keyboard = _build_file_keyboard(size_str)
 
     try:
         await client.send_cached_media(
