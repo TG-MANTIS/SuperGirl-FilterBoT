@@ -220,14 +220,15 @@ async def next_page_handler(client: Client, query: CallbackQuery):
     else:
         old_html = ""
 
-    if re.search(r'⎎ Page :</b>\s*\d+\s*/\s*\d+', old_html):
-        updated_caption = re.sub(
-            r'(⎎ Page :</b>\s*)\d+\s*/\s*\d+',
-            rf'\g<1>{current_page}-{total_pages}',
-            old_html
+    page_pattern = re.compile(r'(Page\s*:\s*</b>\s*)\d+\s*/\s*\d+', re.IGNORECASE)
+    if page_pattern.search(old_html):
+        updated_caption = page_pattern.sub(
+            rf'\g<1>{current_page} / {total_pages}',
+            old_html,
+            count=1
         )
     else:
-        updated_caption = f"{old_html}\n\n<b>⎎ Page :</b> {current_page}-{total_pages}"
+        updated_caption = f"{old_html}\n\n<b>╰◍ Page :</b> {current_page} / {total_pages}"
 
     try:
         if query.message.photo:
