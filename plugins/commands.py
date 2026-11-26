@@ -165,6 +165,7 @@ async def start_handler(client: Client, message):
         return
 
     data = message.command[1]
+    logger.info(f"Start payload received for user {message.from_user.id}: {data}")
     
     # Handle Private Settings Panel Redirect from Group
     if data.startswith("settings_"):
@@ -355,8 +356,12 @@ async def start_handler(client: Client, message):
                     continue
             await asyncio.sleep(1) 
         return await sts.delete()
-        
-    files_ = await get_file_details(file_id, user_id=message.from_user.id)           
+
+    try:
+        files_ = await get_file_details(file_id, user_id=message.from_user.id)
+    except TypeError:
+        files_ = await get_file_details(file_id)
+
     if not files_:
         try:
             decoded_bytes = base64.urlsafe_b64decode(data + "=" * (-len(data) % 4))
@@ -385,8 +390,8 @@ async def start_handler(client: Client, message):
                     pass
             await msg.edit_caption(f_caption, parse_mode=enums.ParseMode.HTML)
             return
-        except Exception:
-            pass
+        except Exception as err:
+            logger.error(f"Fallback file send failed for payload '{data}': {err}")
         return await message.reply('❌ No such file exists!')
     
     files = files_[0]
@@ -418,14 +423,18 @@ async def start_handler(client: Client, message):
         ]
     ])
 
-    await client.send_cached_media(
-        chat_id=message.from_user.id,
-        file_id=file_id,
-        caption=f_caption,
-        reply_markup=file_keyboard,
-        protect_content=True if pre == 'filep' else False,
-        parse_mode=enums.ParseMode.HTML
-    )
+    try:
+        await client.send_cached_media(
+            chat_id=message.from_user.id,
+            file_id=files.file_id,
+            caption=f_caption,
+            reply_markup=file_keyboard,
+            protect_content=True if pre == 'filep' else False,
+            parse_mode=enums.ParseMode.HTML
+        )
+    except Exception as err:
+        logger.error(f"Error sending cached media in PM: {err}")
+        await message.reply("❌ Failed to send file! Please try again.")
 
 
 # --------------------------------------------------------------------------- #
