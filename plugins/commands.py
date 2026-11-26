@@ -26,6 +26,19 @@ logger = logging.getLogger(__name__)
 
 BATCH_FILES = {}
 
+
+async def _resolve_bot_username(client: Client) -> str:
+    """Safely returns bot username from temp, client.me, or get_me()."""
+    if temp.U_NAME:
+        return temp.U_NAME
+    if getattr(client, "me", None) and getattr(client.me, "username", None):
+        temp.U_NAME = client.me.username
+        return temp.U_NAME
+    me = await client.get_me()
+    temp.U_NAME = me.username
+    return temp.U_NAME
+
+
 # --------------------------------------------------------------------------- #
 #  /start Command Handler (Group & Private Welcome & File Delivery)          #
 # --------------------------------------------------------------------------- #
@@ -36,6 +49,8 @@ async def start_handler(client: Client, message):
     Handles /start commands across group and private chats, manages user registration,
     force subscription checks, and file/batch delivery.
     """
+    bot_username = await _resolve_bot_username(client)
+
     # Group Start Handler
     if message.chat.type in [enums.ChatType.GROUP, enums.ChatType.SUPERGROUP]:
         buttons = [
@@ -51,7 +66,7 @@ async def start_handler(client: Client, message):
         await message.reply(
             script.START_TXT_GROUP.format(
                 message.from_user.mention if message.from_user else message.chat.title, 
-                temp.U_NAME, 
+                bot_username, 
                 temp.B_NAME
             ), 
             reply_markup=reply_markup
@@ -67,22 +82,22 @@ async def start_handler(client: Client, message):
         return 
 
     # Private User Registration Check
-    if not await db.is_user_exist(message.from_user.id):
+    if message.from_user and not await db.is_user_exist(message.from_user.id):
         await db.add_user(message.from_user.id, message.from_user.first_name)
         try:
             await client.send_message(LOG_CHANNEL, script.LOG_TEXT_P.format(message.from_user.id, message.from_user.mention))
         except Exception as err:
             logger.error(f"User Log Error: {err}")
 
-    # Standard Private Start / No File Payload (Added 'Create Clone Bot' Button)
+    # Standard Private Start / No File Payload
     if len(message.command) != 2:
-        grpid = await active_connection(str(message.from_user.id))
+        grpid = await active_connection(str(message.from_user.id)) if message.from_user else None
         settings = await get_settings(int(grpid)) if grpid else None
         start_pic_enabled = settings.get("start_pic", True) if settings else True
 
         buttons = [
             [
-                InlineKeyboardButton('+ Add Me To Group +', url=f'http://t.me/{temp.U_NAME}?startgroup=true')
+                InlineKeyboardButton('+ Add Me To Group +', url=f'http://t.me/{bot_username}?startgroup=true')
             ],
             [
                 InlineKeyboardButton('✘ Close', callback_data='close_data'),
@@ -94,17 +109,20 @@ async def start_handler(client: Client, message):
         if start_pic_enabled:
             await message.reply_photo(
                 photo=random.choice(PICS),
-                caption=script.START_TXT.format(message.from_user.mention, temp.U_NAME, temp.B_NAME),
+                caption=script.START_TXT.format(message.from_user.mention if message.from_user else "Friend", bot_username, temp.B_NAME),
                 reply_markup=reply_markup,
                 parse_mode=enums.ParseMode.HTML
             )
         else:
             await message.reply_text(
-                text=script.START_TXT.format(message.from_user.mention, temp.U_NAME, temp.B_NAME),
+                text=script.START_TXT.format(message.from_user.mention if message.from_user else "Friend", bot_username, temp.B_NAME),
                 reply_markup=reply_markup,
                 parse_mode=enums.ParseMode.HTML
             )
         return
+
+    data = message.command[1].strip()
+    logger.info(f"Start payload received for user {message.from_user.id if message.from_user else 'Unknown'}: {data}")
 
     # Force Subscription Check (/start with payload)
     if AUTH_CHANNEL and not await is_subscribed(client, message):
@@ -116,13 +134,13 @@ async def start_handler(client: Client, message):
             
         btn = [[InlineKeyboardButton("✇ Join Channel ✇", url=invite_link.invite_link)]]
 
-        if message.command[1] != "subscribe":
+        if data != "subscribe":
             try:
-                kk, file_id = message.command[1].split("_", 1)
+                kk, file_id = data.split("_", 1)
                 pre = 'checksubp' if kk == 'filep' else 'checksub' 
                 btn.append([InlineKeyboardButton("↺ Try Again ↺", callback_data=f"{pre}#{file_id}")])
             except (IndexError, ValueError):
-                btn.append([InlineKeyboardButton("↺ Try Again ↺", url=f"https://t.me/{temp.U_NAME}?start={message.command[1]}")])
+                btn.append([InlineKeyboardButton("↺ Try Again ↺", url=f"https://t.me/{bot_username}?start={data}")])
                 
         await client.send_photo(
             chat_id=message.from_user.id,
@@ -133,14 +151,14 @@ async def start_handler(client: Client, message):
         )
         return
 
-    if len(message.command) == 2 and message.command[1] in ["subscribe", "error", "okay", "help"]:
-        grpid = await active_connection(str(message.from_user.id))
+    if data in ["subscribe", "error", "okay", "help"]:
+        grpid = await active_connection(str(message.from_user.id)) if message.from_user else None
         settings = await get_settings(int(grpid)) if grpid else None
         start_pic_enabled = settings.get("start_pic", True) if settings else True
 
         buttons = [
             [
-                InlineKeyboardButton('+ Add Me To Group +', url=f'http://t.me/{temp.U_NAME}?startgroup=true')
+                InlineKeyboardButton('+ Add Me To Group +', url=f'http://t.me/{bot_username}?startgroup=true')
             ],
             [
                 InlineKeyboardButton('✘ Close', callback_data='close_data'),
@@ -152,20 +170,17 @@ async def start_handler(client: Client, message):
         if start_pic_enabled:
             await message.reply_photo(
                 photo=random.choice(PICS),
-                caption=script.START_TXT.format(message.from_user.mention, temp.U_NAME, temp.B_NAME),
+                caption=script.START_TXT.format(message.from_user.mention if message.from_user else "Friend", bot_username, temp.B_NAME),
                 reply_markup=reply_markup,
                 parse_mode=enums.ParseMode.HTML
             )
         else:
             await message.reply_text(
-                text=script.START_TXT.format(message.from_user.mention, temp.U_NAME, temp.B_NAME),
+                text=script.START_TXT.format(message.from_user.mention if message.from_user else "Friend", bot_username, temp.B_NAME),
                 reply_markup=reply_markup,
                 parse_mode=enums.ParseMode.HTML
             )
         return
-
-    data = message.command[1]
-    logger.info(f"Start payload received for user {message.from_user.id}: {data}")
     
     # Handle Private Settings Panel Redirect from Group
     if data.startswith("settings_"):
@@ -190,24 +205,24 @@ async def start_handler(client: Client, message):
         if settings is not None:
             buttons = [
                 [
-                    InlineKeyboardButton('Button', callback_data=f'setgs#button#{settings["button"]}#{grp_id}#1'),
-                    InlineKeyboardButton('Single' if settings["button"] else 'Double', callback_data=f'setgs#button#{settings["button"]}#{grp_id}#1')
+                    InlineKeyboardButton('Button', callback_data=f'setgs#button#{settings.get("button", True)}#{grp_id}#1'),
+                    InlineKeyboardButton('Single' if settings.get("button", True) else 'Double', callback_data=f'setgs#button#{settings.get("button", True)}#{grp_id}#1')
                 ],
                 [
-                    InlineKeyboardButton('Bot PM', callback_data=f'setgs#botpm#{settings["botpm"]}#{grp_id}#1'),
-                    InlineKeyboardButton('√ Yes' if settings["botpm"] else '❌ No', callback_data=f'setgs#botpm#{settings["botpm"]}#{grp_id}#1')
+                    InlineKeyboardButton('Bot PM', callback_data=f'setgs#botpm#{settings.get("botpm", True)}#{grp_id}#1'),
+                    InlineKeyboardButton('√ Yes' if settings.get("botpm", True) else '❌ No', callback_data=f'setgs#botpm#{settings.get("botpm", True)}#{grp_id}#1')
                 ],
                 [
-                    InlineKeyboardButton('File Secure', callback_data=f'setgs#file_secure#{settings["file_secure"]}#{grp_id}#1'),
-                    InlineKeyboardButton('√ Yes' if settings["file_secure"] else '❌ No', callback_data=f'setgs#file_secure#{settings["file_secure"]}#{grp_id}#1')
+                    InlineKeyboardButton('File Secure', callback_data=f'setgs#file_secure#{settings.get("file_secure", False)}#{grp_id}#1'),
+                    InlineKeyboardButton('√ Yes' if settings.get("file_secure", False) else '❌ No', callback_data=f'setgs#file_secure#{settings.get("file_secure", False)}#{grp_id}#1')
                 ],
                 [
-                    InlineKeyboardButton('IMDB', callback_data=f'setgs#imdb#{settings["imdb"]}#{grp_id}#1'),
-                    InlineKeyboardButton('√ Yes' if settings["imdb"] else '❌ No', callback_data=f'setgs#imdb#{settings["imdb"]}#{grp_id}#1')
+                    InlineKeyboardButton('IMDB', callback_data=f'setgs#imdb#{settings.get("imdb", True)}#{grp_id}#1'),
+                    InlineKeyboardButton('√ Yes' if settings.get("imdb", True) else '❌ No', callback_data=f'setgs#imdb#{settings.get("imdb", True)}#{grp_id}#1')
                 ],
                 [
-                    InlineKeyboardButton('Spell Msg', callback_data=f'setgs#spell_check#{settings["spell_check"]}#{grp_id}#1'),
-                    InlineKeyboardButton('√ Yes' if settings["spell_check"] else '❌ No', callback_data=f'setgs#spell_check#{settings["spell_check"]}#{grp_id}#1')
+                    InlineKeyboardButton('Spell Msg', callback_data=f'setgs#spell_check#{settings.get("spell_check", True)}#{grp_id}#1'),
+                    InlineKeyboardButton('√ Yes' if settings.get("spell_check", True) else '❌ No', callback_data=f'setgs#spell_check#{settings.get("spell_check", True)}#{grp_id}#1')
                 ],
                 [
                     InlineKeyboardButton('Close', callback_data='close_data'),
@@ -230,18 +245,11 @@ async def start_handler(client: Client, message):
         return
 
     # Handle Standard Deep Link Search
-    if not "_" in data and not data.startswith("BATCH") and not data.startswith("DSTORE"):
+    if "_" not in data and not data.startswith("BATCH") and not data.startswith("DSTORE"):
         search_query = data.replace("_", " ")
         message.text = search_query
         await auto_filter(client, message)
         return
-
-    # Handle Batch Files & Single Files Delivery
-    try:
-        pre, file_id = data.split('_', 1)
-    except Exception:
-        file_id = data
-        pre = ""
 
     user = message.from_user
     user_mention = user.mention if user else "Friend"
@@ -249,10 +257,10 @@ async def start_handler(client: Client, message):
 
     if data.split("-", 1)[0] == "BATCH":
         sts = await message.reply("⏳ Please wait, processing batch files...")
-        file_id = data.split("-", 1)[1]
-        msgs = BATCH_FILES.get(file_id)
+        batch_file_id = data.split("-", 1)[1]
+        msgs = BATCH_FILES.get(batch_file_id)
         if not msgs:
-            file = await client.download_media(file_id)
+            file = await client.download_media(batch_file_id)
             try: 
                 with open(file, 'r', encoding='utf-8') as file_data:
                     msgs = json.loads(file_data.read())
@@ -260,7 +268,7 @@ async def start_handler(client: Client, message):
                 await sts.edit("❌ Failed to process batch file!")
                 return await client.send_message(LOG_CHANNEL, "⚠️ UNABLE TO OPEN BATCH FILE.")
             os.remove(file)
-            BATCH_FILES[file_id] = msgs
+            BATCH_FILES[batch_file_id] = msgs
             
         for msg in msgs:
             title = msg.get("title")
@@ -357,47 +365,59 @@ async def start_handler(client: Client, message):
             await asyncio.sleep(1) 
         return await sts.delete()
 
+    # Single File Delivery (handles `file_<id>` and `filep_<id>`)
+    if "_" in data:
+        pre, file_id = data.split("_", 1)
+    else:
+        pre, file_id = "", data
+
+    logger.info(f"Fetching file details for pre='{pre}', file_id='{file_id}'")
+
     try:
         files_ = await get_file_details(file_id, user_id=message.from_user.id)
     except TypeError:
         files_ = await get_file_details(file_id)
+    except Exception as err:
+        logger.exception(f"Error in get_file_details for {file_id}: {err}")
+        files_ = None
 
     if not files_:
+        # Try direct cached media fallback if file_id is a valid Telegram file_id
         try:
-            decoded_bytes = base64.urlsafe_b64decode(data + "=" * (-len(data) % 4))
-            pre, file_id = decoded_bytes.decode("ascii").split("_", 1)
             msg = await client.send_cached_media(
                 chat_id=message.from_user.id,
                 file_id=file_id,
-                protect_content=True if pre == 'filep' else False,
+                protect_content=True if pre == "filep" else False,
             )
-            filetype = msg.media
-            file = getattr(msg, filetype.value)
-            title = file.file_name
-            size = get_size(file.file_size)
-            
-            f_caption = f"<code>{title}</code>"
-            if CUSTOM_FILE_CAPTION:
-                try:
-                    f_caption = CUSTOM_FILE_CAPTION.format(
-                        file_name='' if title is None else title, 
-                        file_size='' if size is None else size, 
-                        file_caption='',
-                        user_mention=user_mention,
-                        user_name=user_name
-                    )
-                except Exception:
-                    pass
-            await msg.edit_caption(f_caption, parse_mode=enums.ParseMode.HTML)
+            logger.info(f"Delivered file directly via cached media fallback: {file_id}")
             return
-        except Exception as err:
-            logger.error(f"Fallback file send failed for payload '{data}': {err}")
+        except Exception as direct_err:
+            logger.warning(f"Direct cached media fallback failed for '{file_id}': {direct_err}")
+
+        # Try base64 encoded payload fallback only if valid base64
+        try:
+            padded = data + "=" * (-len(data) % 4)
+            decoded_bytes = base64.urlsafe_b64decode(padded.encode("ascii"))
+            decoded_str = decoded_bytes.decode("ascii")
+            if "_" in decoded_str:
+                b_pre, b_file_id = decoded_str.split("_", 1)
+                await client.send_cached_media(
+                    chat_id=message.from_user.id,
+                    file_id=b_file_id,
+                    protect_content=True if b_pre == "filep" else False,
+                )
+                return
+        except Exception:
+            pass
+
+        logger.error(f"No file found for payload '{data}'")
         return await message.reply('❌ No such file exists!')
     
     files = files_[0]
-    title = files.file_name
-    size = get_size(files.file_size)
-    f_caption = files.caption
+    title = getattr(files, "file_name", None)
+    size = get_size(getattr(files, "file_size", 0))
+    f_caption = getattr(files, "caption", None)
+    actual_file_id = getattr(files, "file_id", file_id)
     
     if CUSTOM_FILE_CAPTION:
         try:
@@ -411,7 +431,7 @@ async def start_handler(client: Client, message):
         except Exception as err:
             logger.exception(err)
     if f_caption is None or f_caption == "":
-        f_caption = f"{files.file_name}"
+        f_caption = f"{title or 'Media File'}"
         
     file_keyboard = InlineKeyboardMarkup([
         [
@@ -426,14 +446,15 @@ async def start_handler(client: Client, message):
     try:
         await client.send_cached_media(
             chat_id=message.from_user.id,
-            file_id=files.file_id,
+            file_id=actual_file_id,
             caption=f_caption,
             reply_markup=file_keyboard,
             protect_content=True if pre == 'filep' else False,
             parse_mode=enums.ParseMode.HTML
         )
+        logger.info(f"Successfully sent file {actual_file_id} to user {message.from_user.id}")
     except Exception as err:
-        logger.error(f"Error sending cached media in PM: {err}")
+        logger.exception(f"Error sending cached media in PM for {actual_file_id}: {err}")
         await message.reply("❌ Failed to send file! Please try again.")
 
 
@@ -446,7 +467,6 @@ async def clone_bot_start_callback(client: Client, query):
     """
     Triggers the clone bot creation guide when the user clicks 'Create Clone Bot' in PM start menu.
     """
-    from plugins.clone import clone_intro_handler
     await clone_bot_start_callback_impl(client, query)
 
 
@@ -773,10 +793,11 @@ async def settings_handler(client: Client, message):
                 pass
             return
 
+        bot_username = await _resolve_bot_username(client)
         buttons = InlineKeyboardMarkup([
             [
                 InlineKeyboardButton("•Open(Group)", callback_data=f"set_group_menu#{chat_id}#1"),
-                InlineKeyboardButton("Private(PM)•", url=f"https://t.me/{client.me.username}?start=settings_{chat_id}")
+                InlineKeyboardButton("Private(PM)•", url=f"https://t.me/{bot_username}?start=settings_{chat_id}")
             ],
             [
                 InlineKeyboardButton("✗ Close Msg ✗", callback_data="close_data")
@@ -812,24 +833,24 @@ async def settings_handler(client: Client, message):
             if settings is not None:
                 buttons = [
                     [
-                        InlineKeyboardButton('⊶Button⊶', callback_data=f'setgs#button#{settings["button"]}#{grp_id}#1'),
-                        InlineKeyboardButton('Single' if settings["button"] else 'Double', callback_data=f'setgs#button#{settings["button"]}#{grp_id}#1')
+                        InlineKeyboardButton('⊶Button⊶', callback_data=f'setgs#button#{settings.get("button", True)}#{grp_id}#1'),
+                        InlineKeyboardButton('Single' if settings.get("button", True) else 'Double', callback_data=f'setgs#button#{settings.get("button", True)}#{grp_id}#1')
                     ],
                     [
-                        InlineKeyboardButton('⊶Bot PM⊶', callback_data=f'setgs#botpm#{settings["botpm"]}#{grp_id}#1'),
-                        InlineKeyboardButton('√ Yes' if settings["botpm"] else '⛌ No', callback_data=f'setgs#botpm#{settings["botpm"]}#{grp_id}#1')
+                        InlineKeyboardButton('⊶Bot PM⊶', callback_data=f'setgs#botpm#{settings.get("botpm", True)}#{grp_id}#1'),
+                        InlineKeyboardButton('√ Yes' if settings.get("botpm", True) else '⛌ No', callback_data=f'setgs#botpm#{settings.get("botpm", True)}#{grp_id}#1')
                     ],
                     [
-                        InlineKeyboardButton('⊶File Secure⊶', callback_data=f'setgs#file_secure#{settings["file_secure"]}#{grp_id}#1'),
-                        InlineKeyboardButton('√ Yes' if settings["file_secure"] else '⛌ No', callback_data=f'setgs#file_secure#{settings["file_secure"]}#{grp_id}#1')
+                        InlineKeyboardButton('⊶File Secure⊶', callback_data=f'setgs#file_secure#{settings.get("file_secure", False)}#{grp_id}#1'),
+                        InlineKeyboardButton('√ Yes' if settings.get("file_secure", False) else '⛌ No', callback_data=f'setgs#file_secure#{settings.get("file_secure", False)}#{grp_id}#1')
                     ],
                     [
-                        InlineKeyboardButton('⊶IMDB⊶', callback_data=f'setgs#imdb#{settings["imdb"]}#{grp_id}#1'),
-                        InlineKeyboardButton('√ Yes' if settings["imdb"] else '⛌ No', callback_data=f'setgs#imdb#{settings["imdb"]}#{grp_id}#1')
+                        InlineKeyboardButton('⊶IMDB⊶', callback_data=f'setgs#imdb#{settings.get("imdb", True)}#{grp_id}#1'),
+                        InlineKeyboardButton('√ Yes' if settings.get("imdb", True) else '⛌ No', callback_data=f'setgs#imdb#{settings.get("imdb", True)}#{grp_id}#1')
                     ],
                     [
-                        InlineKeyboardButton('⊶Spell Msg⊶', callback_data=f'setgs#spell_check#{settings["spell_check"]}#{grp_id}#1'),
-                        InlineKeyboardButton('√ Yes' if settings["spell_check"] else '⛌ No', callback_data=f'setgs#spell_check#{settings["spell_check"]}#{grp_id}#1')
+                        InlineKeyboardButton('⊶Spell Msg⊶', callback_data=f'setgs#spell_check#{settings.get("spell_check", True)}#{grp_id}#1'),
+                        InlineKeyboardButton('√ Yes' if settings.get("spell_check", True) else '⛌ No', callback_data=f'setgs#spell_check#{settings.get("spell_check", True)}#{grp_id}#1')
                     ],
                     [
                         InlineKeyboardButton('✗ Close', callback_data='close_data'),
