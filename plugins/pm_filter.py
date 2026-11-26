@@ -53,6 +53,18 @@ NON_IMG = """<b>➲ Hello {user_mention},</b>
 ᴥ <b><u>Search Format:</u></b> <code>Movie Name Year</code> (Eg: <i>Lucifer 2019</i>)"""
 
 
+async def _get_bot_username(client: Client) -> str:
+    """Safely resolves and caches the bot username."""
+    if temp.U_NAME:
+        return temp.U_NAME
+    if getattr(client, "me", None) and client.me.username:
+        temp.U_NAME = client.me.username
+        return temp.U_NAME
+    me = await client.get_me()
+    temp.U_NAME = me.username
+    return temp.U_NAME
+
+
 @Client.on_message(filters.group & filters.text & filters.incoming, group=1)
 async def give_filter_handler(client: Client, message):
     if message.text.startswith("/") or message.text.startswith("#"):
@@ -192,8 +204,9 @@ async def next_page_handler(client: Client, query: CallbackQuery):
             ],
         )
     else:
+        bot_username = await _get_bot_username(client)
         btn.append(
-            [InlineKeyboardButton("ᴥ︎ Bot Pm", url=f"https://t.me/{temp.U_NAME}"),
+            [InlineKeyboardButton("ᴥ︎ Bot Pm", url=f"https://t.me/{bot_username}"),
              InlineKeyboardButton("Delete 〆", callback_data="close_data")]
         )
 
@@ -265,7 +278,6 @@ async def filter_menu_handler(client: Client, query: CallbackQuery):
                 InlineKeyboardButton("Marathi", callback_data=f"filter_apply#{req_user_id}#{key}#Marathi")
             ],
             [
-                
                 InlineKeyboardButton("Dual", callback_data=f"filter_apply#{req_user_id}#{key}#Dual Audio"),
                 InlineKeyboardButton("Multi", callback_data=f"filter_apply#{req_user_id}#{key}#Multi Audio"),
                 InlineKeyboardButton("Other", callback_data=f"filter_apply#{req_user_id}#{key}#Other")
@@ -340,8 +352,9 @@ async def filter_menu_handler(client: Client, query: CallbackQuery):
                 InlineKeyboardButton(text="Next ⇉", callback_data=f"next_{req_user_id}_{key}_10")
             ])
         else:
+            bot_username = await _get_bot_username(client)
             btn.append([
-                InlineKeyboardButton("ᴥ Bot Pm", url=f"https://t.me/{temp.U_NAME}"),
+                InlineKeyboardButton("ᴥ Bot Pm", url=f"https://t.me/{bot_username}"),
                 InlineKeyboardButton(text="Delete 〆", callback_data="close_data")
             ])
             
@@ -735,7 +748,7 @@ async def cb_handler(client: Client, query: CallbackQuery):
         await query.answer('√ Settings updated successfully!')
         
     elif query.data.startswith("file"):
-        ident, file_id = query.data.split("#")
+        ident, file_id = query.data.split("#", 1)
         files_ = await get_file_details(file_id)
         if not files_:
             return await query.answer('∅ No such file exists!', show_alert=True)
@@ -772,11 +785,13 @@ async def cb_handler(client: Client, query: CallbackQuery):
             f_caption = f"{title}"
 
         try:
+            bot_username = await _get_bot_username(client)
             if settings.get("forcesub", True) and AUTH_CHANNEL and not await is_subscribed(client, query):
-                await query.answer(url=f"https://t.me/{temp.U_NAME}?start={ident}_{file_id}")
+                await query.answer(url=f"https://t.me/{bot_username}?start={ident}_{file_id}")
                 return
-            elif settings['botpm'] and query.message.chat.type != enums.ChatType.PRIVATE:
-                await query.answer(url=f"https://t.me/{temp.U_NAME}?start={ident}_{file_id}")
+            elif settings.get("botpm", False) and query.message.chat.type != enums.ChatType.PRIVATE:
+                logger.info(f"Redirecting user {query.from_user.id} to PM for payload: {ident}_{file_id}")
+                await query.answer(url=f"https://t.me/{bot_username}?start={ident}_{file_id}")
                 return
             else:
                 file_keyboard = InlineKeyboardMarkup([
@@ -801,9 +816,12 @@ async def cb_handler(client: Client, query: CallbackQuery):
         except UserIsBlocked:
             await query.answer('∅ Please unblock the bot in PM first!', show_alert=True)
         except PeerIdInvalid:
-            await query.answer(url=f"https://t.me/{temp.U_NAME}?start={ident}_{file_id}")
-        except Exception:
-            await query.answer(url=f"https://t.me/{temp.U_NAME}?start={ident}_{file_id}")
+            bot_username = await _get_bot_username(client)
+            await query.answer(url=f"https://t.me/{bot_username}?start={ident}_{file_id}")
+        except Exception as err:
+            logger.error(f"Error in file callback for {ident}_{file_id}: {err}")
+            bot_username = await _get_bot_username(client)
+            await query.answer(url=f"https://t.me/{bot_username}?start={ident}_{file_id}")
             
     elif query.data.startswith("checksub"):
         chat_id = query.message.chat.id
@@ -816,7 +834,7 @@ async def cb_handler(client: Client, query: CallbackQuery):
         if settings.get("forcesub", True) and AUTH_CHANNEL and not await is_subscribed(client, query):
             return await query.answer("∅ Please subscribe to our channel first!", show_alert=True)
             
-        ident, file_id = query.data.split("#")
+        ident, file_id = query.data.split("#", 1)
         files_ = await get_file_details(file_id)
         if not files_:
             return await query.answer('∅ No such file exists!', show_alert=True)
@@ -883,9 +901,10 @@ async def cb_handler(client: Client, query: CallbackQuery):
         grpid = await active_connection(str(query.from_user.id))
         settings = await get_settings(int(grpid)) if grpid else None
         start_pic_enabled = settings.get("start_pic", True) if settings else True
+        bot_username = await _get_bot_username(client)
 
         buttons = [[
-            InlineKeyboardButton('+ Add Me To Group +', url=f'http://t.me/{temp.U_NAME}?startgroup=true')
+            InlineKeyboardButton('+ Add Me To Group +', url=f'http://t.me/{bot_username}?startgroup=true')
             ],[
             InlineKeyboardButton('✘ Close', callback_data='close_data'),
             InlineKeyboardButton('About 〄', callback_data='about')
@@ -895,7 +914,7 @@ async def cb_handler(client: Client, query: CallbackQuery):
         if start_pic_enabled:
             try:
                 await query.message.edit_media(
-                    media=InputMediaPhoto(random.choice(PICS), caption=script.START_TXT.format(query.from_user.mention, temp.U_NAME, temp.B_NAME)),
+                    media=InputMediaPhoto(random.choice(PICS), caption=script.START_TXT.format(query.from_user.mention, bot_username, temp.B_NAME)),
                     reply_markup=reply_markup
                 )
             except Exception:
@@ -903,14 +922,14 @@ async def cb_handler(client: Client, query: CallbackQuery):
                 await client.send_photo(
                     chat_id=query.message.chat.id,
                     photo=random.choice(PICS),
-                    caption=script.START_TXT.format(query.from_user.mention, temp.U_NAME, temp.B_NAME),
+                    caption=script.START_TXT.format(query.from_user.mention, bot_username, temp.B_NAME),
                     reply_markup=reply_markup,
                     parse_mode=enums.ParseMode.HTML
                 )
         else:
             try:
                 await query.message.edit_text(
-                    text=script.START_TXT.format(query.from_user.mention, temp.U_NAME, temp.B_NAME),
+                    text=script.START_TXT.format(query.from_user.mention, bot_username, temp.B_NAME),
                     reply_markup=reply_markup,
                     parse_mode=enums.ParseMode.HTML
                 )
@@ -921,7 +940,7 @@ async def cb_handler(client: Client, query: CallbackQuery):
                     pass
                 await client.send_message(
                     chat_id=query.message.chat.id,
-                    text=script.START_TXT.format(query.from_user.mention, temp.U_NAME, temp.B_NAME),
+                    text=script.START_TXT.format(query.from_user.mention, bot_username, temp.B_NAME),
                     reply_markup=reply_markup,
                     parse_mode=enums.ParseMode.HTML
                 )
@@ -1131,6 +1150,7 @@ async def auto_filter(client: Client, msg, spoll=False):
         InlineKeyboardButton('Quality ⎙', callback_data=f'qual_menu#{req}#{key}')
     ])
 
+    bot_username = await _get_bot_username(client)
     if offset != "" and int(total_results) > 10:
         btn.append([
             InlineKeyboardButton(text="〆 Delete", callback_data="close_data"),
@@ -1138,7 +1158,7 @@ async def auto_filter(client: Client, msg, spoll=False):
         ])
     else:
         btn.append([
-            InlineKeyboardButton("ᴥ︎ Bot Pm", url=f"https://t.me/{temp.U_NAME}"),
+            InlineKeyboardButton("ᴥ︎ Bot Pm", url=f"https://t.me/{bot_username}"),
             InlineKeyboardButton(text="Delete 〆", callback_data="close_data")
         ])
 
@@ -1239,7 +1259,7 @@ async def auto_filter(client: Client, msg, spoll=False):
                 f"𝖸𝗈𝗎𝗋 𝖱𝖾𝗊𝗎𝖾𝗌ᴛ <u>[{movie_title}]</u> 𝖧𝖺𝗌 𝖡𝖾𝖾𝗇 𝖣𝖾𝗅𝖾𝗍𝖾𝖽 🗑 \n"
                 f"(𝖣𝗎𝖾 𝖳𝗈 𝖠𝗏𝗈𝗂𝖽 𝖢𝗈𝗉𝗒𝗋𝗂𝗀𝗁𝗍𝗌 𝖨𝗌𝗌𝗎𝖾😌)\n"
                 f"==============================\n"
-                f"𝖨𝖥 𝖸𝖮𝖴 𝖶𝖠𝖭𝖳 𝖳𝖧𝖠𝖳 𝖥𝖨𝖫𝖤, 𝖱𝖤𝗤𝖴𝖤𝖲𝖳 𝖠𝖦𝖠𝖨𝗭\n"
+                f"𝖨𝖥 𝖸𝖮𝖴 𝖶𝖠𝖭𝖳 𝖳𝖧𝖠𝖳 𝖥𝖨𝖱𝖤, 𝖱𝖤𝗤𝖴𝖤𝖲𝖳 𝖠𝖦𝖠𝖨𝗭\n"
                 f"==============================</b>"
             )
             
