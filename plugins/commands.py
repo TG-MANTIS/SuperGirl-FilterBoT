@@ -69,11 +69,11 @@ def _build_file_keyboard(size_str: str | None) -> InlineKeyboardMarkup:
     size_label = size_str if size_str else "N/A"
     return InlineKeyboardMarkup([
         [
-            InlineKeyboardButton('🚸 Group', url="https://t.me/+iEbhY7mM4oE1OTVl"),
-            InlineKeyboardButton('Delete 🗑️', callback_data='close_data')
+            InlineKeyboardButton('⌬ Group', url="https://t.me/+iEbhY7mM4oE1OTVl"),
+            InlineKeyboardButton('Delete 〆', callback_data='close_data')
         ],
         [
-            InlineKeyboardButton(text=f'⚙️ File Size: {size_label}', callback_data='gxneo')
+            InlineKeyboardButton(text=f'▣ File Size: {size_label} ▣', callback_data='gxneo')
         ]
     ])
 
@@ -94,11 +94,15 @@ async def start_handler(client: Client, message):
     if message.chat.type in [enums.ChatType.GROUP, enums.ChatType.SUPERGROUP]:
         buttons = [
             [
-                InlineKeyboardButton('OTT Update Channel', url='https://t.me/cinema_flix_updates'),
+                InlineKeyboardButton('ᚐOTT Updatesᚐ', url='https://t.me/cinema_flix_updates'),
+                InlineKeyboardButton('ᚐLinks Channelᚐ', url='https://t.me/CFOTTUPDATE')
             ],
             [
-                InlineKeyboardButton('Movie Group', url='https://t.me/+iEbhY7mM4oE1OTVl'),
-                InlineKeyboardButton('Main Group', url='https://t.me/Mallu_Movie_Hub_Group')
+                InlineKeyboardButton('ᚐBackup Groupᚐ', url='https://t.me/+iEbhY7mM4oE1OTVl'),
+                InlineKeyboardButton('ᚐMain Groupᚐ', url='https://t.me/Mallu_Movie_Hub_Group')
+            ],
+            ]
+               InlineKeyboardButton('✘ Close the mean', callback_data='close_data')
             ]
         ]
         reply_markup = InlineKeyboardMarkup(buttons)
