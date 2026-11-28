@@ -101,7 +101,7 @@ async def start_handler(client: Client, message):
                 InlineKeyboardButton('ᚐBackup Groupᚐ', url='https://t.me/+iEbhY7mM4oE1OTVl'),
                 InlineKeyboardButton('ᚐMain Groupᚐ', url='https://t.me/Mallu_Movie_Hub_Group')
             ],
-            ]
+            [
                InlineKeyboardButton('✘ Close the mean', callback_data='close_data')
             ]
         ]
